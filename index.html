@@ -182,9 +182,39 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   .month-lbl{padding-left:46px;}
   .tab-btn{flex:0 0 auto;padding:13px 14px;}
 }
+
+/* ── LOGIN ── */
+.login-overlay{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-box{width:100%;max-width:340px;text-align:center;}
+.login-emoji{font-size:42px;margin-bottom:10px;}
+.login-title{font-family:'DM Serif Display',serif;font-size:30px;color:var(--pink);line-height:1.1;}
+.login-sub{font-size:13.5px;color:var(--muted);margin:10px 0 22px;line-height:1.5;}
+.login-box input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);margin-bottom:10px;}
+.login-box input:focus{outline:1px solid var(--pink);}
+.login-box .submit-btn{width:100%;padding:13px;font-size:15px;margin-top:4px;}
+.login-err{font-size:13px;color:var(--danger);margin-top:12px;min-height:18px;line-height:1.4;}
+/* sync pill */
+.sync-pill{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px;opacity:0;transition:opacity .3s;pointer-events:none;}
+.sync-pill.show{opacity:1;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--done);}
+.sync-dot.off{background:var(--warn);}
 </style>
 </head>
 <body>
+
+<div class="login-overlay" id="login">
+  <div class="login-box">
+    <div class="login-emoji">💍</div>
+    <div class="login-title">Наше весілля</div>
+    <div class="login-sub">Спільний доступ для двох.<br>Введи email і пароль, які ми створили.</div>
+    <input id="logEmail" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input id="logPass" type="password" placeholder="Пароль" autocomplete="current-password">
+    <button id="logBtn" class="submit-btn">Увійти</button>
+    <div class="login-err" id="logErr"></div>
+  </div>
+</div>
+
+<div class="sync-pill" id="syncPill"><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Синхронізовано</span></div>
 
 <div class="hero">
   <div class="hero-eyebrow">06 вересня 2026</div>
@@ -339,8 +369,30 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const WEDDING = new Date('2026-09-06');
+
+/* ════ FIREBASE (спільна синхронізація між телефонами) ════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAtHp8tsubQ_v4iSi2zkfCZTgKKMjm2VGA",
+  authDomain: "wedding-6e47f.firebaseapp.com",
+  projectId: "wedding-6e47f",
+  storageBucket: "wedding-6e47f.firebasestorage.app",
+  messagingSenderId: "87093437583",
+  appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
+};
+let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap'};
+try{
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  const fdb = firebase.firestore();
+  try{ fdb.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+  DOC = fdb.collection('wedding').doc('state');
+}catch(e){ console.warn('firebase init', e); }
 
 /* ── PORTABLE STORAGE (localStorage + in-memory fallback) ── */
 const _mem = {};
@@ -353,7 +405,13 @@ function loadJSON(key, fallback){
   if(raw===null) return JSON.parse(JSON.stringify(fallback));
   try{ return JSON.parse(raw); }catch{ return JSON.parse(JSON.stringify(fallback)); }
 }
-function saveJSON(key, val){ DB.set(key, JSON.stringify(val)); }
+function saveJSON(key, val){
+  DB.set(key, JSON.stringify(val));                 // локальний кеш (працює офлайн)
+  if(DOC && cloudReady && !applyingSnapshot && FIELD[key]){
+    DOC.set({[FIELD[key]]: val, _updated: Date.now()}, {merge:true})
+       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
+  }
+}
 
 /* ── DEFAULTS ── */
 const DEFAULT_TASKS = [
@@ -681,9 +739,76 @@ document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
 });
 
 /* ── INIT ── */
+function renderAll(){
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes();
+  document.getElementById('capInput').value = budgetCap||'';
+}
 document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding());
-renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes();
+renderAll();
 setInterval(()=>{ document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding()); },60000);
+
+/* ════ SYNC + LOGIN ════ */
+let syncTimer=null;
+function flashSync(ok){
+  const pill=document.getElementById('syncPill'), dot=document.getElementById('syncDot'), txt=document.getElementById('syncTxt');
+  dot.className='sync-dot'+(ok?'':' off');
+  txt.textContent=ok?'Збережено для двох ✓':'Збережено локально (немає мережі)';
+  pill.classList.add('show');
+  clearTimeout(syncTimer); syncTimer=setTimeout(()=>pill.classList.remove('show'),1800);
+}
+function startSync(){
+  if(!DOC) return;
+  DOC.onSnapshot(snap=>{
+    cloudReady=true;
+    if(!snap.exists){
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      return;
+    }
+    const d=snap.data();
+    applyingSnapshot=true;
+    if(Array.isArray(d.tasks))    tasks=d.tasks;
+    if(Array.isArray(d.guests))   guests=d.guests;
+    if(Array.isArray(d.budget))   budget=d.budget;
+    if(Array.isArray(d.contacts)) contacts=d.contacts;
+    if(Array.isArray(d.notes))    notes=d.notes;
+    if(typeof d.cap==='number')   budgetCap=d.cap;
+    // оновлюємо локальний кеш
+    DB.set('wed-tasks',JSON.stringify(tasks));
+    DB.set('wed-guests',JSON.stringify(guests));
+    DB.set('wed-budget',JSON.stringify(budget));
+    DB.set('wed-contacts',JSON.stringify(contacts));
+    DB.set('wed-notes',JSON.stringify(notes));
+    DB.set('wed-cap',JSON.stringify(budgetCap));
+    applyingSnapshot=false;
+    renderAll();
+  }, err=>{ console.warn('snapshot', err); });
+}
+
+if(auth){
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      document.getElementById('login').style.display='none';
+      if(!cloudReady) startSync();
+    }else{
+      document.getElementById('login').style.display='flex';
+    }
+  });
+  const doLogin=()=>{
+    const e=val('logEmail'), p=document.getElementById('logPass').value;
+    const errEl=document.getElementById('logErr'); errEl.textContent='';
+    if(!e||!p){ errEl.textContent='Впиши email і пароль.'; return; }
+    document.getElementById('logBtn').textContent='Заходимо…';
+    auth.signInWithEmailAndPassword(e,p).catch(err=>{
+      errEl.textContent='Не вдалось увійти. Перевір email і пароль.';
+      document.getElementById('logBtn').textContent='Увійти';
+    });
+  };
+  document.getElementById('logBtn').onclick=doLogin;
+  document.getElementById('logPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+}else{
+  // Firebase недоступний — працюємо локально, без екрана входу
+  document.getElementById('login').style.display='none';
+}
 </script>
 </body>
 </html>
