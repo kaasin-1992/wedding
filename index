@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06.09 — Весілля</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0F0F0F;--surface:#181818;--surface2:#222;
+  --pink:#E8A0BF;--pink-dim:rgba(232,160,191,0.12);
+  --blue:#7EB8D4;--blue-dim:rgba(126,184,212,0.12);
+  --text:#F0ECE8;--muted:#777;
+  --warn:#F4B942;--warn-dim:rgba(244,185,66,0.12);
+  --danger:#E05C5C;--danger-dim:rgba(224,92,92,0.12);
+  --done:#4CAF82;--done-dim:rgba(76,175,130,0.1);
+  --line:rgba(255,255,255,0.07);
+  --timeline-line:rgba(232,160,191,0.2);
+  --r:14px;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:80px;}
+
+/* HEADER */
+.hero{padding:36px 20px 24px;text-align:center;border-bottom:1px solid var(--line);position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:340px;height:340px;background:radial-gradient(circle,rgba(232,160,191,0.07) 0%,transparent 70%);pointer-events:none;}
+.hero-eyebrow{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--pink);font-weight:500;margin-bottom:8px;}
+.hero-title{font-family:'DM Serif Display',serif;font-size:clamp(30px,7vw,52px);line-height:1.05;}
+.hero-title em{font-style:italic;color:var(--pink);}
+.hero-countdown{margin-top:12px;display:inline-flex;align-items:baseline;gap:8px;}
+.cnt-num{font-family:'DM Serif Display',serif;font-size:clamp(40px,9vw,64px);color:var(--pink);line-height:1;}
+.cnt-lbl{font-size:15px;color:var(--muted);font-weight:300;}
+
+/* TABS */
+.tabs-bar{display:flex;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:10;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.tabs-bar::-webkit-scrollbar{display:none;}
+.tab-btn{flex:1 0 auto;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap;}
+.tab-btn.active{color:var(--pink);border-bottom-color:var(--pink);}
+.tab-btn:hover:not(.active){color:var(--text);}
+
+/* PANEL */
+.panel{display:none;max-width:680px;margin:0 auto;padding:24px 16px 0;}
+.panel.active{display:block;}
+.section-hint{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+
+/* ── TASKS ── */
+.progress-strip{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.pbar-track{flex:1;height:4px;background:var(--line);border-radius:99px;overflow:hidden;}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--pink),#f0d0e0);border-radius:99px;transition:width .4s;}
+.pbar-lbl{font-size:13px;color:var(--muted);white-space:nowrap;}
+.timeline{position:relative;}
+.timeline::before{content:'';position:absolute;top:0;bottom:0;left:28px;width:1px;background:var(--timeline-line);}
+.month-lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--pink);font-weight:600;padding:14px 0 8px 56px;}
+.task-row{display:flex;align-items:flex-start;gap:14px;padding:8px 0;}
+.task-dot{width:18px;height:18px;min-width:18px;border-radius:50%;border:2px solid var(--timeline-line);background:var(--bg);margin-top:3px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;}
+.task-dot.done{background:var(--done);border-color:var(--done);}
+.task-dot.done::after{content:'✓';color:#fff;font-size:9px;font-weight:700;}
+.task-dot.hot{border-color:var(--danger);}
+.task-dot.warn{border-color:var(--warn);}
+.task-card{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:.15s;position:relative;}
+.task-card:hover{background:var(--surface2);}
+.task-card.done{background:var(--done-dim);border-color:rgba(76,175,130,.15);opacity:.7;}
+.task-card.hot{background:var(--danger-dim);border-color:rgba(224,92,92,.2);}
+.task-card.warn{background:var(--warn-dim);border-color:rgba(244,185,66,.2);}
+.task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.task-text{font-size:14px;line-height:1.4;flex:1;}
+.task-card.done .task-text{text-decoration:line-through;color:var(--muted);}
+.chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.chip.done{background:rgba(76,175,130,.2);color:var(--done);}
+.chip.hot{background:rgba(224,92,92,.2);color:var(--danger);}
+.chip.warn{background:rgba(244,185,66,.2);color:var(--warn);}
+.chip.ok{background:rgba(232,160,191,.15);color:var(--pink);}
+.chip.asap{background:rgba(224,92,92,.25);color:var(--danger);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.task-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+.days-red{color:var(--danger);font-weight:600;}
+.days-yellow{color:var(--warn);font-weight:600;}
+.days-green{color:var(--done);font-weight:600;}
+.del-x{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;opacity:0;transition:.15s;padding:2px 4px;}
+.task-card:hover .del-x{opacity:.6;}
+.del-x:hover{opacity:1!important;color:var(--danger);}
+
+/* ── GUESTS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;}
+.stat-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;text-align:center;}
+.stat-num{font-family:'DM Serif Display',serif;font-size:26px;color:var(--pink);line-height:1;}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.filt-btn{font-size:12px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;transition:.15s;}
+.filt-btn.active{background:var(--pink-dim);border-color:rgba(232,160,191,.3);color:var(--pink);}
+.filt-btn:hover:not(.active){color:var(--text);}
+.guest-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+.guest-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.guest-card.confirmed{border-color:rgba(76,175,130,.2);}
+.guest-card.declined{opacity:.5;}
+.guest-avatar{width:36px;height:36px;min-width:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-family:'DM Serif Display',serif;}
+.av-her{background:rgba(232,160,191,.2);color:var(--pink);}
+.av-his{background:rgba(126,184,212,.2);color:var(--blue);}
+.guest-info{flex:1;min-width:0;}
+.guest-name{font-size:14px;font-weight:500;line-height:1.2;}
+.guest-sub{font-size:12px;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.badge{font-size:11px;font-weight:500;padding:2px 7px;border-radius:99px;}
+.badge.ceremony{background:rgba(232,160,191,.15);color:var(--pink);}
+.badge.party{background:rgba(126,184,212,.15);color:var(--blue);}
+.badge.both{background:rgba(76,175,130,.15);color:var(--done);}
+.badge.plus1{background:rgba(244,185,66,.15);color:var(--warn);}
+.badge.plus1-confirmed{background:rgba(76,175,130,.15);color:var(--done);}
+.guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.status-dot{width:10px;height:10px;border-radius:50%;}
+.status-dot.pending{background:var(--muted);}
+.status-dot.confirmed{background:var(--done);}
+.status-dot.declined{background:var(--danger);}
+.row-actions{display:flex;gap:6px;}
+.icon-btn{background:none;border:1px solid var(--line);border-radius:8px;padding:4px 8px;color:var(--muted);cursor:pointer;font-size:12px;transition:.15s;}
+.icon-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.icon-btn.danger:hover{color:var(--danger);border-color:rgba(224,92,92,.3);}
+
+/* ── BUDGET ── */
+.budget-cap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.budget-cap label{font-size:13px;color:var(--muted);}
+.budget-cap input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);width:160px;text-align:right;}
+.budget-cap input:focus{outline:1px solid var(--pink);}
+.budget-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.bsum-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 10px;text-align:center;}
+.bsum-num{font-family:'DM Serif Display',serif;font-size:20px;line-height:1.1;}
+.bsum-lbl{font-size:11px;color:var(--muted);margin-top:4px;}
+.cap-note{font-size:12.5px;text-align:center;margin-bottom:18px;padding:8px;border-radius:10px;}
+.cap-note.under{color:var(--done);background:var(--done-dim);}
+.cap-note.over{color:var(--danger);background:var(--danger-dim);}
+.budget-cat{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--pink);font-weight:600;margin:18px 0 8px;}
+.budget-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;}
+.bi-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
+.bi-name{font-size:14px;font-weight:500;}
+.bi-amounts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bi-field{display:flex;flex-direction:column;gap:4px;}
+.bi-field span{font-size:11px;color:var(--muted);}
+.bi-field input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);width:100%;text-align:right;}
+.bi-field input:focus{outline:1px solid var(--pink);}
+.bi-field.paid input{color:var(--done);}
+.bi-remain{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;}
+
+/* ── CONTACTS ── */
+.contact-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;}
+.cc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.cc-role{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--pink);font-weight:600;}
+.cc-name{font-size:15px;font-weight:500;margin-top:3px;}
+.cc-name.empty{color:var(--muted);font-style:italic;font-weight:400;}
+.cc-contact{font-size:13px;color:var(--blue);margin-top:4px;word-break:break-word;}
+.cc-note{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.4;}
+.cc-status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;cursor:pointer;}
+.cc-status.search{background:rgba(119,119,119,.2);color:var(--muted);}
+.cc-status.talk{background:rgba(244,185,66,.18);color:var(--warn);}
+.cc-status.booked{background:rgba(76,175,130,.18);color:var(--done);}
+
+/* ── NOTES ── */
+.note-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;position:relative;}
+.note-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--pink);margin-bottom:6px;}
+.note-text{font-size:14px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+
+/* FORMS */
+.add-section{margin-top:8px;}
+.add-section details{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.add-section details summary{padding:12px 14px;cursor:pointer;font-size:14px;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;}
+.add-section details summary:hover{color:var(--text);}
+.add-section details[open] summary{border-bottom:1px solid var(--line);color:var(--text);}
+.add-form{padding:14px;display:flex;flex-direction:column;gap:10px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.add-form input,.add-form select,.add-form textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);width:100%;}
+.add-form textarea{resize:vertical;min-height:70px;}
+.add-form input::placeholder,.add-form textarea::placeholder{color:var(--muted);}
+.add-form input:focus,.add-form select:focus,.add-form textarea:focus{outline:1px solid var(--pink);}
+.add-form select option{background:var(--bg);}
+.submit-btn{background:var(--pink);color:#0F0F0F;border:none;border-radius:10px;padding:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;}
+.submit-btn:hover{opacity:.9;}
+.empty-state{text-align:center;color:var(--muted);padding:32px 0;font-size:14px;line-height:1.5;}
+
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .form-row{grid-template-columns:1fr;}
+  .timeline::before{left:22px;}
+  .month-lbl{padding-left:46px;}
+  .tab-btn{flex:0 0 auto;padding:13px 14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">06 вересня 2026</div>
+  <h1 class="hero-title">Наше <em>весілля</em></h1>
+  <div class="hero-countdown">
+    <span class="cnt-num" id="daysLeft">—</span>
+    <span class="cnt-lbl">днів залишилось</span>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab-btn active" data-tab="tasks">✅ Завдання</button>
+  <button class="tab-btn" data-tab="guests">👥 Гості</button>
+  <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
+  <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
+  <button class="tab-btn" data-tab="notes">📝 Нотатки</button>
+</div>
+
+<!-- TASKS -->
+<div class="panel active" id="tab-tasks">
+  <div class="progress-strip">
+    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
+    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
+  </div>
+  <div class="timeline" id="timeline"></div>
+  <div class="add-section" style="margin-top:24px;">
+    <details>
+      <summary>＋ Додати завдання</summary>
+      <div class="add-form">
+        <input type="text" id="newTaskText" placeholder="Назва завдання…">
+        <input type="date" id="newTaskDate">
+        <button class="submit-btn" id="addTaskBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- GUESTS -->
+<div class="panel" id="tab-guests">
+  <div class="stats-grid" id="guestStats"></div>
+  <div class="filters">
+    <button class="filt-btn active" data-f="all">Всі</button>
+    <button class="filt-btn" data-f="her">Мої</button>
+    <button class="filt-btn" data-f="his">Його</button>
+    <button class="filt-btn" data-f="ceremony">Розпис</button>
+    <button class="filt-btn" data-f="party">Вечірка</button>
+    <button class="filt-btn" data-f="plus1">+1</button>
+    <button class="filt-btn" data-f="pending">Не підтвердили</button>
+  </div>
+  <div class="guest-list" id="guestList"></div>
+  <div class="add-section">
+    <details>
+      <summary>＋ Додати гостя</summary>
+      <div class="add-form">
+        <input type="text" id="gName" placeholder="Імʼя гостя…">
+        <div class="form-row">
+          <select id="gSide">
+            <option value="her">Мої (нареченої)</option>
+            <option value="his">Його (нареченого)</option>
+          </select>
+          <select id="gEvent">
+            <option value="both">Розпис + вечірка</option>
+            <option value="ceremony">Тільки розпис</option>
+            <option value="party">Тільки вечірка</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <select id="gStatus">
+            <option value="pending">Очікує підтвердження</option>
+            <option value="confirmed">Підтвердив(ла)</option>
+            <option value="declined">Відмовив(ла)</option>
+          </select>
+          <select id="gPlus1">
+            <option value="none">Без +1</option>
+            <option value="pending">+1 (не підтверджено)</option>
+            <option value="confirmed">+1 (підтверджено)</option>
+          </select>
+        </div>
+        <button class="submit-btn" id="addGuestBtn">Додати гостя</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- BUDGET -->
+<div class="panel" id="tab-budget">
+  <div class="budget-cap">
+    <label for="capInput">Орієнтовний бюджет</label>
+    <input type="number" id="capInput" placeholder="0" min="0">
+  </div>
+  <div class="budget-summary">
+    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--pink)">0</div><div class="bsum-lbl">Заплановано</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
+  </div>
+  <div id="capNote"></div>
+  <div id="budgetList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати статтю витрат</summary>
+      <div class="add-form">
+        <input type="text" id="bName" placeholder="Назва (напр. Декор залу)…">
+        <select id="bCat">
+          <option>Локація</option><option>Їжа / Кейтеринг</option><option>Фото / Відео</option>
+          <option>Вбрання</option><option>Каблучки</option><option>Торт</option>
+          <option>Декор / Флористика</option><option>Музика / Ведучий</option>
+          <option>Краса (візаж, зачіска)</option><option>Транспорт</option><option>Інше</option>
+        </select>
+        <div class="form-row">
+          <input type="number" id="bPlanned" placeholder="Заплановано, ₴" min="0">
+          <input type="number" id="bPaid" placeholder="Сплачено, ₴" min="0">
+        </div>
+        <button class="submit-btn" id="addBudgetBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- CONTACTS -->
+<div class="panel" id="tab-contacts">
+  <div class="section-hint">Підрядники й контакти. Тицьни на статус, щоб змінити: 🔍 Шукаємо → 💬 На звʼязку → ✅ Заброньовано.</div>
+  <div id="contactList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати контакт</summary>
+      <div class="add-form">
+        <div class="form-row">
+          <input type="text" id="cRole" placeholder="Роль (напр. Фотограф)">
+          <input type="text" id="cName" placeholder="Імʼя / назва">
+        </div>
+        <input type="text" id="cContact" placeholder="Телефон / Instagram / сайт">
+        <input type="text" id="cNote" placeholder="Нотатка (ціна, деталі…)">
+        <button class="submit-btn" id="addContactBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- NOTES -->
+<div class="panel" id="tab-notes">
+  <div class="section-hint">Ідеї, списки, що завгодно — все, що треба тримати під рукою.</div>
+  <div id="noteList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати нотатку</summary>
+      <div class="add-form">
+        <input type="text" id="nTitle" placeholder="Заголовок (необовʼязково)">
+        <textarea id="nText" placeholder="Текст нотатки…"></textarea>
+        <button class="submit-btn" id="addNoteBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+const WEDDING = new Date('2026-09-06');
+
+/* ── PORTABLE STORAGE (localStorage + in-memory fallback) ── */
+const _mem = {};
+const DB = {
+  get(k){ try{ return localStorage.getItem(k); }catch{ return _mem[k] ?? null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch{ _mem[k]=v; } }
+};
+function loadJSON(key, fallback){
+  const raw = DB.get(key);
+  if(raw===null) return JSON.parse(JSON.stringify(fallback));
+  try{ return JSON.parse(raw); }catch{ return JSON.parse(JSON.stringify(fallback)); }
+}
+function saveJSON(key, val){ DB.set(key, JSON.stringify(val)); }
+
+/* ── DEFAULTS ── */
+const DEFAULT_TASKS = [
+  {id:'t1',text:'Запрошення цифрові',deadline:'2026-06-17',done:false},
+  {id:'t2',text:'Локація — аванс за Софі + бронь Хвильового',deadline:'2026-06-18',done:false},
+  {id:'t3',text:'Фотограф + відеограф',deadline:'2026-06-30',done:false},
+  {id:'t4',text:'Вбрання нареченої',deadline:'2026-06-30',done:false},
+  {id:'t5',text:'Вбрання нареченого',deadline:'2026-06-30',done:false},
+  {id:'t6',text:'Програма для Хвильового',deadline:'2026-07-06',done:false},
+  {id:'t7',text:'Програма для Софі',deadline:'2026-07-12',done:false},
+  {id:'t8',text:'Каблучки',deadline:'2026-07-30',done:false},
+  {id:'t9',text:'Запрошення паперові',deadline:'2026-08-01',done:false},
+  {id:'t10',text:'Розсадка та меню в Софі',deadline:'2026-08-15',done:false},
+  {id:'t11',text:'Торт',deadline:'2026-08-15',done:false},
+  {id:'t12',text:'Обітниці',deadline:'2026-08-15',done:false},
+  {id:'t13',text:'Обрати дружку / дружба',deadline:null,done:false,asap:true},
+  {id:'t14',text:'Трансфер — координація',deadline:null,done:false,asap:true},
+  {id:'t15',text:'Записатись у Дію (4–5 вересня)',deadline:null,done:false,asap:true},
+];
+const DEFAULT_BUDGET = [
+  {id:'b1',name:'Локація — Хвильовий',cat:'Локація',planned:0,paid:0},
+  {id:'b2',name:'Ресторан — Софі',cat:'Локація',planned:0,paid:0},
+  {id:'b3',name:'Меню / кейтеринг',cat:'Їжа / Кейтеринг',planned:0,paid:0},
+  {id:'b4',name:'Фотограф',cat:'Фото / Відео',planned:0,paid:0},
+  {id:'b5',name:'Відеограф',cat:'Фото / Відео',planned:0,paid:0},
+  {id:'b6',name:'Вбрання нареченої',cat:'Вбрання',planned:0,paid:0},
+  {id:'b7',name:'Вбрання нареченого',cat:'Вбрання',planned:0,paid:0},
+  {id:'b8',name:'Каблучки',cat:'Каблучки',planned:0,paid:0},
+  {id:'b9',name:'Торт',cat:'Торт',planned:0,paid:0},
+  {id:'b10',name:'Декор / квіти',cat:'Декор / Флористика',planned:0,paid:0},
+  {id:'b11',name:'Візаж + зачіска',cat:'Краса (візаж, зачіска)',planned:0,paid:0},
+];
+const DEFAULT_CONTACTS = [
+  {id:'c1',role:'Фотограф',name:'',contact:'',note:'',status:'search'},
+  {id:'c2',role:'Відеограф',name:'',contact:'',note:'',status:'search'},
+  {id:'c3',role:'Локація — Софі',name:'',contact:'',note:'',status:'search'},
+  {id:'c4',role:'Локація — Хвильовий',name:'',contact:'',note:'',status:'search'},
+  {id:'c5',role:'Кондитер (торт)',name:'',contact:'',note:'',status:'search'},
+  {id:'c6',role:'Музика / Ведучий',name:'',contact:'',note:'',status:'search'},
+  {id:'c7',role:'Візаж + зачіска',name:'',contact:'',note:'',status:'search'},
+];
+
+let tasks    = loadJSON('wed-tasks', DEFAULT_TASKS);
+let guests   = loadJSON('wed-guests', []);
+let budget   = loadJSON('wed-budget', DEFAULT_BUDGET);
+let contacts = loadJSON('wed-contacts', DEFAULT_CONTACTS);
+let notes    = loadJSON('wed-notes', []);
+let budgetCap= loadJSON('wed-cap', 0);
+
+/* ── HELPERS ── */
+const today = ()=> new Date(new Date().toDateString());
+const daysUntil = s => s ? Math.ceil((new Date(s)-today())/86400000) : null;
+const daysUntilWedding = ()=> Math.ceil((WEDDING-today())/86400000);
+const fmtDate = s => { if(!s)return''; const p=s.split('-'); return`${p[2]}.${p[1]}`; };
+const fmtMoney = n => (Number(n)||0).toLocaleString('uk-UA') + ' ₴';
+const MONTHS = ['','Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+
+function getStatus(t){
+  if(t.done) return'done';
+  if(t.asap&&!t.deadline) return'asap';
+  const d=daysUntil(t.deadline);
+  if(d===null) return'ok';
+  if(d<0||d<=7) return'hot';
+  if(d<=21) return'warn';
+  return'ok';
+}
+
+/* ════ TASKS ════ */
+function renderTasks(){
+  const total=tasks.length, done=tasks.filter(t=>t.done).length;
+  document.getElementById('pbarFill').style.width=(total?Math.round(done/total*100):0)+'%';
+  document.getElementById('pbarLabel').textContent=`${done} / ${total} виконано`;
+
+  const sorted=[...tasks].sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  const groups={};
+  sorted.forEach(t=>{
+    const key=t.deadline?`${MONTHS[+t.deadline.split('-')[1]]} ${t.deadline.split('-')[0]}`:'no-deadline';
+    (groups[key]=groups[key]||[]).push(t);
+  });
+
+  const tl=document.getElementById('timeline'); tl.innerHTML='';
+  Object.entries(groups).forEach(([month,mt])=>{
+    const grp=document.createElement('div');
+    const lbl=document.createElement('div'); lbl.className='month-lbl';
+    lbl.textContent=month==='no-deadline'?'Без дедлайну':month; grp.appendChild(lbl);
+    mt.forEach(task=>{
+      const st=getStatus(task), days=daysUntil(task.deadline);
+      const row=document.createElement('div'); row.className='task-row';
+      const dot=document.createElement('div');
+      dot.className=`task-dot ${st==='done'?'done':st==='hot'||st==='asap'?'hot':st==='warn'?'warn':''}`;
+      dot.onclick=()=>toggleTask(task.id);
+      const card=document.createElement('div');
+      card.className=`task-card ${st==='done'?'done':st==='hot'||st==='asap'?'hot':st==='warn'?'warn':''}`;
+      card.onclick=()=>toggleTask(task.id);
+      const chipTxt=st==='done'?'Готово ✓':st==='asap'?'ASAP':st==='hot'&&days<0?'Прострочено':st==='hot'?'🔥 Горить':st==='warn'?'⚡ Скоро':'У часі';
+      let metaHtml='';
+      if(task.deadline){
+        const dc=!task.done&&days!==null?(days<=7?'days-red':days<=21?'days-yellow':'days-green'):'';
+        const dl=!task.done&&days!==null?` · <span class="${dc}">${days<0?Math.abs(days)+' дн. тому':days===0?'Сьогодні!':days+' дн.'}</span>`:'';
+        metaHtml=`<div class="task-meta">до ${fmtDate(task.deadline)}${dl}</div>`;
+      }
+      card.innerHTML=`<button class="del-x" data-del="${task.id}">✕</button>
+        <div class="task-top"><div class="task-text">${esc(task.text)}</div>
+        <span class="chip ${st==='asap'?'asap':st}">${chipTxt}</span></div>${metaHtml}`;
+      card.querySelector('[data-del]').addEventListener('click',e=>{
+        e.stopPropagation(); tasks=tasks.filter(x=>x.id!==task.id); saveJSON('wed-tasks',tasks); renderTasks();
+      });
+      row.appendChild(dot); row.appendChild(card); grp.appendChild(row);
+    });
+    tl.appendChild(grp);
+  });
+}
+function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; saveJSON('wed-tasks',tasks); renderTasks();} }
+document.getElementById('addTaskBtn').onclick=()=>{
+  const text=val('newTaskText'); if(!text)return;
+  tasks.push({id:'u'+Date.now(),text,deadline:document.getElementById('newTaskDate').value||null,done:false});
+  document.getElementById('newTaskText').value=''; document.getElementById('newTaskDate').value='';
+  saveJSON('wed-tasks',tasks); renderTasks();
+};
+
+/* ════ GUESTS ════ */
+let activeFilter='all';
+const countPeople=g=>1+(g.plus1==='confirmed'?1:0);
+const totalPeople=()=>guests.filter(g=>g.status!=='declined').reduce((s,g)=>s+countPeople(g),0);
+function applyFilter(g,f){
+  if(f==='all')return true;
+  if(f==='her')return g.side==='her';
+  if(f==='his')return g.side==='his';
+  if(f==='ceremony')return g.event==='ceremony'||g.event==='both';
+  if(f==='party')return g.event==='party'||g.event==='both';
+  if(f==='plus1')return g.plus1!=='none';
+  if(f==='pending')return g.status==='pending';
+  return true;
+}
+function renderGuests(){
+  const confirmed=guests.filter(g=>g.status==='confirmed').length;
+  const pending=guests.filter(g=>g.status==='pending').length;
+  document.getElementById('guestStats').innerHTML=`
+    <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--blue)">${totalPeople()}</div><div class="stat-lbl">Людей (з +1)</div></div>`;
+
+  const listEl=document.getElementById('guestList');
+  const filtered=guests.filter(g=>applyFilter(g,activeFilter));
+  if(!filtered.length){
+    listEl.innerHTML=`<div class="empty-state">${guests.length===0?'Гостей ще немає — додай першого 🌸':'Нікого за цим фільтром'}</div>`;
+    return;
+  }
+  listEl.innerHTML='';
+  filtered.forEach(g=>{
+    const initials=g.name.trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
+    const evBadge=g.event==='both'?'<span class="badge both">Розпис+вечірка</span>':g.event==='ceremony'?'<span class="badge ceremony">Розпис</span>':'<span class="badge party">Вечірка</span>';
+    const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
+    const card=document.createElement('div');
+    card.className=`guest-card ${g.status}`;
+    card.innerHTML=`
+      <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
+      <div class="guest-info">
+        <div class="guest-name">${esc(g.name)}</div>
+        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--pink)':'var(--blue)'}">${g.side==='her'?'Мої':'Його'}</span>${evBadge}${p1}</div>
+      </div>
+      <div class="guest-status">
+        <div class="row-actions">
+          ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm">✓</button>`:''}
+          ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline">✕</button>`:''}
+          <button class="icon-btn danger" data-id="${g.id}" data-a="del">🗑</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
+          <div class="status-dot ${g.status}"></div>
+          <span style="font-size:11px;color:var(--muted)">${g.status==='confirmed'?'Підтвердив':g.status==='declined'?'Відмовив':'Очікує'}</span>
+        </div>
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-a]').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    const g=guests.find(x=>x.id===btn.dataset.id); if(!g)return;
+    const a=btn.dataset.a;
+    if(a==='confirm')g.status='confirmed';
+    else if(a==='decline')g.status='declined';
+    else if(a==='del')guests=guests.filter(x=>x.id!==g.id);
+    saveJSON('wed-guests',guests); renderGuests();
+  });
+}
+document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
+});
+document.getElementById('addGuestBtn').onclick=()=>{
+  const name=val('gName'); if(!name)return;
+  guests.push({id:'g'+Date.now(),name,side:val('gSide'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1')});
+  document.getElementById('gName').value=''; saveJSON('wed-guests',guests); renderGuests();
+};
+
+/* ════ BUDGET ════ */
+document.getElementById('capInput').value = budgetCap||'';
+document.getElementById('capInput').addEventListener('input',e=>{
+  budgetCap=Number(e.target.value)||0; saveJSON('wed-cap',budgetCap); renderBudget();
+});
+function renderBudget(){
+  const planned=budget.reduce((s,b)=>s+(Number(b.planned)||0),0);
+  const paid=budget.reduce((s,b)=>s+(Number(b.paid)||0),0);
+  document.getElementById('sumPlanned').textContent=fmtMoney(planned);
+  document.getElementById('sumPaid').textContent=fmtMoney(paid);
+  document.getElementById('sumRemain').textContent=fmtMoney(planned-paid);
+
+  const noteEl=document.getElementById('capNote');
+  if(budgetCap>0){
+    const diff=budgetCap-planned;
+    noteEl.className='cap-note '+(diff>=0?'under':'over');
+    noteEl.textContent=diff>=0?`В межах бюджету — лишається ${fmtMoney(diff)}`:`Перевищення бюджету на ${fmtMoney(-diff)}`;
+  } else noteEl.className='', noteEl.textContent='';
+
+  const groups={};
+  budget.forEach(b=>{(groups[b.cat]=groups[b.cat]||[]).push(b);});
+  const listEl=document.getElementById('budgetList'); listEl.innerHTML='';
+  if(!budget.length){ listEl.innerHTML='<div class="empty-state">Статей витрат ще немає</div>'; return; }
+  Object.entries(groups).forEach(([cat,items])=>{
+    const catTotal=items.reduce((s,b)=>s+(Number(b.planned)||0),0);
+    const h=document.createElement('div'); h.className='budget-cat';
+    h.textContent=`${cat} · ${fmtMoney(catTotal)}`; listEl.appendChild(h);
+    items.forEach(b=>{
+      const remain=(Number(b.planned)||0)-(Number(b.paid)||0);
+      const item=document.createElement('div'); item.className='budget-item';
+      item.innerHTML=`
+        <div class="bi-top"><div class="bi-name">${esc(b.name)}</div>
+          <button class="icon-btn danger" data-bdel="${b.id}">🗑</button></div>
+        <div class="bi-amounts">
+          <label class="bi-field"><span>Заплановано</span><input type="number" min="0" data-bid="${b.id}" data-fld="planned" value="${b.planned||''}" placeholder="0"></label>
+          <label class="bi-field paid"><span>Сплачено</span><input type="number" min="0" data-bid="${b.id}" data-fld="paid" value="${b.paid||''}" placeholder="0"></label>
+        </div>
+        <div class="bi-remain">${remain>0?'Доплатити: '+fmtMoney(remain):remain===0&&(b.planned>0)?'Сплачено повністю ✓':''}</div>`;
+      listEl.appendChild(item);
+    });
+  });
+  listEl.querySelectorAll('input[data-bid]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const b=budget.find(x=>x.id===inp.dataset.bid); if(!b)return;
+      b[inp.dataset.fld]=Number(inp.value)||0; saveJSON('wed-budget',budget); renderBudget();
+    });
+  });
+  listEl.querySelectorAll('[data-bdel]').forEach(btn=>btn.onclick=()=>{
+    budget=budget.filter(x=>x.id!==btn.dataset.bdel); saveJSON('wed-budget',budget); renderBudget();
+  });
+}
+document.getElementById('addBudgetBtn').onclick=()=>{
+  const name=val('bName'); if(!name)return;
+  budget.push({id:'b'+Date.now(),name,cat:val('bCat'),planned:Number(val('bPlanned'))||0,paid:Number(val('bPaid'))||0});
+  ['bName','bPlanned','bPaid'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-budget',budget); renderBudget();
+};
+
+/* ════ CONTACTS ════ */
+const CSTAT=['search','talk','booked'];
+const CSTAT_LBL={search:'🔍 Шукаємо',talk:'💬 На звʼязку',booked:'✅ Заброньовано'};
+function renderContacts(){
+  const listEl=document.getElementById('contactList'); listEl.innerHTML='';
+  if(!contacts.length){ listEl.innerHTML='<div class="empty-state">Контактів ще немає</div>'; return; }
+  contacts.forEach(c=>{
+    const card=document.createElement('div'); card.className='contact-card';
+    card.innerHTML=`
+      <div class="cc-top">
+        <div style="flex:1;min-width:0">
+          <div class="cc-role">${esc(c.role)}</div>
+          <div class="cc-name ${c.name?'':'empty'}">${c.name?esc(c.name):'не обрано'}</div>
+          ${c.contact?`<div class="cc-contact">${esc(c.contact)}</div>`:''}
+          ${c.note?`<div class="cc-note">${esc(c.note)}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+          <span class="cc-status ${c.status}" data-cid="${c.id}">${CSTAT_LBL[c.status]}</span>
+          <button class="icon-btn danger" data-cdel="${c.id}">🗑</button>
+        </div>
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-cid]').forEach(el=>el.onclick=()=>{
+    const c=contacts.find(x=>x.id===el.dataset.cid); if(!c)return;
+    c.status=CSTAT[(CSTAT.indexOf(c.status)+1)%CSTAT.length]; saveJSON('wed-contacts',contacts); renderContacts();
+  });
+  listEl.querySelectorAll('[data-cdel]').forEach(btn=>btn.onclick=()=>{
+    contacts=contacts.filter(x=>x.id!==btn.dataset.cdel); saveJSON('wed-contacts',contacts); renderContacts();
+  });
+}
+document.getElementById('addContactBtn').onclick=()=>{
+  const role=val('cRole')||'Контакт';
+  if(!val('cRole')&&!val('cName'))return;
+  contacts.push({id:'c'+Date.now(),role,name:val('cName'),contact:val('cContact'),note:val('cNote'),status:'search'});
+  ['cRole','cName','cContact','cNote'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-contacts',contacts); renderContacts();
+};
+
+/* ════ NOTES ════ */
+function renderNotes(){
+  const listEl=document.getElementById('noteList'); listEl.innerHTML='';
+  if(!notes.length){ listEl.innerHTML='<div class="empty-state">Нотаток ще немає 📝</div>'; return; }
+  notes.forEach(n=>{
+    const card=document.createElement('div'); card.className='note-card';
+    card.innerHTML=`<button class="del-x" data-ndel="${n.id}" style="opacity:.5">✕</button>
+      ${n.title?`<div class="note-title">${esc(n.title)}</div>`:''}
+      <div class="note-text">${esc(n.text)}</div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-ndel]').forEach(btn=>btn.onclick=()=>{
+    notes=notes.filter(x=>x.id!==btn.dataset.ndel); saveJSON('wed-notes',notes); renderNotes();
+  });
+}
+document.getElementById('addNoteBtn').onclick=()=>{
+  const text=val('nText'); if(!text)return;
+  notes.unshift({id:'n'+Date.now(),title:val('nTitle'),text});
+  document.getElementById('nTitle').value=''; document.getElementById('nText').value='';
+  saveJSON('wed-notes',notes); renderNotes();
+};
+
+/* ── UTILS ── */
+function val(id){ return document.getElementById(id).value.trim(); }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ── TABS ── */
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+});
+
+/* ── INIT ── */
+document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding());
+renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes();
+setInterval(()=>{ document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding()); },60000);
+</script>
+</body>
+</html>
