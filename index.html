@@ -110,6 +110,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .badge.ceremony{background:rgba(232,160,191,.15);color:var(--pink);}
 .badge.party{background:rgba(126,184,212,.15);color:var(--blue);}
 .badge.both{background:rgba(76,175,130,.15);color:var(--done);}
+.badge.grp-family{background:rgba(244,185,66,.15);color:var(--warn);cursor:pointer;}
+.badge.grp-friends{background:rgba(126,184,212,.15);color:var(--blue);cursor:pointer;}
 .badge.plus1{background:rgba(244,185,66,.15);color:var(--warn);}
 .badge.plus1-confirmed{background:rgba(76,175,130,.15);color:var(--done);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
@@ -265,6 +267,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <button class="filt-btn active" data-f="all">Всі</button>
     <button class="filt-btn" data-f="her">Мої</button>
     <button class="filt-btn" data-f="his">Його</button>
+    <button class="filt-btn" data-f="family">Родичі</button>
+    <button class="filt-btn" data-f="friends">Друзі</button>
     <button class="filt-btn" data-f="ceremony">Розпис</button>
     <button class="filt-btn" data-f="party">Вечірка</button>
     <button class="filt-btn" data-f="plus1">+1</button>
@@ -287,6 +291,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
             <option value="party">Тільки вечірка</option>
           </select>
         </div>
+        <select id="gGroup">
+          <option value="friends">Друзі</option>
+          <option value="family">Родичі</option>
+        </select>
         <div class="form-row">
           <select id="gStatus">
             <option value="pending">Очікує підтвердження</option>
@@ -546,6 +554,8 @@ function applyFilter(g,f){
   if(f==='all')return true;
   if(f==='her')return g.side==='her';
   if(f==='his')return g.side==='his';
+  if(f==='family')return (g.group||'friends')==='family';
+  if(f==='friends')return (g.group||'friends')==='friends';
   if(f==='ceremony')return g.event==='ceremony'||g.event==='both';
   if(f==='party')return g.event==='party'||g.event==='both';
   if(f==='plus1')return g.plus1!=='none';
@@ -571,6 +581,8 @@ function renderGuests(){
   filtered.forEach(g=>{
     const initials=g.name.trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
     const evBadge=g.event==='both'?'<span class="badge both">Розпис+вечірка</span>':g.event==='ceremony'?'<span class="badge ceremony">Розпис</span>':'<span class="badge party">Вечірка</span>';
+    const grp=g.group||'friends';
+    const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}`;
@@ -578,7 +590,7 @@ function renderGuests(){
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--pink)':'var(--blue)'}">${g.side==='her'?'Мої':'Його'}</span>${evBadge}${p1}</div>
+        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--pink)':'var(--blue)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}</div>
       </div>
       <div class="guest-status">
         <div class="row-actions">
@@ -602,6 +614,12 @@ function renderGuests(){
     else if(a==='del')guests=guests.filter(x=>x.id!==g.id);
     saveJSON('wed-guests',guests); renderGuests();
   });
+  listEl.querySelectorAll('[data-grp]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    const g=guests.find(x=>x.id===el.dataset.grp); if(!g)return;
+    g.group=(g.group||'friends')==='family'?'friends':'family';
+    saveJSON('wed-guests',guests); renderGuests();
+  });
 }
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -609,7 +627,7 @@ document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>
 });
 document.getElementById('addGuestBtn').onclick=()=>{
   const name=val('gName'); if(!name)return;
-  guests.push({id:'g'+Date.now(),name,side:val('gSide'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1')});
+  guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1')});
   document.getElementById('gName').value=''; saveJSON('wed-guests',guests); renderGuests();
 };
 
