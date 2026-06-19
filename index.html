@@ -174,6 +174,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .note-title{font-family:var(--serif);font-size:18px;color:var(--terra);margin-bottom:6px;}
 .note-text{font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
 
+/* ── IDEAS / LINKS ── */
+.idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
+.idea-thumb{width:100%;height:180px;object-fit:cover;background:var(--surface2);display:block;}
+.idea-body{padding:13px 15px;}
+.idea-loading{font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:6px;}
+.idea-title{font-size:14.5px;font-weight:600;line-height:1.32;word-break:break-word;}
+.idea-host{font-size:11px;color:var(--terra);margin-top:4px;letter-spacing:.02em;}
+.idea-desc{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.45;}
+.idea-note{font-size:13px;color:var(--text);margin-top:9px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+.idea-actions{margin-top:11px;}
+.idea-open{display:block;text-align:center;background:var(--terra);color:#fff;text-decoration:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;letter-spacing:.02em;}
+.idea-open:hover{background:#a86846;}
+.idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
+
+/* ── SCRIPT / SCENARIO ── */
+.script-row{position:relative;display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 15px;margin-bottom:8px;}
+.script-time{font-family:var(--serif);font-size:17px;color:var(--terra);min-width:52px;line-height:1.3;}
+.script-text{flex:1;font-size:14px;line-height:1.45;padding-right:14px;word-break:break-word;}
+.script-row .del-x{opacity:.5;}
+.script-row:hover .del-x{opacity:1;}
+
 /* FORMS */
 .add-section{margin-top:8px;}
 .add-section details{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
@@ -242,6 +263,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <button class="tab-btn active" data-tab="tasks">✅ Завдання</button>
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
+  <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
+  <button class="tab-btn" data-tab="script">📜 Сценарій</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
   <button class="tab-btn" data-tab="notes">📝 Нотатки</button>
 </div>
@@ -325,7 +348,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <input type="number" id="capInput" placeholder="0" min="0">
   </div>
   <div class="budget-summary">
-    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--pink)">0</div><div class="bsum-lbl">Заплановано</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--terra)">0</div><div class="bsum-lbl">Заплановано</div></div>
     <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
     <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
   </div>
@@ -388,6 +411,50 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   </div>
 </div>
 
+<!-- IDEAS / LOOK -->
+<div class="panel" id="tab-ideas">
+  <div class="section-hint">Кидай сюди посилання — апка сама підтягне фото, назву й опис. Магазини одягу, каблучки, ідеї та конкурси з Instagram чи Pinterest. Спершу обери розділ.</div>
+  <div class="filters" id="ideaFilters">
+    <button class="filt-btn active" data-i="her">👰 Вона</button>
+    <button class="filt-btn" data-i="his">🤵 Він</button>
+    <button class="filt-btn" data-i="rings">💍 Каблучки</button>
+    <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
+  </div>
+  <div id="ideaList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати посилання</summary>
+      <div class="add-form">
+        <input type="url" id="iUrl" placeholder="Встав посилання (Instagram, магазин, Pinterest…)" autocapitalize="none" spellcheck="false">
+        <input type="text" id="iNote" placeholder="Підпис / нотатка (необовʼязково)">
+        <button class="submit-btn" id="addIdeaBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- SCRIPT -->
+<div class="panel" id="tab-script">
+  <div class="section-hint">Хід дня по хвилинах. Окремо розпис у Софі та святкування у Хвильовому.</div>
+  <div class="filters" id="scriptTabs">
+    <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
+    <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
+  </div>
+  <div id="scriptList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати пункт сценарію</summary>
+      <div class="add-form">
+        <div class="form-row">
+          <input type="time" id="sTime">
+          <input type="text" id="sText" placeholder="Що відбувається…">
+        </div>
+        <button class="submit-btn" id="addScriptBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -404,7 +471,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -479,6 +546,9 @@ let budget   = loadJSON('wed-budget', DEFAULT_BUDGET);
 let contacts = loadJSON('wed-contacts', DEFAULT_CONTACTS);
 let notes    = loadJSON('wed-notes', []);
 let budgetCap= loadJSON('wed-cap', 0);
+let ideas       = loadJSON('wed-ideas', []);
+let scriptSofia = loadJSON('wed-scriptS', []);
+let scriptWave  = loadJSON('wed-scriptW', []);
 
 /* ── HELPERS ── */
 const today = ()=> new Date(new Date().toDateString());
@@ -574,7 +644,7 @@ function renderGuests(){
     <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--blue)">${totalPeople()}</div><div class="stat-lbl">Людей (з +1)</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople()}</div><div class="stat-lbl">Людей (з +1)</div></div>`;
 
   const listEl=document.getElementById('guestList');
   const filtered=guests.filter(g=>applyFilter(g,activeFilter));
@@ -595,7 +665,7 @@ function renderGuests(){
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--pink)':'var(--blue)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}</div>
+        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}</div>
       </div>
       <div class="guest-status">
         <div class="row-actions">
@@ -755,6 +825,95 @@ document.getElementById('addNoteBtn').onclick=()=>{
   saveJSON('wed-notes',notes); renderNotes();
 };
 
+/* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
+let activeIdea='her';
+function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
+async function fetchPreview(url){
+  try{
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url));
+    const j=await r.json();
+    if(j&&j.status==='success'&&j.data){
+      const d=j.data;
+      return {title:d.title||'', desc:d.description||'', img:(d.image&&d.image.url)||(d.logo&&d.logo.url)||''};
+    }
+  }catch(e){ console.warn('preview', e); }
+  return null;
+}
+function renderIdeas(){
+  const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
+  const items=ideas.filter(i=>i.cat===activeIdea);
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав перше посилання 🌸</div>'; return; }
+  items.forEach(it=>{
+    const host=hostOf(it.url);
+    const card=document.createElement('div'); card.className='idea-card';
+    card.innerHTML=`
+      <button class="del-x" data-idel="${it.id}">✕</button>
+      ${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
+      <div class="idea-body">
+        ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        <div class="idea-title">${esc(it.title||it.url)}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
+        ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
+        <div class="idea-actions"><a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
+    ideas=ideas.filter(x=>x.id!==b.dataset.idel); saveJSON('wed-ideas',ideas); renderIdeas();
+  });
+}
+document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
+});
+document.getElementById('addIdeaBtn').onclick=async()=>{
+  let url=val('iUrl'); if(!url)return;
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  const note=val('iNote'), id='i'+Date.now();
+  ideas.unshift({id,cat:activeIdea,url,title:'',desc:'',img:'',note,loading:true,ts:Date.now()});
+  document.getElementById('iUrl').value=''; document.getElementById('iNote').value='';
+  saveJSON('wed-ideas',ideas); renderIdeas();
+  const prev=await fetchPreview(url);
+  const cur=ideas.find(x=>x.id===id); if(!cur)return;
+  cur.loading=false;
+  if(prev){ cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+  saveJSON('wed-ideas',ideas); renderIdeas();
+};
+
+/* ════ SCRIPT / SCENARIO ════ */
+let activeScript='sofia';
+const scriptRef=()=> activeScript==='sofia'?scriptSofia:scriptWave;
+const scriptKey=()=> activeScript==='sofia'?'wed-scriptS':'wed-scriptW';
+function renderScripts(){
+  const arr=[...scriptRef()].sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
+  if(!arr.length){ listEl.innerHTML='<div class="empty-state">Сценарій ще порожній ✍️</div>'; return; }
+  arr.forEach(m=>{
+    const row=document.createElement('div'); row.className='script-row';
+    row.innerHTML=`<button class="del-x" data-sdel="${m.id}">✕</button>
+      <div class="script-time">${esc(m.time||'—')}</div>
+      <div class="script-text">${esc(m.text)}</div>`;
+    listEl.appendChild(row);
+  });
+  listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{
+    if(activeScript==='sofia') scriptSofia=scriptSofia.filter(x=>x.id!==b.dataset.sdel);
+    else scriptWave=scriptWave.filter(x=>x.id!==b.dataset.sdel);
+    saveJSON(scriptKey(),scriptRef()); renderScripts();
+  });
+}
+document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#scriptTabs .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeScript=btn.dataset.s; renderScripts();
+});
+document.getElementById('addScriptBtn').onclick=()=>{
+  const text=val('sText'); if(!text)return;
+  const item={id:'s'+Date.now(),time:document.getElementById('sTime').value||'',text};
+  if(activeScript==='sofia') scriptSofia.push(item); else scriptWave.push(item);
+  document.getElementById('sText').value=''; document.getElementById('sTime').value='';
+  saveJSON(scriptKey(),scriptRef()); renderScripts();
+};
+
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -769,7 +928,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts();
   document.getElementById('capInput').value = budgetCap||'';
 }
 document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding());
@@ -790,7 +949,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -801,6 +960,9 @@ function startSync(){
     if(Array.isArray(d.contacts)) contacts=d.contacts;
     if(Array.isArray(d.notes))    notes=d.notes;
     if(typeof d.cap==='number')   budgetCap=d.cap;
+    if(Array.isArray(d.ideas))       ideas=d.ideas;
+    if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
+    if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     // оновлюємо локальний кеш
     DB.set('wed-tasks',JSON.stringify(tasks));
     DB.set('wed-guests',JSON.stringify(guests));
@@ -808,6 +970,9 @@ function startSync(){
     DB.set('wed-contacts',JSON.stringify(contacts));
     DB.set('wed-notes',JSON.stringify(notes));
     DB.set('wed-cap',JSON.stringify(budgetCap));
+    DB.set('wed-ideas',JSON.stringify(ideas));
+    DB.set('wed-scriptS',JSON.stringify(scriptSofia));
+    DB.set('wed-scriptW',JSON.stringify(scriptWave));
     applyingSnapshot=false;
     renderAll();
   }, err=>{ console.warn('snapshot', err); });
