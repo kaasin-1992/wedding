@@ -221,7 +221,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 /* ── IDEAS / LINKS ── */
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
-.idea-thumb{width:100%;height:180px;object-fit:cover;background:var(--surface2);display:block;}
+.idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
+.idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
+.idea-thumb-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+  background:linear-gradient(135deg,var(--surface2),var(--terra-dim));text-align:center;padding:14px;}
+.idea-fav{width:46px;height:46px;border-radius:11px;background:#fff;padding:6px;object-fit:contain;box-shadow:0 3px 10px rgba(74,65,56,.12);}
+.idea-fav-emoji{font-size:34px;line-height:1;}
+.idea-fallback-host{font-size:13px;color:var(--terra);font-weight:600;letter-spacing:.02em;word-break:break-word;}
 .idea-body{padding:13px 15px;}
 .idea-loading{font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:6px;}
 .idea-title{font-size:14.5px;font-weight:600;line-height:1.32;word-break:break-word;}
@@ -1116,19 +1122,34 @@ document.getElementById('addNoteBtn').onclick=()=>{
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
-async function fetchPreview(url){
-  const ctrl=new AbortController();
-  const t=setTimeout(()=>ctrl.abort(), 12000);
+function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
+async function microlink(url, extra){
+  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), 14000);
   try{
-    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url), {signal:ctrl.signal});
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url)+(extra||''), {signal:ctrl.signal});
     const j=await r.json();
-    if(j&&j.status==='success'&&j.data){
-      const d=j.data;
-      return {title:d.title||'', desc:d.description||'', img:(d.image&&d.image.url)||(d.logo&&d.logo.url)||''};
-    }
-  }catch(e){ console.warn('preview', e); }
+    return (j&&j.status==='success'&&j.data)?j.data:null;
+  }catch(e){ console.warn('preview', e); return null; }
   finally{ clearTimeout(t); }
-  return null;
+}
+async function fetchPreview(url){
+  const host=hostOf(url);
+  const favicon=faviconOf(host);
+  const d=await microlink(url);
+  let title='', desc='', img='', icon=favicon;
+  if(d){
+    title=d.title||''; desc=d.description||'';
+    img=(d.image&&d.image.url)||'';
+    icon=(d.logo&&d.logo.url)||favicon;
+  }
+  // нема картинки товару/посту — пробуємо скрін самої сторінки
+  if(!img){
+    const s=await microlink(url,'&screenshot=true');
+    if(s&&s.screenshot&&s.screenshot.url) img=s.screenshot.url;
+    if(s&&!title&&s.title) title=s.title;
+  }
+  // прев'ю є завжди: хоч фавікон + назва сайту
+  return {title, desc, img, icon, host};
 }
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
@@ -1136,13 +1157,19 @@ function renderIdeas(){
   if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав перше посилання 🌸</div>'; return; }
   items.forEach(it=>{
     const host=hostOf(it.url);
+    const fav=it.icon||faviconOf(host);
+    const fallback=`<div class="idea-thumb-fallback">
+        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:'<div class="idea-fav-emoji">🔗</div>'}
+        <div class="idea-fallback-host">${esc(host||'посилання')}</div>
+      </div>`;
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}</div>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
-      ${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
+      ${thumb}
       <div class="idea-body">
         ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
-        <div class="idea-title">${esc(it.title||it.url)}</div>
+        <div class="idea-title">${esc(it.title||host||it.url)}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
@@ -1168,7 +1195,7 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   const prev=await fetchPreview(url);
   const cur=ideas.find(x=>x.id===id); if(!cur)return;
   cur.loading=false;
-  if(prev){ cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+  if(prev){ cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
   saveJSON('wed-ideas',ideas); renderIdeas();
 };
 
