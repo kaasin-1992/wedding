@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script>try{if(localStorage.getItem('wed-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <style>
 /* ════════ MINIMAL BOHO WEDDING THEME ════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -30,7 +31,23 @@
   --sans:'DM Sans',-apple-system,sans-serif;
   --r:14px;
 }
-html{background:var(--bg);}
+/* ════ ВЕЧІРНЯ (ТЕМНА) ТЕМА ════ */
+:root.dark{
+  --bg:#1E1A17;--surface:#29231F;--surface2:#322A25;
+  --text:#EDE4D8;--muted:#A89682;
+  --terra:#D89570;--terra-dim:#3A2A22;
+  --sage:#A6B391;--sage-dim:#2A2F24;
+  --rose:#D9AFA6;--rose-dim:#382A27;
+  --gold:#C9AE73;
+  --done:#9DB37E;--done-dim:#29301F;
+  --warn:#D2A85E;--warn-dim:#352B1C;
+  --danger:#CE7E64;--danger-dim:#3A251E;
+  --line:#3D342D;
+}
+html{background:var(--bg);transition:background .25s;}
+body{transition:background .25s,color .25s;}
+.theme-toggle{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--terra);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;line-height:1;z-index:5;}
+.theme-toggle:hover{border-color:var(--terra);}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:400;font-size:14px;line-height:1.5;
   max-width:720px;margin:0 auto;min-height:100vh;padding-bottom:90px;}
 
@@ -269,6 +286,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 <div class="sync-pill" id="syncPill"><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Синхронізовано</span></div>
 
 <div class="hero">
+  <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
   <div class="hero-eyebrow">06 вересня 2026</div>
   <h1 class="hero-title">Наше <em>весілля</em></h1>
   <div class="hero-countdown">
@@ -1247,6 +1265,17 @@ if(auth){
   // Firebase недоступний — працюємо локально, без екрана входу
   document.getElementById('login').style.display='none';
 }
+
+/* ── ТЕМА (світла / вечірня) ── */
+const themeBtn=document.getElementById('themeBtn');
+function applyTheme(dark){
+  document.documentElement.classList.toggle('dark',dark);
+  themeBtn.textContent=dark?'☀️':'🌙';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',dark?'#1E1A17':'#F6F1E8');
+  try{localStorage.setItem('wed-theme',dark?'dark':'light');}catch(e){}
+}
+themeBtn.onclick=()=>applyTheme(!document.documentElement.classList.contains('dark'));
+applyTheme(document.documentElement.classList.contains('dark'));
 
 /* ── PWA: офлайн + іконка на екрані ── */
 if('serviceWorker' in navigator){
