@@ -98,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .del-x:hover{opacity:1!important;color:var(--danger);}
 
 /* ── GUESTS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
 .stat-box{padding:13px 8px;text-align:center;}
 .stat-num{font-family:var(--serif);font-size:26px;color:var(--terra);line-height:1;}
 .stat-lbl{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.3;}
@@ -126,7 +126,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .guest-card.maybe{border-color:var(--warn);border-style:dashed;}
 .icon-btn.active-maybe{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
 .badge.wparty{background:var(--rose-dim);color:var(--rose);}
-.icon-btn.active-wparty{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.badge.kids{background:var(--sage-dim);color:var(--sage);}
+/* compact toggle chips (дружка / під питанням / діти) */
+.attr-row{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
+.attr-chip{font-size:11px;line-height:1;padding:4px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:.15s;opacity:.7;}
+.attr-chip.on{opacity:1;}
+.attr-chip.on.wp{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.attr-chip.on.mb{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
+.attr-chip.on.kd{background:var(--sage-dim);border-color:var(--sage);color:var(--sage);}
 
 /* ── HOTEL ── */
 .hotel-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
@@ -354,6 +361,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
             <option value="confirmed">+1 (підтверджено)</option>
           </select>
         </div>
+        <select id="gKids">
+          <option value="0">Без дітей</option>
+          <option value="1">З дитиною (1)</option>
+          <option value="2">З дітьми (2)</option>
+          <option value="3">З дітьми (3)</option>
+        </select>
         <button class="submit-btn" id="addGuestBtn">Додати гостя</button>
       </div>
     </details>
@@ -666,8 +679,9 @@ document.getElementById('addTaskBtn').onclick=()=>{
 
 /* ════ GUESTS ════ */
 let activeFilter='all';
-const countPeople=g=>1+(g.plus1==='confirmed'?1:0);
-const totalPeople=()=>guests.filter(g=>g.status!=='declined').reduce((s,g)=>s+countPeople(g),0);
+const headCount=g=>1+(g.plus1==='confirmed'?1:0)+(Number(g.kids)||0);
+const totalPeople=()=>guests.filter(g=>g.status!=='declined').reduce((s,g)=>s+headCount(g),0);
+const peopleAt=ev=>guests.filter(g=>g.status!=='declined'&&(g.event===ev||g.event==='both')).reduce((s,g)=>s+headCount(g),0);
 function applyFilter(g,f){
   if(f==='all')return true;
   if(f==='her')return g.side==='her';
@@ -689,7 +703,9 @@ function renderGuests(){
     <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople()}</div><div class="stat-lbl">Людей (з +1)</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople()}</div><div class="stat-lbl">Людей разом</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt('ceremony')}</div><div class="stat-lbl">На розписі</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt('party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
   const filtered=guests.filter(g=>applyFilter(g,activeFilter));
@@ -704,20 +720,24 @@ function renderGuests(){
     const grp=g.group||'friends';
     const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
-    const maybeBadge=g.maybe?'<span class="badge maybe">🤔 Під питанням</span>':'';
-    const wpartyBadge=g.wparty?`<span class="badge wparty">${g.side==='her'?'💐 Дружка':'🤵 Дружок'}</span>`:'';
+    const kids=Number(g.kids)||0;
+    const wpLbl=g.side==='her'?'💐 Дружка':'🤵 Дружок';
+    const attrRow=`<div class="attr-row">
+      <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}">${wpLbl}</span>
+      <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}">🤔 Під питанням</span>
+      <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
+    </div>`;
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}${g.maybe?' maybe':''}`;
     card.innerHTML=`
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}${wpartyBadge}${maybeBadge}</div>
+        <div class="guest-sub">${grpBadge}${evBadge}${p1}</div>
+        ${attrRow}
       </div>
       <div class="guest-status">
         <div class="row-actions">
-          <button class="icon-btn${g.wparty?' active-wparty':''}" data-id="${g.id}" data-a="wparty" title="Дружка / Дружок">💐</button>
-          <button class="icon-btn${g.maybe?' active-maybe':''}" data-id="${g.id}" data-a="maybe" title="Під питанням — чи кликати">🤔</button>
           ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm">✓</button>`:''}
           ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline">✕</button>`:''}
           <button class="icon-btn danger" data-id="${g.id}" data-a="del">🗑</button>
@@ -744,6 +764,15 @@ function renderGuests(){
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.grp); if(!g)return;
     g.group=(g.group||'friends')==='family'?'friends':'family';
+    saveJSON('wed-guests',guests); renderGuests();
+  });
+  listEl.querySelectorAll('[data-attr]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    const g=guests.find(x=>x.id===el.dataset.id); if(!g)return;
+    const a=el.dataset.attr;
+    if(a==='wparty') g.wparty=!g.wparty;
+    else if(a==='maybe') g.maybe=!g.maybe;
+    else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     saveJSON('wed-guests',guests); renderGuests();
   });
 }
@@ -834,8 +863,8 @@ document.getElementById('addGuestBtn').onclick=()=>{
     const isDup=confirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?\n\nОК — так, це повтор (не додавати)\nСкасувати — ні, це інша людина (додати)`);
     if(isDup) return;
   }
-  guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1'),maybe:val('gMaybe')==='maybe'});
-  document.getElementById('gName').value=''; document.getElementById('gMaybe').value='no'; saveJSON('wed-guests',guests); renderGuests();
+  guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1'),maybe:val('gMaybe')==='maybe',kids:Number(val('gKids'))||0});
+  document.getElementById('gName').value=''; document.getElementById('gMaybe').value='no'; document.getElementById('gKids').value='0'; saveJSON('wed-guests',guests); renderGuests();
 };
 
 /* ════ BUDGET ════ */
