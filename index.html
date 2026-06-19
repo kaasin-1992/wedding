@@ -1136,13 +1136,37 @@ document.getElementById('addHotelBtn').onclick=async()=>{
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* ── TABS ── */
-document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+/* ── TABS (+ свайп між вкладками) ── */
+const TAB_ORDER=[...document.querySelectorAll('.tab-btn')].map(b=>b.dataset.tab);
+function activateTab(name){
+  if(!name) return;
+  const btns=[...document.querySelectorAll('.tab-btn')];
+  btns.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-});
+  const panel=document.getElementById('tab-'+name); if(panel) panel.classList.add('active');
+  const btn=btns.find(b=>b.dataset.tab===name);
+  if(btn) btn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
+function currentTab(){ const a=document.querySelector('.tab-btn.active'); return a?a.dataset.tab:TAB_ORDER[0]; }
+function shiftTab(dir){
+  const i=TAB_ORDER.indexOf(currentTab()), ni=i+dir;
+  if(ni<0||ni>=TAB_ORDER.length) return;
+  activateTab(TAB_ORDER[ni]);
+}
+let _sx=0,_sy=0,_st=0,_swipe=false;
+document.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1 || e.target.closest('.tabs-bar, input, textarea, select')){ _swipe=false; return; }
+  const t=e.touches[0]; _sx=t.clientX; _sy=t.clientY; _st=Date.now(); _swipe=true;
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!_swipe) return; _swipe=false;
+  const t=e.changedTouches[0], dx=t.clientX-_sx, dy=t.clientY-_sy;
+  if(Date.now()-_st>600) return;            // надто повільно — не свайп
+  if(Math.abs(dx)<60) return;               // замала відстань
+  if(Math.abs(dx)<Math.abs(dy)*1.8) return; // переважно вертикальний рух — ігноруємо
+  shiftTab(dx<0?1:-1);
+},{passive:true});
 
 /* ── INIT ── */
 function renderAll(){
