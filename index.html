@@ -18,7 +18,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --bg:#F6F1E8;--surface:#FFFDF8;--surface2:#FBF5EC;
-  --text:#4A4138;--muted:#A2937E;
+  --text:#4A4138;--muted:#8C7C66;
   --terra:#BC7A55;--terra-dim:#F1E2D6;
   --sage:#8E9B7C;--sage-dim:#E7EADF;
   --rose:#CBA39B;--rose-dim:#F3E6E1;
@@ -49,7 +49,9 @@ body{transition:background .25s,color .25s;}
 .theme-toggle{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--terra);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;line-height:1;z-index:5;}
 .theme-toggle:hover{border-color:var(--terra);}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:400;font-size:14px;line-height:1.5;
-  max-width:720px;margin:0 auto;min-height:100vh;padding-bottom:90px;}
+  max-width:720px;margin:0 auto;min-height:100vh;
+  padding-bottom:calc(90px + env(safe-area-inset-bottom));
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
 
 /* HEADER */
 .hero{padding:40px 24px 28px;text-align:center;position:relative;}
@@ -62,10 +64,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cnt-lbl{font-size:13px;color:var(--muted);}
 
 /* TABS */
-.tabs-bar{display:flex;justify-content:center;background:var(--bg);position:sticky;top:0;z-index:10;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-  border-bottom:1px solid var(--line);}
+.tabs-bar{display:flex;justify-content:flex-start;background:var(--bg);position:sticky;top:0;z-index:10;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  border-bottom:1px solid var(--line);scroll-snap-type:x proximity;
+  -webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent);}
 .tabs-bar::-webkit-scrollbar{display:none;}
-.tab-btn{flex:0 0 auto;padding:13px 15px;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--muted);background:none;cursor:pointer;white-space:nowrap;
+.tab-btn{flex:0 0 auto;padding:15px 16px;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--muted);background:none;cursor:pointer;white-space:nowrap;scroll-snap-align:center;
   border:none;border-bottom:2px solid transparent;transition:.2s;}
 .tab-btn.active{color:var(--terra);border-bottom-color:var(--terra);}
 
@@ -110,15 +113,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .days-red{color:var(--danger);font-weight:600;}
 .days-yellow{color:var(--warn);font-weight:600;}
 .days-green{color:var(--done);font-weight:600;}
-.del-x{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;opacity:0;transition:.15s;padding:2px 5px;}
-.task-card:hover .del-x{opacity:.6;}
-.del-x:hover{opacity:1!important;color:var(--danger);}
+.del-x{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;opacity:.5;transition:.15s;padding:4px 8px;line-height:1;border-radius:8px;}
+.task-card:hover .del-x{opacity:.7;}
+.del-x:hover,.del-x:active{opacity:1!important;color:var(--danger);}
 
 /* ── GUESTS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
 .stat-box{padding:13px 8px;text-align:center;}
 .stat-num{font-family:var(--serif);font-size:26px;color:var(--terra);line-height:1;}
-.stat-lbl{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.3;}
+.stat-lbl{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.3;}
 .filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
 .filt-btn{font-size:12px;font-weight:500;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;transition:.15s;}
 .filt-btn.active{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
@@ -164,9 +167,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .status-dot.confirmed{background:var(--done);}
 .status-dot.declined{background:var(--danger);}
 .row-actions{display:flex;gap:6px;}
-.icon-btn{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:4px 9px;color:var(--muted);cursor:pointer;font-size:12px;transition:.15s;}
+.icon-btn{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;min-width:36px;min-height:34px;color:var(--muted);cursor:pointer;font-size:13px;transition:.15s;}
 .icon-btn:hover{color:var(--text);border-color:var(--terra);}
+.icon-btn:active{transform:scale(.92);}
 .icon-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
+/* press-feedback для всього, що тицяється */
+.badge.ev-badge:active,.badge.grp-family:active,.badge.grp-friends:active,
+.attr-chip:active,.cc-status:active,.hotel-status:active,.filt-btn:active,.del-x:active,.tab-btn:active{transform:scale(.93);}
+/* тонкий пунктир-натяк, що бейдж клікабельний */
+.badge.ev-badge,.badge.grp-family,.badge.grp-friends,.cc-status,.hotel-status{border:1px dashed currentColor;}
 
 /* ── BUDGET ── */
 .budget-cap{padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -264,10 +273,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .login-box .submit-btn{width:100%;padding:13px;font-size:15px;margin-top:4px;}
 .login-err{font-size:13px;color:var(--danger);margin-top:14px;min-height:18px;line-height:1.4;}
 /* sync pill */
-.sync-pill{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:8px 15px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 4px 16px rgba(74,65,56,.08);}
+.sync-pill{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:8px 15px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 4px 16px rgba(74,65,56,.08);}
 .sync-pill.show{opacity:1;}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--done);}
 .sync-dot.off{background:var(--warn);}
+/* тост зі скасуванням видалення */
+.toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:950;
+  background:var(--text);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+.toast button{background:none;border:none;color:var(--terra);font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px;}
+.toast.dark-text button{color:var(--gold);}
+/* одноразова підказка про свайп */
+.swipe-hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:960;background:rgba(30,26,23,.86);color:#F6F1E8;
+  border-radius:14px;padding:16px 20px;font-size:14px;line-height:1.5;text-align:center;max-width:260px;box-shadow:0 10px 40px rgba(0,0,0,.3);
+  opacity:0;pointer-events:none;transition:opacity .3s;}
+.swipe-hint.show{opacity:1;}
 /* модальне віконце-підтвердження */
 .modal-overlay{position:fixed;inset:0;z-index:1100;background:rgba(30,26,23,.45);display:flex;align-items:center;justify-content:center;padding:28px;backdrop-filter:blur(2px);}
 .modal-box{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;text-align:center;box-shadow:0 14px 44px rgba(0,0,0,.22);}
@@ -286,14 +307,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <div class="login-emoji">💍</div>
     <div class="login-title">Наше весілля</div>
     <div class="login-sub">Спільний доступ для двох.<br>Введи email і пароль, які ми створили.</div>
-    <input id="logEmail" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
-    <input id="logPass" type="password" placeholder="Пароль" autocomplete="current-password">
+    <input id="logEmail" type="email" placeholder="Email" aria-label="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input id="logPass" type="password" placeholder="Пароль" aria-label="Пароль" autocomplete="current-password">
     <button id="logBtn" class="submit-btn">Увійти</button>
     <div class="login-err" id="logErr"></div>
   </div>
 </div>
 
 <div class="sync-pill" id="syncPill"><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Синхронізовано</span></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastUndo" type="button">Скасувати</button></div>
+<div class="swipe-hint" id="swipeHint">👈 Гортай вліво-вправо, щоб<br>перемикати вкладки 👉</div>
 
 <div class="modal-overlay" id="modal" style="display:none">
   <div class="modal-box">
@@ -311,7 +335,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <h1 class="hero-title">Наше <em>весілля</em></h1>
   <div class="hero-countdown">
     <span class="cnt-num" id="daysLeft">—</span>
-    <span class="cnt-lbl">днів залишилось</span>
+    <span class="cnt-lbl" id="cntLbl">днів залишилось</span>
   </div>
 </div>
 
@@ -697,11 +721,11 @@ function renderTasks(){
         const dl=!task.done&&days!==null?` · <span class="${dc}">${days<0?Math.abs(days)+' дн. тому':days===0?'Сьогодні!':days+' дн.'}</span>`:'';
         metaHtml=`<div class="task-meta">до ${fmtDate(task.deadline)}${dl}</div>`;
       }
-      card.innerHTML=`<button class="del-x" data-del="${task.id}">✕</button>
+      card.innerHTML=`<button class="del-x" data-del="${task.id}" aria-label="Видалити завдання">✕</button>
         <div class="task-top"><div class="task-text">${esc(task.text)}</div>
         <span class="chip ${st==='asap'?'asap':st}">${chipTxt}</span></div>${metaHtml}`;
       card.querySelector('[data-del]').addEventListener('click',e=>{
-        e.stopPropagation(); tasks=tasks.filter(x=>x.id!==task.id); saveJSON('wed-tasks',tasks); renderTasks();
+        e.stopPropagation(); delUndo('wed-tasks',task.id,'Завдання видалено');
       });
       row.appendChild(dot); row.appendChild(card); grp.appendChild(row);
     });
@@ -763,16 +787,16 @@ function renderGuests(){
   filtered.forEach(g=>{
     const initials=g.name.trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
     const evLbl=g.event==='both'?'Розпис+вечірка':g.event==='ceremony'?'Тільки розпис':'Тільки вечірка';
-    const evBadge=`<span class="badge ${g.event} ev-badge" data-ev="${g.id}" title="Тицьни, щоб змінити">${evLbl}</span>`;
+    const evBadge=`<span class="badge ${g.event} ev-badge" data-ev="${g.id}" role="button" tabindex="0" title="Тицьни, щоб змінити" aria-label="Подія: ${evLbl}. Тицьни, щоб змінити">${evLbl}</span>`;
     const grp=g.group||'friends';
-    const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
+    const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" role="button" tabindex="0" title="Тицьни, щоб змінити" aria-label="${grp==='family'?'Родичі':'Друзі'}. Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
     const kids=Number(g.kids)||0;
     const wpLbl=g.side==='her'?'💐 Дружка':'🤵 Дружок';
     const attrRow=`<div class="attr-row">
-      <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}">${wpLbl}</span>
-      <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}">🤔 Під питанням</span>
-      <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
+      <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.wparty}">${wpLbl}</span>
+      <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
+      <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}" role="button" tabindex="0" aria-label="Діти: ${kids}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
     </div>`;
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}${g.maybe?' maybe':''}`;
@@ -785,9 +809,9 @@ function renderGuests(){
       </div>
       <div class="guest-status">
         <div class="row-actions">
-          ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm">✓</button>`:''}
-          ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline">✕</button>`:''}
-          <button class="icon-btn danger" data-id="${g.id}" data-a="del">🗑</button>
+          ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm" aria-label="Підтвердити, що буде" title="Підтвердити">✓</button>`:''}
+          ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline" aria-label="Відмовився" title="Відмова">✕</button>`:''}
+          <button class="icon-btn danger" data-id="${g.id}" data-a="del" aria-label="Видалити гостя" title="Видалити">🗑</button>
         </div>
         <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
           <div class="status-dot ${g.status}"></div>
@@ -800,11 +824,11 @@ function renderGuests(){
     e.stopPropagation();
     const g=guests.find(x=>x.id===btn.dataset.id); if(!g)return;
     const a=btn.dataset.a;
+    if(a==='del'){ delUndo('wed-guests',g.id,`«${g.name}» видалено`); return; }
     if(a==='confirm')g.status='confirmed';
     else if(a==='decline')g.status='declined';
     else if(a==='maybe')g.maybe=!g.maybe;
     else if(a==='wparty')g.wparty=!g.wparty;
-    else if(a==='del')guests=guests.filter(x=>x.id!==g.id);
     saveJSON('wed-guests',guests); renderGuests();
   });
   listEl.querySelectorAll('[data-grp]').forEach(el=>el.onclick=e=>{
@@ -833,6 +857,42 @@ document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
 });
+/* ── ТОСТ ЗІ СКАСУВАННЯМ ── */
+let _toastTimer=null;
+function showToast(msg, undoFn){
+  const t=document.getElementById('toast'), u=document.getElementById('toastUndo');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.toggle('dark-text', document.documentElement.classList.contains('dark'));
+  clearTimeout(_toastTimer);
+  const close=()=>{ t.classList.remove('show'); u.onclick=null; };
+  if(undoFn){ u.style.display=''; u.onclick=()=>{ undoFn(); close(); }; }
+  else u.style.display='none';
+  t.classList.add('show');
+  _toastTimer=setTimeout(close, 5000);
+}
+/* реєстр масивів — закриття бачать актуальне значення let-змінних */
+const ARR={
+  'wed-tasks':{get:()=>tasks,set:v=>tasks=v,render:()=>renderTasks()},
+  'wed-guests':{get:()=>guests,set:v=>guests=v,render:()=>renderGuests()},
+  'wed-budget':{get:()=>budget,set:v=>budget=v,render:()=>renderBudget()},
+  'wed-contacts':{get:()=>contacts,set:v=>contacts=v,render:()=>renderContacts()},
+  'wed-notes':{get:()=>notes,set:v=>notes=v,render:()=>renderNotes()},
+  'wed-ideas':{get:()=>ideas,set:v=>ideas=v,render:()=>renderIdeas()},
+  'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
+  'wed-scriptS':{get:()=>scriptSofia,set:v=>scriptSofia=v,render:()=>renderScripts()},
+  'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()}
+};
+function delUndo(key,id,label){
+  const a=ARR[key], list=a.get(), idx=list.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const removed=list[idx];
+  a.set(list.filter(x=>x.id!==id)); saveJSON(key,a.get()); a.render();
+  showToast(label||'Видалено', ()=>{
+    const cur=a.get().slice(); cur.splice(Math.min(idx,cur.length),0,removed);
+    a.set(cur); saveJSON(key,a.get()); a.render();
+  });
+}
+
 /* ── ВІКОНЦЕ-ПІДТВЕРДЖЕННЯ (свої кнопки) ── */
 function askConfirm(message, yesLabel='Додати', noLabel='Не додати'){
   return new Promise(resolve=>{
@@ -982,7 +1042,7 @@ function renderBudget(){
     });
   });
   listEl.querySelectorAll('[data-bdel]').forEach(btn=>btn.onclick=()=>{
-    budget=budget.filter(x=>x.id!==btn.dataset.bdel); saveJSON('wed-budget',budget); renderBudget();
+    delUndo('wed-budget',btn.dataset.bdel,'Витрату видалено');
   });
 }
 document.getElementById('addBudgetBtn').onclick=()=>{
@@ -1020,7 +1080,7 @@ function renderContacts(){
     c.status=CSTAT[(CSTAT.indexOf(c.status)+1)%CSTAT.length]; saveJSON('wed-contacts',contacts); renderContacts();
   });
   listEl.querySelectorAll('[data-cdel]').forEach(btn=>btn.onclick=()=>{
-    contacts=contacts.filter(x=>x.id!==btn.dataset.cdel); saveJSON('wed-contacts',contacts); renderContacts();
+    delUndo('wed-contacts',btn.dataset.cdel,'Контакт видалено');
   });
 }
 document.getElementById('addContactBtn').onclick=()=>{
@@ -1037,13 +1097,13 @@ function renderNotes(){
   if(!notes.length){ listEl.innerHTML='<div class="empty-state">Нотаток ще немає 📝</div>'; return; }
   notes.forEach(n=>{
     const card=document.createElement('div'); card.className='note-card';
-    card.innerHTML=`<button class="del-x" data-ndel="${n.id}" style="opacity:.5">✕</button>
+    card.innerHTML=`<button class="del-x" data-ndel="${n.id}" aria-label="Видалити нотатку" style="opacity:.5">✕</button>
       ${n.title?`<div class="note-title">${esc(n.title)}</div>`:''}
       <div class="note-text">${esc(n.text)}</div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-ndel]').forEach(btn=>btn.onclick=()=>{
-    notes=notes.filter(x=>x.id!==btn.dataset.ndel); saveJSON('wed-notes',notes); renderNotes();
+    delUndo('wed-notes',btn.dataset.ndel,'Нотатку видалено');
   });
 }
 document.getElementById('addNoteBtn').onclick=()=>{
@@ -1057,14 +1117,17 @@ document.getElementById('addNoteBtn').onclick=()=>{
 let activeIdea='her';
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 async function fetchPreview(url){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(), 12000);
   try{
-    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url));
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url), {signal:ctrl.signal});
     const j=await r.json();
     if(j&&j.status==='success'&&j.data){
       const d=j.data;
       return {title:d.title||'', desc:d.description||'', img:(d.image&&d.image.url)||(d.logo&&d.logo.url)||''};
     }
   }catch(e){ console.warn('preview', e); }
+  finally{ clearTimeout(t); }
   return null;
 }
 function renderIdeas(){
@@ -1075,7 +1138,7 @@ function renderIdeas(){
     const host=hostOf(it.url);
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
-      <button class="del-x" data-idel="${it.id}">✕</button>
+      <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
       ${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
       <div class="idea-body">
         ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
@@ -1088,7 +1151,7 @@ function renderIdeas(){
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
-    ideas=ideas.filter(x=>x.id!==b.dataset.idel); saveJSON('wed-ideas',ideas); renderIdeas();
+    delUndo('wed-ideas',b.dataset.idel,'Видалено');
   });
 }
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -1119,15 +1182,13 @@ function renderScripts(){
   if(!arr.length){ listEl.innerHTML='<div class="empty-state">Сценарій ще порожній ✍️</div>'; return; }
   arr.forEach(m=>{
     const row=document.createElement('div'); row.className='script-row';
-    row.innerHTML=`<button class="del-x" data-sdel="${m.id}">✕</button>
+    row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
       <div class="script-time">${esc(m.time||'—')}</div>
       <div class="script-text">${esc(m.text)}</div>`;
     listEl.appendChild(row);
   });
   listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{
-    if(activeScript==='sofia') scriptSofia=scriptSofia.filter(x=>x.id!==b.dataset.sdel);
-    else scriptWave=scriptWave.filter(x=>x.id!==b.dataset.sdel);
-    saveJSON(scriptKey(),scriptRef()); renderScripts();
+    delUndo(scriptKey(),b.dataset.sdel,'Пункт видалено');
   });
 }
 document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -1152,7 +1213,7 @@ function renderHotels(){
     const who=h.who?`<span class="badge">👤 ${esc(h.who)}</span>`:'';
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
-      <button class="del-x" data-hdel="${h.id}">✕</button>
+      <button class="del-x" data-hdel="${h.id}" aria-label="Видалити готель">✕</button>
       ${h.img?`<img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
       <div class="idea-body">
         ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
@@ -1166,7 +1227,7 @@ function renderHotels(){
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{
-    hotels=hotels.filter(x=>x.id!==b.dataset.hdel); saveJSON('wed-hotels',hotels); renderHotels();
+    delUndo('wed-hotels',b.dataset.hdel,'Готель видалено');
   });
   listEl.querySelectorAll('[data-hbook]').forEach(b=>b.onclick=()=>{
     const h=hotels.find(x=>x.id===b.dataset.hbook); if(!h)return;
@@ -1226,15 +1287,31 @@ document.addEventListener('touchend',e=>{
   if(Math.abs(dx)<Math.abs(dy)*1.8) return; // переважно вертикальний рух — ігноруємо
   shiftTab(dx<0?1:-1);
 },{passive:true});
+/* клавіатура: Enter/Пробіл активує клікабельні спани (role=button) */
+document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ') && e.target.matches && e.target.matches('span[role="button"][tabindex]')){
+    e.preventDefault(); e.target.click();
+  }
+});
+/* одноразова підказка про свайп (тільки на тач-пристроях) */
+function maybeSwipeHint(){
+  if(!('ontouchstart' in window)) return;
+  try{ if(localStorage.getItem('wed-swipe-hint')) return; localStorage.setItem('wed-swipe-hint','1'); }catch(e){ return; }
+  const h=document.getElementById('swipeHint');
+  setTimeout(()=>h.classList.add('show'), 800);
+  setTimeout(()=>h.classList.remove('show'), 4400);
+}
 
 /* ── INIT ── */
 function renderAll(){
   renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels();
   document.getElementById('capInput').value = budgetCap||'';
 }
-document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding());
+function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
+function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
+updateCountdown();
 renderAll();
-setInterval(()=>{ document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding()); },60000);
+setInterval(updateCountdown,60000);
 
 /* ════ SYNC + LOGIN ════ */
 let syncTimer=null;
@@ -1285,6 +1362,7 @@ if(auth){
   auth.onAuthStateChanged(user=>{
     if(user){
       document.getElementById('login').style.display='none';
+      maybeSwipeHint();
       if(!cloudReady) startSync();
     }else{
       document.getElementById('login').style.display='flex';
@@ -1305,6 +1383,7 @@ if(auth){
 }else{
   // Firebase недоступний — працюємо локально, без екрана входу
   document.getElementById('login').style.display='none';
+  maybeSwipeHint();
 }
 
 /* ── ТЕМА (світла / вечірня) ── */
