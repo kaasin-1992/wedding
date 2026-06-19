@@ -125,6 +125,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .badge.maybe{background:transparent;border:1px dashed var(--warn);color:var(--warn);}
 .guest-card.maybe{border-color:var(--warn);border-style:dashed;}
 .icon-btn.active-maybe{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
+.badge.wparty{background:var(--rose-dim);color:var(--rose);}
+.icon-btn.active-wparty{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+
+/* ── HOTEL ── */
+.hotel-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.hotel-status{cursor:pointer;}
+.hotel-status.booked{background:var(--done-dim);color:var(--done);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
 .status-dot{width:9px;height:9px;border-radius:50%;}
 .status-dot.pending{background:var(--muted);}
@@ -268,6 +275,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
+  <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
   <button class="tab-btn" data-tab="notes">📝 Нотатки</button>
 </div>
@@ -304,6 +312,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <button class="filt-btn" data-f="party">Вечірка</button>
     <button class="filt-btn" data-f="plus1">+1</button>
     <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
+    <button class="filt-btn" data-f="wparty">💐 Дружки</button>
     <button class="filt-btn" data-f="pending">Не підтвердили</button>
   </div>
   <div class="guest-list" id="guestList"></div>
@@ -465,6 +474,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   </div>
 </div>
 
+<!-- HOTEL -->
+<div class="panel" id="tab-hotel">
+  <div class="section-hint">Ночівля до/після свята — нам, і якщо раптом хтось приїде з іншого міста. Встав посилання на готель — підтягнеться фото й опис. Тицьни на статус, щоб позначити бронь.</div>
+  <div id="hotelList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати варіант ночівлі</summary>
+      <div class="add-form">
+        <input type="text" id="hName" placeholder="Назва готелю / варіант">
+        <input type="url" id="hUrl" placeholder="Посилання (Booking, сайт…) — необовʼязково" autocapitalize="none" spellcheck="false">
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Заїзд та виїзд:</div>
+        <div class="form-row">
+          <input type="date" id="hIn">
+          <input type="date" id="hOut">
+        </div>
+        <input type="text" id="hWho" placeholder="Для кого (напр. Ми / гості зі Львова)">
+        <input type="text" id="hNote" placeholder="Нотатка (ціна, деталі…)">
+        <button class="submit-btn" id="addHotelBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -481,7 +513,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -559,6 +591,7 @@ let budgetCap= loadJSON('wed-cap', 0);
 let ideas       = loadJSON('wed-ideas', []);
 let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
+let hotels      = loadJSON('wed-hotels', []);
 
 /* ── HELPERS ── */
 const today = ()=> new Date(new Date().toDateString());
@@ -645,6 +678,7 @@ function applyFilter(g,f){
   if(f==='party')return g.event==='party'||g.event==='both';
   if(f==='plus1')return g.plus1!=='none';
   if(f==='maybe')return !!g.maybe;
+  if(f==='wparty')return !!g.wparty;
   if(f==='pending')return g.status==='pending';
   return true;
 }
@@ -671,16 +705,18 @@ function renderGuests(){
     const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
     const maybeBadge=g.maybe?'<span class="badge maybe">🤔 Під питанням</span>':'';
+    const wpartyBadge=g.wparty?`<span class="badge wparty">${g.side==='her'?'💐 Дружка':'🤵 Дружок'}</span>`:'';
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}${g.maybe?' maybe':''}`;
     card.innerHTML=`
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}${maybeBadge}</div>
+        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}${wpartyBadge}${maybeBadge}</div>
       </div>
       <div class="guest-status">
         <div class="row-actions">
+          <button class="icon-btn${g.wparty?' active-wparty':''}" data-id="${g.id}" data-a="wparty" title="Дружка / Дружок">💐</button>
           <button class="icon-btn${g.maybe?' active-maybe':''}" data-id="${g.id}" data-a="maybe" title="Під питанням — чи кликати">🤔</button>
           ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm">✓</button>`:''}
           ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline">✕</button>`:''}
@@ -700,6 +736,7 @@ function renderGuests(){
     if(a==='confirm')g.status='confirmed';
     else if(a==='decline')g.status='declined';
     else if(a==='maybe')g.maybe=!g.maybe;
+    else if(a==='wparty')g.wparty=!g.wparty;
     else if(a==='del')guests=guests.filter(x=>x.id!==g.id);
     saveJSON('wed-guests',guests); renderGuests();
   });
@@ -1009,6 +1046,55 @@ document.getElementById('addScriptBtn').onclick=()=>{
   saveJSON(scriptKey(),scriptRef()); renderScripts();
 };
 
+/* ════ HOTEL (ночівля до/після) ════ */
+function renderHotels(){
+  const listEl=document.getElementById('hotelList'); listEl.innerHTML='';
+  if(!hotels.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай готель чи варіант ночівлі 🏨</div>'; return; }
+  hotels.forEach(h=>{
+    const host=hostOf(h.url);
+    const dates=(h.checkin||h.checkout)?`<span class="badge">🗓 ${h.checkin?fmtDate(h.checkin):'?'}${h.checkout?' – '+fmtDate(h.checkout):''}</span>`:'';
+    const who=h.who?`<span class="badge">👤 ${esc(h.who)}</span>`:'';
+    const card=document.createElement('div'); card.className='idea-card';
+    card.innerHTML=`
+      <button class="del-x" data-hdel="${h.id}">✕</button>
+      ${h.img?`<img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
+      <div class="idea-body">
+        ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        <div class="idea-title">${esc(h.title||h.url||'Готель')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${h.desc?`<div class="idea-desc">${esc(h.desc)}</div>`:''}
+        <div class="hotel-meta">${dates}${who}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span></div>
+        ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
+        ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{
+    hotels=hotels.filter(x=>x.id!==b.dataset.hdel); saveJSON('wed-hotels',hotels); renderHotels();
+  });
+  listEl.querySelectorAll('[data-hbook]').forEach(b=>b.onclick=()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hbook); if(!h)return;
+    h.booked=!h.booked; saveJSON('wed-hotels',hotels); renderHotels();
+  });
+}
+document.getElementById('addHotelBtn').onclick=async()=>{
+  const name=val('hName'); let url=val('hUrl');
+  if(!name&&!url)return;
+  if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='h'+Date.now();
+  hotels.unshift({id,title:name,url,checkin:document.getElementById('hIn').value||'',checkout:document.getElementById('hOut').value||'',who:val('hWho'),note:val('hNote'),img:'',desc:'',booked:false,loading:!!url,ts:Date.now()});
+  ['hName','hUrl','hWho','hNote'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('hIn').value=''; document.getElementById('hOut').value='';
+  saveJSON('wed-hotels',hotels); renderHotels();
+  if(url){
+    const prev=await fetchPreview(url);
+    const cur=hotels.find(x=>x.id===id); if(!cur)return;
+    cur.loading=false;
+    if(prev){ if(!cur.title)cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+    saveJSON('wed-hotels',hotels); renderHotels();
+  }
+};
+
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1023,7 +1109,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels();
   document.getElementById('capInput').value = budgetCap||'';
 }
 document.getElementById('daysLeft').textContent=Math.max(0,daysUntilWedding());
@@ -1044,7 +1130,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -1058,6 +1144,7 @@ function startSync(){
     if(Array.isArray(d.ideas))       ideas=d.ideas;
     if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
+    if(Array.isArray(d.hotels))      hotels=d.hotels;
     // оновлюємо локальний кеш
     DB.set('wed-tasks',JSON.stringify(tasks));
     DB.set('wed-guests',JSON.stringify(guests));
@@ -1068,6 +1155,7 @@ function startSync(){
     DB.set('wed-ideas',JSON.stringify(ideas));
     DB.set('wed-scriptS',JSON.stringify(scriptSofia));
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
+    DB.set('wed-hotels',JSON.stringify(hotels));
     applyingSnapshot=false;
     renderAll();
   }, err=>{ console.warn('snapshot', err); });
