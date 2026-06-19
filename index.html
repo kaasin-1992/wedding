@@ -122,6 +122,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .badge.grp-friends{background:var(--sage-dim);color:var(--sage);cursor:pointer;}
 .badge.plus1{background:var(--warn-dim);color:var(--warn);}
 .badge.plus1-confirmed{background:var(--done-dim);color:var(--done);}
+.badge.maybe{background:transparent;border:1px dashed var(--warn);color:var(--warn);}
+.guest-card.maybe{border-color:var(--warn);border-style:dashed;}
+.icon-btn.active-maybe{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
 .status-dot{width:9px;height:9px;border-radius:50%;}
 .status-dot.pending{background:var(--muted);}
@@ -300,6 +303,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <button class="filt-btn" data-f="ceremony">Розпис</button>
     <button class="filt-btn" data-f="party">Вечірка</button>
     <button class="filt-btn" data-f="plus1">+1</button>
+    <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
     <button class="filt-btn" data-f="pending">Не підтвердили</button>
   </div>
   <div class="guest-list" id="guestList"></div>
@@ -319,10 +323,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
             <option value="party">Тільки вечірка</option>
           </select>
         </div>
-        <select id="gGroup">
-          <option value="friends">Друзі</option>
-          <option value="family">Родичі</option>
-        </select>
+        <div class="form-row">
+          <select id="gGroup">
+            <option value="friends">Друзі</option>
+            <option value="family">Родичі</option>
+          </select>
+          <select id="gMaybe">
+            <option value="no">Точно кличемо</option>
+            <option value="maybe">🤔 Ще не впевнені</option>
+          </select>
+        </div>
         <div class="form-row">
           <select id="gStatus">
             <option value="pending">Очікує підтвердження</option>
@@ -634,6 +644,7 @@ function applyFilter(g,f){
   if(f==='ceremony')return g.event==='ceremony'||g.event==='both';
   if(f==='party')return g.event==='party'||g.event==='both';
   if(f==='plus1')return g.plus1!=='none';
+  if(f==='maybe')return !!g.maybe;
   if(f==='pending')return g.status==='pending';
   return true;
 }
@@ -659,16 +670,18 @@ function renderGuests(){
     const grp=g.group||'friends';
     const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
+    const maybeBadge=g.maybe?'<span class="badge maybe">🤔 Під питанням</span>':'';
     const card=document.createElement('div');
-    card.className=`guest-card ${g.status}`;
+    card.className=`guest-card ${g.status}${g.maybe?' maybe':''}`;
     card.innerHTML=`
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}</div>
+        <div class="guest-sub"><span style="color:${g.side==='her'?'var(--rose)':'var(--sage)'}">${g.side==='her'?'Мої':'Його'}</span>${grpBadge}${evBadge}${p1}${maybeBadge}</div>
       </div>
       <div class="guest-status">
         <div class="row-actions">
+          <button class="icon-btn${g.maybe?' active-maybe':''}" data-id="${g.id}" data-a="maybe" title="Під питанням — чи кликати">🤔</button>
           ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm">✓</button>`:''}
           ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline">✕</button>`:''}
           <button class="icon-btn danger" data-id="${g.id}" data-a="del">🗑</button>
@@ -686,6 +699,7 @@ function renderGuests(){
     const a=btn.dataset.a;
     if(a==='confirm')g.status='confirmed';
     else if(a==='decline')g.status='declined';
+    else if(a==='maybe')g.maybe=!g.maybe;
     else if(a==='del')guests=guests.filter(x=>x.id!==g.id);
     saveJSON('wed-guests',guests); renderGuests();
   });
@@ -783,8 +797,8 @@ document.getElementById('addGuestBtn').onclick=()=>{
     const isDup=confirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?\n\nОК — так, це повтор (не додавати)\nСкасувати — ні, це інша людина (додати)`);
     if(isDup) return;
   }
-  guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1')});
-  document.getElementById('gName').value=''; saveJSON('wed-guests',guests); renderGuests();
+  guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1'),maybe:val('gMaybe')==='maybe'});
+  document.getElementById('gName').value=''; document.getElementById('gMaybe').value='no'; saveJSON('wed-guests',guests); renderGuests();
 };
 
 /* ════ BUDGET ════ */
