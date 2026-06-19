@@ -136,6 +136,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .badge.ceremony{background:var(--rose-dim);color:var(--rose);}
 .badge.party{background:var(--sage-dim);color:var(--sage);}
 .badge.both{background:var(--terra-dim);color:var(--terra);}
+.badge.ev-badge{cursor:pointer;}
 .badge.grp-family{background:var(--warn-dim);color:var(--warn);cursor:pointer;}
 .badge.grp-friends{background:var(--sage-dim);color:var(--sage);cursor:pointer;}
 .badge.plus1{background:var(--warn-dim);color:var(--warn);}
@@ -267,6 +268,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .sync-pill.show{opacity:1;}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--done);}
 .sync-dot.off{background:var(--warn);}
+/* модальне віконце-підтвердження */
+.modal-overlay{position:fixed;inset:0;z-index:1100;background:rgba(30,26,23,.45);display:flex;align-items:center;justify-content:center;padding:28px;backdrop-filter:blur(2px);}
+.modal-box{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;text-align:center;box-shadow:0 14px 44px rgba(0,0,0,.22);}
+.modal-text{font-size:14.5px;line-height:1.55;color:var(--text);white-space:pre-line;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.modal-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;background:var(--terra);color:#fff;transition:.15s;}
+.modal-btn:hover{background:#a86846;}
+.modal-btn.ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--line);}
+.modal-btn.ghost:hover{background:var(--surface2);color:var(--text);}
 </style>
 </head>
 <body>
@@ -284,6 +294,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 </div>
 
 <div class="sync-pill" id="syncPill"><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Синхронізовано</span></div>
+
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-text" id="modalText"></div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="modalNo">Не додати</button>
+      <button class="modal-btn" id="modalYes">Додати</button>
+    </div>
+  </div>
+</div>
 
 <div class="hero">
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
@@ -742,7 +762,8 @@ function renderGuests(){
   listEl.innerHTML='';
   filtered.forEach(g=>{
     const initials=g.name.trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
-    const evBadge=g.event==='both'?'<span class="badge both">Розпис+вечірка</span>':g.event==='ceremony'?'<span class="badge ceremony">Розпис</span>':'<span class="badge party">Вечірка</span>';
+    const evLbl=g.event==='both'?'Розпис+вечірка':g.event==='ceremony'?'Тільки розпис':'Тільки вечірка';
+    const evBadge=`<span class="badge ${g.event} ev-badge" data-ev="${g.id}" title="Тицьни, щоб змінити">${evLbl}</span>`;
     const grp=g.group||'friends';
     const grpBadge=`<span class="badge grp-${grp}" data-grp="${g.id}" title="Тицьни, щоб змінити">${grp==='family'?'👪 Родичі':'🧑‍🤝‍🧑 Друзі'}</span>`;
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
@@ -792,6 +813,12 @@ function renderGuests(){
     g.group=(g.group||'friends')==='family'?'friends':'family';
     saveJSON('wed-guests',guests); renderGuests();
   });
+  listEl.querySelectorAll('[data-ev]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();
+    const g=guests.find(x=>x.id===el.dataset.ev); if(!g)return;
+    g.event={both:'ceremony',ceremony:'party',party:'both'}[g.event]||'both';
+    saveJSON('wed-guests',guests); renderGuests();
+  });
   listEl.querySelectorAll('[data-attr]').forEach(el=>el.onclick=e=>{
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.id); if(!g)return;
@@ -806,6 +833,20 @@ document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
 });
+/* ── ВІКОНЦЕ-ПІДТВЕРДЖЕННЯ (свої кнопки) ── */
+function askConfirm(message, yesLabel='Додати', noLabel='Не додати'){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('modal');
+    document.getElementById('modalText').textContent=message;
+    const yes=document.getElementById('modalYes'), no=document.getElementById('modalNo');
+    yes.textContent=yesLabel; no.textContent=noLabel;
+    ov.style.display='flex';
+    const done=v=>{ ov.style.display='none'; yes.onclick=null; no.onclick=null; resolve(v); };
+    yes.onclick=()=>done(true);
+    no.onclick=()=>done(false);
+  });
+}
+
 /* ── ПЕРЕВІРКА НА ПОВТОРИ (схожі імена в будь-якій формі) ── */
 const NICK_GROUPS=[
   ['олександр','саша','сашко','санько','алекс'],
@@ -882,12 +923,12 @@ function findDuplicateGuest(name){
   }
   return null;
 }
-document.getElementById('addGuestBtn').onclick=()=>{
+document.getElementById('addGuestBtn').onclick=async()=>{
   const name=val('gName'); if(!name)return;
   const dup=findDuplicateGuest(name);
   if(dup){
-    const isDup=confirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?\n\nОК — так, це повтор (не додавати)\nСкасувати — ні, це інша людина (додати)`);
-    if(isDup) return;
+    const add=await askConfirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?`, 'Додати', 'Не додати');
+    if(!add) return;
   }
   guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1'),maybe:val('gMaybe')==='maybe',kids:Number(val('gKids'))||0});
   document.getElementById('gName').value=''; document.getElementById('gMaybe').value='no'; document.getElementById('gKids').value='0'; saveJSON('wed-guests',guests); renderGuests();
