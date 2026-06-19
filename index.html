@@ -700,8 +700,89 @@ document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
 });
+/* ── ПЕРЕВІРКА НА ПОВТОРИ (схожі імена в будь-якій формі) ── */
+const NICK_GROUPS=[
+  ['олександр','саша','сашко','санько','алекс'],
+  ['олександра','сашка','леся'],
+  ['катерина','катя','катруся','катеринка'],
+  ['олена','оленка','аленка'],
+  ['ольга','оля'],
+  ['михайло','міша','мишко'],
+  ['дмитро','діма','дмитрик'],
+  ['володимир','вова','володя','вовка'],
+  ['наталія','наталя','наташа','ната'],
+  ['анна','аня','анничка'],
+  ['марія','маша','маруся'],
+  ['іван','ваня','іванко'],
+  ['юлія','юля','юлька'],
+  ['тетяна','таня','танюша'],
+  ['ірина','іра','іринка'],
+  ['сергій','сергійко','сєрьожа'],
+  ['андрій','андрійко'],
+  ['вікторія','віка'],
+  ['євген','женя','жека'],
+  ['артем','тьома','артемко'],
+  ['назар','назарко'],
+  ['богдан','бодя'],
+  ['софія','соня','софійка'],
+  ['дарина','даша','даря','даринка'],
+  ['христина','христя'],
+  ['роман','рома','ромчик'],
+  ['петро','петрик','петя'],
+  ['василь','вася','васько'],
+  ['микола','коля','миколка'],
+  ['григорій','гриша','грицько'],
+  ['павло','паша','павлик'],
+  ['денис','деня'],
+  ['максим','макс','максимко'],
+  ['людмила','люда','люся'],
+  ['валентина','валя'],
+  ['валерій','валера'],
+  ['станіслав','стас'],
+  ['ярослав','ярік','слава'],
+  ['владислав','влад'],
+  ['віталій','віталік'],
+  ['олег','олежко'],
+  ['ігор','ігорьок'],
+  ['юрій','юра','юрко'],
+];
+const NICK_MAP=(()=>{const m={};NICK_GROUPS.forEach((g,i)=>g.forEach(n=>{if(m[n]===undefined)m[n]=i;}));return m;})();
+function normName(s){ return String(s||'').toLowerCase().replace(/[ʼ'’`.,!?]/g,'').replace(/\s+/g,' ').trim(); }
+function canon(tok){ return NICK_MAP[tok]!==undefined ? 'g'+NICK_MAP[tok] : tok; }
+function lev(a,b){
+  const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){ const cur=[i];
+    for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); }
+    prev=cur;
+  }
+  return prev[n];
+}
+function similarTok(a,b){
+  if(!a||!b)return false;
+  if(a===b)return true;
+  const min=Math.min(a.length,b.length);
+  if(min>=3&&(a.startsWith(b)||b.startsWith(a)))return true;
+  const mx=Math.max(a.length,b.length);
+  return mx>0 && (1-lev(a,b)/mx)>=0.8;
+}
+function findDuplicateGuest(name){
+  const inFull=normName(name), inFirst=inFull.split(' ')[0], inCanon=canon(inFirst);
+  for(const g of guests){
+    const exFull=normName(g.name), exFirst=exFull.split(' ')[0];
+    if(exFull===inFull) return g.name;
+    if(canon(exFirst)===inCanon) return g.name;
+    if(similarTok(inFirst,exFirst)) return g.name;
+  }
+  return null;
+}
 document.getElementById('addGuestBtn').onclick=()=>{
   const name=val('gName'); if(!name)return;
+  const dup=findDuplicateGuest(name);
+  if(dup){
+    const isDup=confirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?\n\nОК — так, це повтор (не додавати)\nСкасувати — ні, це інша людина (додати)`);
+    if(isDup) return;
+  }
   guests.push({id:'g'+Date.now(),name,side:val('gSide'),group:val('gGroup'),event:val('gEvent'),status:val('gStatus'),plus1:val('gPlus1')});
   document.getElementById('gName').value=''; saveJSON('wed-guests',guests); renderGuests();
 };
