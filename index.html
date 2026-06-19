@@ -107,6 +107,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .filt-btn.active{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
 .guest-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
 .guest-card{padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.guest-card.confirmed{background:var(--done-dim);border-color:var(--done);box-shadow:inset 3px 0 0 var(--done);}
 .guest-card.declined{opacity:.5;}
 .guest-avatar{width:38px;height:38px;min-width:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:var(--serif);}
 .av-her{background:var(--rose-dim);color:var(--rose);}
@@ -696,6 +697,13 @@ function applyFilter(g,f){
   if(f==='pending')return g.status==='pending';
   return true;
 }
+/* порядок у списку: підтверджені → запрошені (чекаємо) → під питанням → відмовили */
+function guestRank(g){
+  if(g.status==='confirmed') return 0;
+  if(g.status==='declined')  return 3;
+  if(g.maybe)                return 2;
+  return 1;
+}
 function renderGuests(){
   const confirmed=guests.filter(g=>g.status==='confirmed').length;
   const pending=guests.filter(g=>g.status==='pending').length;
@@ -708,7 +716,7 @@ function renderGuests(){
     <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt('party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
-  const filtered=guests.filter(g=>applyFilter(g,activeFilter));
+  const filtered=guests.filter(g=>applyFilter(g,activeFilter)).sort((a,b)=>guestRank(a)-guestRank(b));
   if(!filtered.length){
     listEl.innerHTML=`<div class="empty-state">${guests.length===0?'Гостей ще немає — додай першого 🌸':'Нікого за цим фільтром'}</div>`;
     return;
