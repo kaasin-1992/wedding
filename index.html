@@ -1051,7 +1051,7 @@ const firebaseConfig = {
   messagingSenderId: "87093437583",
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
-let auth=null, DOC=null, COMMENTS=null, cloudReady=false, seeded=false, applyingSnapshot=false;
+let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=false, applyingSnapshot=false;
 // гостьовий перегляд: ?guest у посиланні → анонімний вхід, тільки читання + коментарі
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
@@ -1062,7 +1062,8 @@ try{
   auth = firebase.auth();
   const fdb = firebase.firestore();
   try{ fdb.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
-  DOC = fdb.collection('wedding').doc('state');
+  WEDCOL = fdb.collection('wedding');
+  DOC = WEDCOL.doc('state');
   COMMENTS = fdb.collection('comments');
 }catch(e){ console.warn('firebase init', e); }
 if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
@@ -1078,12 +1079,108 @@ function loadJSON(key, fallback){
   if(raw===null) return JSON.parse(JSON.stringify(fallback));
   try{ return JSON.parse(raw); }catch{ return JSON.parse(JSON.stringify(fallback)); }
 }
+/* ── ВЕЛИКІ КАРТИНКИ ЗБЕРІГАЄМО ОКРЕМО ──
+   Firestore тримає не більше 1 MiB на документ. Якщо складати всі base64-фото
+   (фото пари, манекени, примірки, фото товарів) в один документ wedding/state —
+   він переростає ліміт, і ТОДІ ВЗАГАЛІ НІЧОГО не зберігається (мовчазна помилка).
+   Тому важкі картинки кладемо в окремі документи тієї ж колекції `wedding`,
+   а в state лишаємо тільки легкі дані (для ідей — маркер '@m' замість base64). */
+const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-outfit':'outfit'};
+const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', mannequin:'m_mannequin', outfit:'m_outfit'};
+const isDataUrl = s => /^data:/.test(s||'');
+let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
+function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
+function mediaSet(docId, payload){
+  if(!WEDCOL || IS_GUEST) return;
+  const sig=mediaSig(payload);
+  if(_mediaWritten[docId]===sig) return;            // без змін — не пишемо
+  _mediaWritten[docId]=sig;
+  WEDCOL.doc(docId).set({...payload, _updated:Date.now()})
+    .then(()=>flashSync(true)).catch(e=>{ console.warn('media save '+docId, e); _mediaWritten[docId]=null; flashSync(false); });
+}
+// розкласти масив ідей на «легкий» (для state) + важкі картинки (по документу на ідею)
+function splitIdeas(arr){
+  const light = arr.map(it=>{
+    const c={...it};
+    ['img','gen','tryon'].forEach(k=>{ if(isDataUrl(c[k])) c[k]='@m'; });   // base64 → маркер
+    if(Array.isArray(c.imgChoices)) c.imgChoices=c.imgChoices.filter(s=>!isDataUrl(s)).slice(0,8);
+    return c;
+  });
+  arr.forEach(it=>{
+    const m={};
+    ['img','gen','tryon'].forEach(k=>{ if(isDataUrl(it[k])) m[k]=it[k]; });
+    const docId='m_idea_'+it.id;
+    if(Object.keys(m).length) mediaSet(docId, m);
+    else if(_mediaWritten[docId]!==undefined && _mediaWritten[docId]!==null){    // картинку прибрали
+      _mediaWritten[docId]=null; if(WEDCOL && !IS_GUEST) WEDCOL.doc(docId).delete().catch(()=>{});
+    }
+  });
+  return light;
+}
 function saveJSON(key, val){
-  DB.set(key, JSON.stringify(val));                 // локальний кеш (працює офлайн)
-  if(DOC && cloudReady && !applyingSnapshot && !IS_GUEST && FIELD[key]){
+  DB.set(key, JSON.stringify(val));                 // локальний кеш (повні дані, працює офлайн)
+  if(!(DOC && cloudReady && !applyingSnapshot && !IS_GUEST)) return;
+  if(HEAVY_KEYS[key]){                               // фото пари/манекени/примірки → окремий документ
+    mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
+    return;
+  }
+  if(key==='wed-ideas'){                             // ідеї: легке в state, картинки — окремо
+    const light=splitIdeas(val);
+    DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
+       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save ideas', e); flashSync(false); });
+    return;
+  }
+  if(FIELD[key]){
     DOC.set({[FIELD[key]]: val, _updated: Date.now()}, {merge:true})
        .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
   }
+}
+// кеш важких картинок з хмари: base = {photos,photosFull,mannequin,outfit}; idea = {ideaId:{img,gen,tryon}}
+const mediaCache = {base:{}, idea:{}};
+const legacyMedia = {};   // старі картинки, що могли лишитись у самому state (для сумісності)
+// зібрати повні дані з легких (state) + важких (окремі документи) і перемалювати
+function applyMedia(){
+  ['photos','photosFull','mannequin','outfit'].forEach(name=>{
+    const m = mediaCache.base[name] || legacyMedia[name];
+    if(m && typeof m==='object'){
+      if(name==='photos') photos=m; else if(name==='photosFull') photosFull=m;
+      else if(name==='mannequin') mannequin=m; else outfit=m;
+    }
+  });
+  // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа
+  if(Array.isArray(ideas)) ideas.forEach(it=>{
+    const m=mediaCache.idea[it.id]||{};
+    ['img','gen','tryon'].forEach(k=>{ if(it[k]==='@m') it[k]=m[k]||''; });
+  });
+  // оновлюємо локальний кеш повними даними
+  applyingSnapshot=true;
+  DB.set('wed-photos',JSON.stringify(photos));
+  DB.set('wed-photos-full',JSON.stringify(photosFull));
+  DB.set('wed-mannequin',JSON.stringify(mannequin));
+  DB.set('wed-outfit',JSON.stringify(outfit));
+  DB.set('wed-ideas',JSON.stringify(ideas));
+  applyingSnapshot=false;
+  if(typeof renderAll==='function') renderAll();
+}
+let mediaBound=false;
+function startMediaSync(){
+  if(!WEDCOL || mediaBound) return; mediaBound=true;
+  WEDCOL.onSnapshot(snap=>{
+    snap.docChanges().forEach(ch=>{
+      const id=ch.doc.id; if(id==='state') return;
+      const data=ch.doc.data()||{};
+      if(id==='m_photos') mediaCache.base.photos=data.d;
+      else if(id==='m_photosFull') mediaCache.base.photosFull=data.d;
+      else if(id==='m_mannequin') mediaCache.base.mannequin=data.d;
+      else if(id==='m_outfit') mediaCache.base.outfit=data.d;
+      else if(id.indexOf('m_idea_')===0){
+        const iid=id.slice(7);
+        if(ch.type==='removed') delete mediaCache.idea[iid];
+        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon};
+      }
+    });
+    applyMedia();
+  }, err=>{ console.warn('media snapshot', err); });
 }
 
 /* ── DEFAULTS ── */
@@ -2158,7 +2255,7 @@ const FB_VER='11.10.0';
 // лише актуальні моделі (Gemini 2.0 Flash та Imagen вимкнені у 2026; 2.5-flash-image = «Nano Banana»)
 const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 // єдиний стиль для ВСІХ примірок — щоб усі картинки виглядали як модельний лукбук
-const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру (співвідношення 3:4) на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. ЄДИНЕ КАДРУВАННЯ: постать заповнює майже всю висоту кадру — маківка біля верхнього краю, ступні біля нижнього, з однаковими невеликими полями зверху і знизу (≈5%); той самий масштаб і та сама відстань камери, що для стандартного лукбуку на повний зріст (щоб різні картинки були в одному розмірі). Фотореалізм, реалістичні пропорції, без тексту і водяних знаків.';
+const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру (співвідношення 3:4) на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. ЄДИНЕ КАДРУВАННЯ: постать заповнює майже всю висоту кадру — маківка біля верхнього краю, ступні біля нижнього, з однаковими невеликими полями зверху і знизу (≈5%); той самий масштаб і та сама відстань камери, що для стандартного лукбуку на повний зріст (щоб різні картинки були в одному розмірі). Фотореалізм, реалістичні пропорції; голова РЕАЛІСТИЧНОГО розміру (≈1/7–1/8 зросту), НЕ збільшена; без тексту і водяних знаків.';
 // зріст для реалістичних пропорцій
 function heightLine(who){ return who==='her'?'Жінка зростом приблизно 170 см, реалістична статура.':'Чоловік трохи вищий за 170 см (≈175–182 см), реалістична статура.'; }
 // одне суворе правило обличчя для манекена і примірки
@@ -2242,14 +2339,14 @@ async function aiMakeMannequin(who){
   if(manqBusy[who]) return;
   manqBusy[who]=true; renderBasePhotos(); renderCouple();
   try{
-    const base='Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.';
     let parts;
-    if(faceSrc && bodySrc){
-      parts=[`[ПОРТРЕТ] — справжнє фото обличчя людини (ЄДИНЕ джерело обличчя). [ФОТО] — її фото в повний зріст: з нього бери ЛИШЕ статуру, пропорції й позу, але НЕ обличчя. ${base}${faceRule(true)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc), dataUrlToPart(bodySrc)];
+    if(bodySrc){
+      // Є справжнє фото в повний зріст → РЕДАГУЄМО його: лишаємо людину 1:1, міняємо ЛИШЕ одяг.
+      // (синтез тіла з портрета давав велику голову й «чуже» обличчя — тому редагуємо реальне фото)
+      parts=[`Відредагуй це фото людини: заміни ЛИШЕ її одяг на простий базовий СІРИЙ — однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу. КРИТИЧНО: НЕ перемальовуй саму людину — збережи ТОЧНО як на фото обличчя, зачіску, голову та її розмір, пропорції тіла, зріст, статуру й позу. Міняй виключно тканину/одяг, більше нічого. Не збільшуй голову, не «прикрашай», не змінюй риси. Покажи людину на повний зріст. Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc)];
     }else{
-      const one=faceSrc||bodySrc;
-      const tag=faceSrc?'[ПОРТРЕТ]':'[ФОТО]';
-      parts=[`${tag} — справжнє фото людини. ${base}${faceRule(!!faceSrc)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(one)];
+      // тільки портрет → доводиться домалювати тіло; суворо тримаємо обличчя й реалістичну голову
+      parts=[`[ПОРТРЕТ] — справжнє фото людини. Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.${faceRule(true)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc)];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,768,small=>{
@@ -3063,7 +3160,15 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,photosFull,mannequin,weedPass:weedPassHash,outfit,partyHer,partyHis,bar,team,seating,invites,inviteGame,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true;
+        const lightIdeas=splitIdeas(ideas);   // картинки ідей — в окремі документи
+        DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas:lightIdeas,scriptSofia,scriptWave,hotels,weedPass:weedPassHash,partyHer,partyHis,bar,team,seating,invites,inviteGame,_updated:Date.now()},{merge:true}).catch(()=>{});
+        // важкі картинки — окремими документами
+        if(photos&&(photos.her||photos.his)) mediaSet(MEDIA_DOC.photos,{d:photos});
+        if(photosFull&&(photosFull.her||photosFull.his)) mediaSet(MEDIA_DOC.photosFull,{d:photosFull});
+        if(mannequin&&(mannequin.her||mannequin.his)) mediaSet(MEDIA_DOC.mannequin,{d:mannequin});
+        if(outfit&&(outfit.her||outfit.his)) mediaSet(MEDIA_DOC.outfit,{d:outfit});
+      }
       return;
     }
     const d=snap.data();
@@ -3078,11 +3183,16 @@ function startSync(){
     if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
-    if(d.photos && typeof d.photos==='object') photos=d.photos;
-    if(d.photosFull && typeof d.photosFull==='object') photosFull=d.photosFull;
-    if(d.mannequin && typeof d.mannequin==='object') mannequin=d.mannequin;
+    // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
+    if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
+    if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
+    if(d.mannequin && typeof d.mannequin==='object') legacyMedia.mannequin=d.mannequin;
+    if(d.outfit && typeof d.outfit==='object') legacyMedia.outfit=d.outfit;
     if(typeof d.weedPass==='string') weedPassHash=d.weedPass;
-    if(d.outfit && typeof d.outfit==='object') outfit=d.outfit;
+    // одноразова міграція старих картинок зі state в окремі документи
+    if(!IS_GUEST) ['photos','photosFull','mannequin','outfit'].forEach(name=>{
+      if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
+    });
     if(d.seating && typeof d.seating==='object') seating=d.seating;
     if(Array.isArray(d.invites)) invites=d.invites;
     if(d.inviteGame && typeof d.inviteGame==='object') inviteGame=d.inviteGame;
@@ -3097,15 +3207,10 @@ function startSync(){
     DB.set('wed-contacts',JSON.stringify(contacts));
     DB.set('wed-notes',JSON.stringify(notes));
     DB.set('wed-cap',JSON.stringify(budgetCap));
-    DB.set('wed-ideas',JSON.stringify(ideas));
     DB.set('wed-scriptS',JSON.stringify(scriptSofia));
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
-    DB.set('wed-photos',JSON.stringify(photos));
-    DB.set('wed-photos-full',JSON.stringify(photosFull));
-    DB.set('wed-mannequin',JSON.stringify(mannequin));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
-    DB.set('wed-outfit',JSON.stringify(outfit));
     DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-invites',JSON.stringify(invites));
     DB.set('wed-invite-game',JSON.stringify(inviteGame));
@@ -3114,8 +3219,9 @@ function startSync(){
     DB.set('wed-bar',JSON.stringify(bar));
     DB.set('wed-team',JSON.stringify(team));
     applyingSnapshot=false;
-    renderAll();
+    applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
   }, err=>{ console.warn('snapshot', err); });
+  startMediaSync();
 }
 
 if(auth){
