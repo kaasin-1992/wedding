@@ -151,6 +151,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .icon-btn.active-maybe{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
 .badge.wparty{background:var(--rose-dim);color:var(--rose);}
 .badge.kids{background:var(--sage-dim);color:var(--sage);}
+.badge.role{background:var(--gold,#caa24a);color:#fff;font-weight:600;}
+.attr-chip.on.rl{background:var(--gold,#caa24a);border-color:var(--gold,#caa24a);color:#fff;}
 /* compact toggle chips (дружка / під питанням / діти) */
 .attr-row{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
 .attr-chip{font-size:11px;line-height:1;padding:4px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:.15s;opacity:.7;}
@@ -224,6 +226,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cc-status.search{background:var(--surface2);color:var(--muted);}
 .cc-status.talk{background:var(--warn-dim);color:var(--warn);}
 .cc-status.booked{background:var(--done-dim);color:var(--done);}
+.opt-block{margin-top:10px;}
+.opt-block>summary{font-size:12px;color:var(--muted);cursor:pointer;list-style:none;padding:4px 0;}
+.opt-block>summary::-webkit-details-marker{display:none;}
+.opt-row{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px;background:var(--surface2);}
+.opt-row.chosen{border-color:var(--done);background:var(--done-dim);}
+.opt-info{min-width:0;flex:1;}
+.opt-name{font-weight:600;font-size:13px;word-break:break-word;}
+.opt-contact,.opt-note{font-size:12px;color:var(--muted);word-break:break-word;}
+.opt-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.mini-btn{font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);color:inherit;cursor:pointer;white-space:nowrap;}
+.mini-btn.on{background:var(--done-dim);border-color:var(--done);color:var(--done);font-weight:600;}
+.opt-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.opt-add .opt-in{flex:1;min-width:130px;font-size:12px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:inherit;}
 
 /* ── NOTES ── */
 .note-card{padding:14px 16px;margin-bottom:8px;position:relative;}
@@ -795,18 +810,18 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- CONTACTS -->
 <div class="panel" id="tab-contacts">
-  <div class="section-hint">Підрядники й контакти. Тицьни на статус, щоб змінити: 🔍 Шукаємо → 💬 На звʼязку → ✅ Заброньовано.</div>
+  <div class="section-hint">Підрядники й контакти. Під кожною роллю можна додати кілька <b>варіантів</b> з контактами, а потім тицьнути «Обрати» — обраний показується зверху й лишається як основний. Тицьни на статус, щоб змінити: 🔍 Шукаємо → 💬 На звʼязку → ✅ Заброньовано.</div>
   <div id="contactList"></div>
   <div class="add-section" style="margin-top:16px;">
     <details>
-      <summary>＋ Додати контакт</summary>
+      <summary>＋ Додати роль / підрядника</summary>
       <div class="add-form">
         <div class="form-row">
           <input type="text" id="cRole" placeholder="Роль (напр. Фотограф)">
-          <input type="text" id="cName" placeholder="Імʼя / назва">
+          <input type="text" id="cName" placeholder="Перший варіант — імʼя / назва (необовʼязково)">
         </div>
         <input type="text" id="cContact" placeholder="Телефон / Instagram / сайт">
-        <input type="text" id="cNote" placeholder="Нотатка (ціна, деталі…)">
+        <input type="text" id="cNote" placeholder="Ціна / нотатка">
         <button class="submit-btn" id="addContactBtn">Додати</button>
       </div>
     </details>
@@ -924,7 +939,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
-  <div class="section-hint">Хід дня по хвилинах. Окремо розпис у Софі та святкування у Хвильовому. Можна спершу накидати всі плани без часу в беклог, а потім розставити їм час.</div>
+  <div class="section-hint">Хід дня по хвилинах. Таймлайн окремий для Софі та Хвильового, а беклог (плани без часу) — <b>спільний</b>: накидай ідеї, признач локацію, а коли поставиш час — пункт піде в таймлайн тієї локації, яку зараз дивишся.</div>
   <div class="filters" id="scriptTabs">
     <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
     <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
@@ -1281,6 +1296,8 @@ function guestRank(g){
   if(g.maybe)                return 2;
   return 1;
 }
+const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
+const ROLE_ORDER=['','photo','video','mc'];
 function renderGuests(){
   const confirmed=guests.filter(g=>g.status==='confirmed').length;
   const pending=guests.filter(g=>g.status==='pending').length;
@@ -1308,7 +1325,9 @@ function renderGuests(){
     const p1=g.plus1==='none'?'':g.plus1==='confirmed'?'<span class="badge plus1-confirmed">+1 ✓</span>':'<span class="badge plus1">+1 ?</span>';
     const kids=Number(g.kids)||0;
     const wpLbl=g.side==='her'?'💐 Дружка':'🤵 Дружок';
+    const roleBadge=g.role&&GUEST_ROLES[g.role]?`<span class="badge role">${GUEST_ROLES[g.role]}</span>`:'';
     const attrRow=`<div class="attr-row">
+      <span class="attr-chip rl ${g.role?'on':''}" data-attr="role" data-id="${g.id}" role="button" tabindex="0" title="Роль на весіллі — одна людина на роль (тицяй, щоб змінити)">${g.role&&GUEST_ROLES[g.role]?GUEST_ROLES[g.role]:'🎬 Роль'}</span>
       <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.wparty}">${wpLbl}</span>
       <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
       <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}" role="button" tabindex="0" aria-label="Діти: ${kids}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
@@ -1325,7 +1344,7 @@ function renderGuests(){
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
         <div class="guest-name">${esc(g.name)}</div>
-        <div class="guest-sub">${grpBadge}${evBadge}${p1}</div>
+        <div class="guest-sub">${grpBadge}${evBadge}${roleBadge}${p1}</div>
         ${attrRow}
       </div>
       <div class="guest-status">
@@ -1374,6 +1393,11 @@ function renderGuests(){
     else if(a==='alco') g.alco=!g.alco;
     else if(a==='veg') g.veg=!g.veg;
     else if(a==='weed') g.weed=!g.weed;
+    else if(a==='role'){
+      const next=ROLE_ORDER[(ROLE_ORDER.indexOf(g.role||'')+1)%ROLE_ORDER.length];
+      if(next) guests.forEach(x=>{ if(x!==g && x.role===next) x.role=''; }); // одна людина на роль
+      g.role=next;
+    }
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     saveJSON('wed-guests',guests); renderGuests();
     if(a==='alco'||a==='veg'||a==='weed') renderBar();
@@ -1599,24 +1623,63 @@ document.getElementById('addBudgetBtn').onclick=()=>{
 /* ════ CONTACTS ════ */
 const CSTAT=['search','talk','booked'];
 const CSTAT_LBL={search:'🔍 Шукаємо',talk:'💬 На звʼязку',booked:'✅ Заброньовано'};
+// гарантуємо, що в контакта є масив варіантів (міграція старих записів)
+function migrateContact(c){
+  if(!Array.isArray(c.options)){
+    c.options=(c.name||c.contact||c.note)?[{id:'o'+c.id,name:c.name||'',contact:c.contact||'',note:c.note||''}]:[];
+    c.chosen=c.options[0]?c.options[0].id:'';
+    return true;
+  }
+  return false;
+}
+// записуємо обраний варіант у верхні поля — щоб він «лишався всюди»
+function syncChosen(c){
+  const o=(c.options||[]).find(x=>x.id===c.chosen);
+  c.name=o?o.name:''; c.contact=o?o.contact:''; c.note=o?o.note:'';
+}
 function renderContacts(){
   const listEl=document.getElementById('contactList'); listEl.innerHTML='';
+  let migrated=false; contacts.forEach(c=>{ if(migrateContact(c)) migrated=true; });
+  if(migrated) saveJSON('wed-contacts',contacts);
   if(!contacts.length){ listEl.innerHTML='<div class="empty-state">Контактів ще немає</div>'; return; }
   contacts.forEach(c=>{
+    const opts=c.options||[];
+    const chosen=opts.find(o=>o.id===c.chosen)||null;
     const card=document.createElement('div'); card.className='contact-card';
     card.innerHTML=`
       <div class="cc-top">
         <div style="flex:1;min-width:0">
           <div class="cc-role">${esc(c.role)}</div>
-          <div class="cc-name ${c.name?'':'empty'}">${c.name?esc(c.name):'не обрано'}</div>
-          ${c.contact?`<div class="cc-contact">${esc(c.contact)}</div>`:''}
-          ${c.note?`<div class="cc-note">${esc(c.note)}</div>`:''}
+          <div class="cc-name ${chosen?'':'empty'}">${chosen?esc(chosen.name||'—'):'не обрано'}</div>
+          ${chosen&&chosen.contact?`<div class="cc-contact">${esc(chosen.contact)}</div>`:''}
+          ${chosen&&chosen.note?`<div class="cc-note">${esc(chosen.note)}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
           <span class="cc-status ${c.status}" data-cid="${c.id}">${CSTAT_LBL[c.status]}</span>
           <button class="icon-btn danger" data-cdel="${c.id}">🗑</button>
         </div>
-      </div>`;
+      </div>
+      <details class="opt-block" ${chosen?'':'open'}>
+        <summary>Варіанти (${opts.length})${chosen?' · обрано ✓':' · ще не обрано'}</summary>
+        ${opts.map(o=>`
+          <div class="opt-row ${o.id===c.chosen?'chosen':''}">
+            <div class="opt-info">
+              <div class="opt-name">${esc(o.name||'—')}</div>
+              ${o.contact?`<div class="opt-contact">${esc(o.contact)}</div>`:''}
+              ${o.note?`<div class="opt-note">${esc(o.note)}</div>`:''}
+            </div>
+            <div class="opt-actions">
+              <button class="mini-btn ${o.id===c.chosen?'on':''}" data-choose="${c.id}|${o.id}">${o.id===c.chosen?'✓ Обрано':'Обрати'}</button>
+              <button class="icon-btn danger" data-optdel="${c.id}|${o.id}">🗑</button>
+            </div>
+          </div>`).join('')}
+        <div class="opt-add">
+          <input class="opt-in" data-f="name" placeholder="Імʼя / назва">
+          <input class="opt-in" data-f="contact" placeholder="Телефон / Instagram / сайт">
+          <input class="opt-in" data-f="note" placeholder="Ціна / нотатка">
+          <button class="mini-btn" data-addopt="${c.id}">＋ Варіант</button>
+        </div>
+      </details>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-cid]').forEach(el=>el.onclick=()=>{
@@ -1626,11 +1689,33 @@ function renderContacts(){
   listEl.querySelectorAll('[data-cdel]').forEach(btn=>btn.onclick=()=>{
     delUndo('wed-contacts',btn.dataset.cdel,'Контакт видалено');
   });
+  listEl.querySelectorAll('[data-choose]').forEach(btn=>btn.onclick=()=>{
+    const [cid,oid]=btn.dataset.choose.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
+    c.chosen=(c.chosen===oid)?'':oid; syncChosen(c); saveJSON('wed-contacts',contacts); renderContacts();
+  });
+  listEl.querySelectorAll('[data-optdel]').forEach(btn=>btn.onclick=()=>{
+    const [cid,oid]=btn.dataset.optdel.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
+    c.options=(c.options||[]).filter(o=>o.id!==oid);
+    if(c.chosen===oid) c.chosen=c.options[0]?c.options[0].id:'';
+    syncChosen(c); saveJSON('wed-contacts',contacts); renderContacts();
+  });
+  listEl.querySelectorAll('[data-addopt]').forEach(btn=>btn.onclick=()=>{
+    const c=contacts.find(x=>x.id===btn.dataset.addopt); if(!c)return;
+    const box=btn.closest('.opt-add'); const get=f=>{const el=box.querySelector(`[data-f="${f}"]`);return el?el.value.trim():'';};
+    const name=get('name'), contact=get('contact'), note=get('note');
+    if(!name&&!contact&&!note){ showToast('Заповни хоч щось про варіант 🙂'); return; }
+    c.options=c.options||[]; const oid='o'+Date.now();
+    c.options.push({id:oid,name,contact,note});
+    if(!c.chosen){ c.chosen=oid; syncChosen(c); }   // перший варіант одразу обраний
+    saveJSON('wed-contacts',contacts); renderContacts();
+  });
 }
 document.getElementById('addContactBtn').onclick=()=>{
   const role=val('cRole')||'Контакт';
   if(!val('cRole')&&!val('cName'))return;
-  contacts.push({id:'c'+Date.now(),role,name:val('cName'),contact:val('cContact'),note:val('cNote'),status:'search'});
+  const opts=[]; let chosen='';
+  if(val('cName')||val('cContact')||val('cNote')){ const oid='o'+Date.now(); opts.push({id:oid,name:val('cName'),contact:val('cContact'),note:val('cNote')}); chosen=oid; }
+  contacts.push({id:'c'+Date.now(),role,status:'search',options:opts,chosen,name:val('cName'),contact:val('cContact'),note:val('cNote')});
   ['cRole','cName','cContact','cNote'].forEach(i=>document.getElementById(i).value='');
   saveJSON('wed-contacts',contacts); renderContacts();
 };
@@ -2327,12 +2412,14 @@ function fillLocDatalist(){
   const dl=document.getElementById('locOptions'); if(!dl) return;
   dl.innerHTML=locSuggestions().map(l=>`<option value="${esc(l)}"></option>`).join('');
 }
+function scriptArrays(){ return [[scriptSofia,'wed-scriptS'],[scriptWave,'wed-scriptW']]; }
+function findScript(id){ for(const [arr,key] of scriptArrays()){ const it=arr.find(x=>x.id===id); if(it) return {arr,key,it}; } return null; }
+function visScript(arr){ return weedUnlocked?arr:arr.filter(m=>!isWeed(m.text)); }
 function renderScripts(){
   fillLocDatalist();
-  // 🌿 пункти сценарію про травку приховані, поки не введено пароль
-  const all = weedUnlocked ? scriptRef() : scriptRef().filter(m=>!isWeed(m.text));
-  const timed=all.filter(m=>m.time).sort((a,b)=>a.time.localeCompare(b.time));
-  const backlog=all.filter(m=>!m.time);
+  // таймлайн (з часом) — окремий для кожної локації; беклог — СПІЛЬНИЙ для обох
+  const timed=visScript(scriptRef()).filter(m=>m.time).sort((a,b)=>a.time.localeCompare(b.time));
+  const backlog=[...visScript(scriptSofia),...visScript(scriptWave)].filter(m=>!m.time);
   const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
   // ── Таймлайн (з часом) ──
   if(!timed.length){
@@ -2352,7 +2439,7 @@ function renderScripts(){
   // ── Беклог (без часу) ──
   const bl=document.createElement('div'); bl.className='backlog-block';
   const head=document.createElement('div'); head.className='backlog-title';
-  head.textContent=`📋 Беклог — плани без часу (${backlog.length})`;
+  head.textContent=`📋 Спільний беклог — плани без часу (${backlog.length})`;
   bl.appendChild(head);
   if(backlog.length){
     backlog.forEach(m=>{
@@ -2369,19 +2456,28 @@ function renderScripts(){
     bl.appendChild(be);
   }
   listEl.appendChild(bl);
-  // handlers
-  listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>delUndo(scriptKey(),b.dataset.sdel,'Пункт видалено'));
+  // handlers (шукаємо пункт в обох списках — беклог спільний)
+  listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{
+    const f=findScript(b.dataset.sdel); if(!f)return; delUndo(f.key,b.dataset.sdel,'Пункт видалено');
+  });
   listEl.querySelectorAll('[data-stime]').forEach(inp=>inp.onchange=()=>{
-    const m=scriptRef().find(x=>x.id===inp.dataset.stime); if(!m)return;
-    m.time=inp.value||''; saveJSON(scriptKey(),scriptRef()); renderScripts();
+    const f=findScript(inp.dataset.stime); if(!f)return;
+    f.it.time=inp.value||'';
+    // ставимо час із спільного беклогу → пункт іде в таймлайн АКТИВНОЇ локації
+    if(f.it.time && f.key!==scriptKey()){
+      f.arr.splice(f.arr.indexOf(f.it),1);
+      scriptRef().push(f.it);
+      saveJSON(f.key,f.arr);
+    }
+    saveJSON(scriptKey(),scriptRef()); renderScripts();
   });
   listEl.querySelectorAll('[data-sloc]').forEach(inp=>inp.onchange=()=>{
-    const m=scriptRef().find(x=>x.id===inp.dataset.sloc); if(!m)return;
-    m.loc=inp.value.trim(); saveJSON(scriptKey(),scriptRef()); renderScripts();
+    const f=findScript(inp.dataset.sloc); if(!f)return;
+    f.it.loc=inp.value.trim(); saveJSON(f.key,f.arr); renderScripts();
   });
   listEl.querySelectorAll('[data-suntime]').forEach(b=>b.onclick=()=>{
-    const m=scriptRef().find(x=>x.id===b.dataset.suntime); if(!m)return;
-    m.time=''; saveJSON(scriptKey(),scriptRef()); renderScripts();
+    const f=findScript(b.dataset.suntime); if(!f)return;
+    f.it.time=''; saveJSON(f.key,f.arr); renderScripts();
   });
 }
 document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
