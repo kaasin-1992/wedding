@@ -3,46 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>06.09 — Весілля</title>
+<title>Катерина & Дмитро · 06.09.2026</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#F6F1E8">
+<meta name="theme-color" content="#EBEBE3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Весілля">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script>try{if(localStorage.getItem('wed-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <style>
 /* ════════ MINIMAL BOHO WEDDING THEME ════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
+/* ════ ДЕНЬ · «СОФІЯ» — фреска, лазур, золото ════ */
 :root{
-  --bg:#F6F1E8;--surface:#FFFDF8;--surface2:#FBF5EC;
-  --text:#4A4138;--muted:#8C7C66;
-  --terra:#BC7A55;--terra-dim:#F1E2D6;
-  --sage:#8E9B7C;--sage-dim:#E7EADF;
-  --rose:#CBA39B;--rose-dim:#F3E6E1;
-  --gold:#B9A06A;
-  --done:#879A6B;--done-dim:#EAEDE0;
-  --warn:#C39A55;--warn-dim:#F3E9D6;
-  --danger:#B16A53;--danger-dim:#F2E0D9;
-  --line:#E6DCCB;
-  --serif:'DM Serif Display',Georgia,serif;
-  --sans:'DM Sans',-apple-system,sans-serif;
-  --r:14px;
+  --bg:#EBEBE3;--surface:#F8F8F3;--surface2:#E1E1D5;
+  --text:#222633;--muted:#6E7484;
+  --terra:#1E4E8A;--terra-dim:#DBE5F1;     /* лазур (основний акцент) */
+  --sage:#3F7C77;--sage-dim:#D6E6E3;       /* смарагд-тіл (Він) */
+  --rose:#A8505F;--rose-dim:#F0DEE1;       /* вишнево-рожевий (Вона) */
+  --gold:#B58A2E;
+  --done:#4E8A6B;--done-dim:#DAE8E0;
+  --warn:#C2912E;--warn-dim:#F2E7CE;
+  --danger:#A8392E;--danger-dim:#F2DAD5;
+  --line:#D5D4C7;
+  --serif:'Unbounded','Manrope',sans-serif;
+  --sans:'Manrope',-apple-system,sans-serif;
+  --r:12px;
 }
-/* ════ ВЕЧІРНЯ (ТЕМНА) ТЕМА ════ */
+/* ════ НІЧ · «ХВИЛЬОВИЙ» — чорнило, золото, електрик ════ */
 :root.dark{
-  --bg:#1E1A17;--surface:#29231F;--surface2:#322A25;
-  --text:#EDE4D8;--muted:#A89682;
-  --terra:#D89570;--terra-dim:#3A2A22;
-  --sage:#A6B391;--sage-dim:#2A2F24;
-  --rose:#D9AFA6;--rose-dim:#382A27;
-  --gold:#C9AE73;
-  --done:#9DB37E;--done-dim:#29301F;
-  --warn:#D2A85E;--warn-dim:#352B1C;
-  --danger:#CE7E64;--danger-dim:#3A251E;
-  --line:#3D342D;
+  --bg:#15171E;--surface:#1E212A;--surface2:#272B36;
+  --text:#ECEAE0;--muted:#9AA0AE;
+  --terra:#6FA3E0;--terra-dim:#1E2A3C;
+  --sage:#6FB0AA;--sage-dim:#1C2B2A;
+  --rose:#D58597;--rose-dim:#34232A;
+  --gold:#DCB85E;
+  --done:#79B488;--done-dim:#1E2C22;
+  --warn:#DDB05A;--warn-dim:#322A1A;
+  --danger:#DA7763;--danger-dim:#36211C;
+  --line:#313644;
 }
 html{background:var(--bg);transition:background .25s;}
 body{transition:background .25s,color .25s;}
@@ -56,8 +57,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* HEADER */
 .hero{padding:40px 24px 28px;text-align:center;position:relative;}
 .hero-eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--terra);font-weight:500;margin-bottom:14px;}
-.hero-title{font-family:var(--serif);font-weight:400;font-size:clamp(32px,8vw,50px);line-height:1.04;color:var(--text);}
-.hero-title em{font-style:italic;color:var(--terra);}
+.hero-title{font-family:var(--serif);font-weight:700;font-size:clamp(25px,6.6vw,42px);line-height:1.08;letter-spacing:-.01em;color:var(--text);}
+.hero-title em{font-style:normal;font-weight:800;color:var(--terra);}
+.hero-surname{font-family:var(--serif);font-weight:800;font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-top:12px;padding-left:.42em;}
 .hero-countdown{margin-top:18px;display:inline-flex;align-items:baseline;gap:8px;padding-top:16px;border-top:1px solid var(--line);}
 .hero-countdown::before{content:'❧';display:block;position:absolute;left:50%;transform:translateX(-50%);margin-top:-30px;color:var(--gold);font-size:16px;}
 .cnt-num{font-family:var(--serif);font-size:clamp(34px,8vw,46px);color:var(--terra);line-height:1;}
@@ -243,7 +245,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-note{font-size:13px;color:var(--text);margin-top:9px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
 .idea-actions{margin-top:11px;}
 .idea-open{display:block;text-align:center;background:var(--terra);color:#fff;text-decoration:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;letter-spacing:.02em;}
-.idea-open:hover{background:#a86846;}
+.idea-open:hover{filter:brightness(.94);}
 .idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
 
 /* ── SCRIPT / SCENARIO ── */
@@ -266,7 +268,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .add-form input:focus,.add-form select:focus,.add-form textarea:focus{outline:none;border-color:var(--terra);}
 .add-form select option{background:var(--surface);}
 .submit-btn{background:var(--terra);color:#fff;border:none;border-radius:10px;padding:11px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:.2s;letter-spacing:.02em;}
-.submit-btn:hover{background:#a86846;}
+.submit-btn:hover{filter:brightness(.94);}
 .empty-state{text-align:center;color:var(--muted);padding:32px 0;font-size:14px;line-height:1.5;}
 
 @media(max-width:480px){
@@ -298,7 +300,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .toast button{background:none;border:none;color:var(--terra);font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px;}
 .toast.dark-text button{color:var(--gold);}
 /* одноразова підказка про свайп */
-.swipe-hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:960;background:rgba(30,26,23,.86);color:#F6F1E8;
+.swipe-hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:960;background:rgba(18,20,26,.9);color:#ECEAE0;
   border-radius:14px;padding:16px 20px;font-size:14px;line-height:1.5;text-align:center;max-width:260px;box-shadow:0 10px 40px rgba(0,0,0,.3);
   opacity:0;pointer-events:none;transition:opacity .3s;}
 .swipe-hint.show{opacity:1;}
@@ -308,7 +310,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .modal-text{font-size:14.5px;line-height:1.55;color:var(--text);white-space:pre-line;}
 .modal-actions{display:flex;gap:10px;margin-top:20px;}
 .modal-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;background:var(--terra);color:#fff;transition:.15s;}
-.modal-btn:hover{background:#a86846;}
+.modal-btn:hover{filter:brightness(.94);}
 .modal-btn.ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--line);}
 .modal-btn.ghost:hover{background:var(--surface2);color:var(--text);}
 </style>
@@ -318,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 <div class="login-overlay" id="login">
   <div class="login-box">
     <div class="login-emoji">💍</div>
-    <div class="login-title">Наше весілля</div>
+    <div class="login-title">Катерина &amp; Дмитро</div>
     <div class="login-sub">Спільний доступ для двох.<br>Введи email і пароль, які ми створили.</div>
     <input id="logEmail" type="email" placeholder="Email" aria-label="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
     <input id="logPass" type="password" placeholder="Пароль" aria-label="Пароль" autocomplete="current-password">
@@ -344,8 +346,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 <div class="hero">
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
-  <div class="hero-eyebrow">06 вересня 2026</div>
-  <h1 class="hero-title">Наше <em>весілля</em></h1>
+  <div class="hero-eyebrow">6 вересня 2026 · Київ</div>
+  <h1 class="hero-title">Катерина <em>&</em> Дмитро</h1>
+  <div class="hero-surname">Люті</div>
   <div class="hero-countdown">
     <span class="cnt-num" id="daysLeft">—</span>
     <span class="cnt-lbl" id="cntLbl">днів залишилось</span>
@@ -1439,7 +1442,7 @@ const themeBtn=document.getElementById('themeBtn');
 function applyTheme(dark){
   document.documentElement.classList.toggle('dark',dark);
   themeBtn.textContent=dark?'☀️':'🌙';
-  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',dark?'#1E1A17':'#F6F1E8');
+  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',dark?'#15171E':'#EBEBE3');
   try{localStorage.setItem('wed-theme',dark?'dark':'light');}catch(e){}
 }
 themeBtn.onclick=()=>applyTheme(!document.documentElement.classList.contains('dark'));
