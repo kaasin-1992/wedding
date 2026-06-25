@@ -264,6 +264,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bp-manq-info.ok{color:var(--sage);}
 .bp-manq-btn{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:2px 8px;cursor:pointer;}
 .bp-manq-btn:hover{filter:brightness(.94);}
+.img-lightbox{position:fixed;inset:0;z-index:2000;background:rgba(20,20,18,.92);display:none;align-items:center;justify-content:center;flex-direction:column;padding:24px;cursor:zoom-out;}
+.img-lightbox img{max-width:100%;max-height:84vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.img-lightbox-cap{color:#fff;margin-top:14px;font-size:14px;opacity:.9;}
+.img-lightbox-x{position:absolute;top:16px;right:18px;width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:18px;cursor:pointer;}
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
@@ -1763,7 +1767,7 @@ function renderImgPick(){
     cell.className='imgpick-cell'+(it.img===src?' sel':'');
     const tag=/s2\/favicons/.test(src)?'іконка':(/screenshot|microlink.*screenshot/.test(src)?'скрін':'');
     cell.innerHTML=`<img src="${esc(src)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'">${tag?`<span class="ic-tag">${tag}</span>`:''}`;
-    cell.onclick=()=>{ it.img=src; saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas(); };
+    cell.onclick=()=>{ it.img=src; saveJSON('wed-ideas',ideas); embedImg(it); renderImgPick(); renderIdeas(); };
     grid.appendChild(cell);
   });
 }
@@ -1783,7 +1787,7 @@ document.getElementById('imgPickShot').onclick=async()=>{
   const url=s&&s.screenshot&&s.screenshot.url;
   if(!url){ showToast('Скрін не вдався 😕 спробуй ще раз'); return; }
   it.imgChoices=[...new Set([url, ...(it.imgChoices||[])])]; it.img=url;
-  saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas();
+  saveJSON('wed-ideas',ideas); embedImg(it); renderImgPick(); renderIdeas();
 };
 document.getElementById('imgPickUp').onclick=()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it) return;
@@ -1834,17 +1838,21 @@ function renderBasePhotos(){
       fr.style.cssText = img ? `background-image:url('${img}')` : '';
       fr.textContent = img ? '' : emoji;
       fr.classList.toggle('busy', !!manqBusy[who]);
+      fr.style.cursor = img ? 'zoom-in' : '';
+      fr.title = mannequin[who] ? 'Манекен — тицяй, щоб збільшити' : (img ? 'Тицяй, щоб збільшити' : '');
+      fr.onclick = img ? ()=>showImgBig(mannequin[who]||photos[who], mannequin[who]?'🧍 Манекен — основа для примірки':'') : null;
     }
     const mc=document.getElementById(mid); if(!mc) return;
     const hasPhoto=photos[who]||photosFull[who];
     if(manqBusy[who]) mc.innerHTML='<span class="bp-manq-info">🧍 роблю манекен…</span>';
-    else if(mannequin[who]) mc.innerHTML=`<span class="bp-manq-info ok">🧍 манекен готовий</span> <button class="bp-manq-btn" data-manq="${who}">↻</button>`;
+    else if(mannequin[who]) mc.innerHTML=`<button class="bp-manq-btn" data-manqview="${who}">🧍 глянути манекен</button> <button class="bp-manq-btn" data-manq="${who}" title="Згенерувати заново">↻</button>`;
     else if(hasPhoto) mc.innerHTML=`<button class="bp-manq-btn" data-manq="${who}">🧍 зробити манекен</button>`;
     else mc.innerHTML='';
     const fc=document.getElementById('bpFull'+(who==='her'?'Her':'His'));
     if(fc) fc.innerHTML = photosFull[who] ? `<span class="bp-full-info">📏 фото в зріст є <button class="bp-full-x" data-fulldel="${who}" title="Прибрати">✕</button></span>` : '';
   });
   document.querySelectorAll('[data-manq]').forEach(b=>b.onclick=()=>aiMakeMannequin(b.dataset.manq));
+  document.querySelectorAll('[data-manqview]').forEach(b=>b.onclick=()=>{ const w=b.dataset.manqview; showImgBig(mannequin[w], '🧍 Манекен — основа для примірки'); });
   document.querySelectorAll('[data-fulldel]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.fulldel; photosFull[who]=''; saveJSON('wed-photos-full',photosFull); renderBasePhotos();
   });
@@ -1866,8 +1874,8 @@ function renderCouple(){
   const hintEl=document.getElementById('csHint');
   if(hintEl){
     hintEl.textContent = (outfit.her||outfit.his)
-      ? 'Образ пари в одному модельному стилі. Натисни 🪄 «Приміряти» на картці — людина перевдягнеться тут.'
-      : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі, поряд із парою.';
+      ? 'Образ дозбирається: кожна нова примірка змінює ЛИШЕ цю річ (туфлі міняють туфлі), а обличчя й решта одягу лишаються. ✕ на фото — почати образ заново.'
+      : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі. Далі додавай туфлі, прикраси — вони дозбираються поверх.';
   }
   document.querySelectorAll('[data-csx]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.csx; outfit[who]=''; saveJSON('wed-outfit',outfit); renderCouple();
@@ -2078,25 +2086,39 @@ async function aiMakeMannequin(who){
 }
 async function aiTryOn(it){
   const who=it.cat==='his'?'his':'her';
-  const personUrl=personBase(who);
-  if(!personUrl){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
+  const facePhoto=photos[who];            // справжній портрет — головний якір обличчя
+  const bodyPhoto=photosFull[who];        // справжній повний зріст (необовʼязково)
+  const manq=mannequin[who];              // манекен (стабільне обличчя — основа)
+  const current=outfit[who];              // поточний образ — дозбираємо одяг поверх нього
+  if(!facePhoto && !bodyPhoto && !manq && !current){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
   if(!it.img){ showToast('У цієї речі нема фото товару. Натисни 🖼 «Обрати картинку» і вибери саме той одяг із посилання.'); return; }
   aiBusy(it.id,true);
   coupleBusy[who]=true; renderCouple();
   try{
-    const onMannequin=!!mannequin[who];
-    const personPart=dataUrlToPart(personUrl);
+    // одяг МАЄ бути реальним фото товару — якщо не вдалось завантажити, НЕ вигадуємо інший
     const garmentPart=await srcToPart(it.img);
+    if(!garmentPart){
+      aiBusy(it.id,false); coupleBusy[who]=false; renderCouple();
+      showToast('Не вдалося взяти фото цього одягу (сайт не віддає картинку). Відкрий 🖼 «Обрати картинку» → 📸 «Скрін сторінки» або 📁 завантаж фото товару — тоді приміряю саме його, без вигадок.');
+      return;
+    }
     const name=who==='her'?'нареченій (жінці)':'нареченому (чоловіку)';
     const gt=gtypeText(it);
+    const typeWord=(it.gtype||'').trim();
     let parts;
-    if(garmentPart){
-      const baseDesc=onMannequin
-        ? 'Перше зображення — ця людина в сірому базовому одязі (манекен-основа): ОБОВʼЯЗКОВО збережи її обличчя, зачіску і статуру без змін, заміни лише сірий базовий одяг на одяг із другого фото.'
-        : 'Перше зображення — фото людини: збережи її обличчя, зачіску і статуру без змін.';
-      parts=[`${baseDesc} Друге зображення — це фото РЕАЛЬНОГО ТОВАРУ з магазину${gt}. ГОЛОВНЕ ЗАВДАННЯ: вдягни на ${name} саме цей одяг з другого фото — точно відтвори його тканину, колір, візерунок, крій, довжину, фурнітуру та всі деталі. Бери одяг ВИКЛЮЧНО з другого фото; не вигадуй і не додавай деталей, яких там нема, не орієнтуйся на слова. Якщо на другому фото є людина-модель — копіюй лише сам одяг, а не її обличчя чи позу. Решту образу лиши нейтральною і простою. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, personPart, garmentPart];
+    if(current){
+      // ДОЗБИРАЄМО образ: міняємо ТІЛЬКИ цю річ, обличчя й решта одягу — без змін
+      parts=[`Перше зображення — ПОТОЧНИЙ образ людини. Друге зображення — фото РЕАЛЬНОГО ТОВАРУ з магазину${gt}. Відредагуй ПЕРШЕ зображення: вдягни на людину саме цей одяг із другого фото${typeWord?`, замінивши лише «${typeWord}»`:', замінивши лише відповідну річ цього типу'}. ОБОВʼЯЗКОВО лиши БЕЗ ЖОДНИХ ЗМІН обличчя, зачіску, статуру, позу, фон і ВЕСЬ інший одяг — зміни рівно одну річ. Точно відтвори тканину, колір, візерунок, крій, довжину і деталі товару; бери одяг ВИКЛЮЧНО з другого фото, не вигадуй. Якщо на фото товару є модель — копіюй лише сам одяг. Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(current), garmentPart];
+    }else if(manq){
+      // ПЕРША примірка: редагуємо манекен (його обличчя стабільне) — лише вдягаємо одяг
+      parts=[`Перше зображення — ця людина в сірому базовому одязі (манекен-основа). Друге зображення — фото РЕАЛЬНОГО ТОВАРУ з магазину${gt}. Відредагуй ПЕРШЕ зображення: заміни сірий базовий одяг на одяг із другого фото. ОБОВʼЯЗКОВО збережи обличчя, зачіску, статуру і позу БЕЗ ЗМІН. Точно відтвори тканину, колір, візерунок, крій, довжину і деталі товару; бери одяг ВИКЛЮЧНО з другого фото, не вигадуй. Якщо на фото товару є модель — копіюй лише сам одяг. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(manq), garmentPart];
     }else{
-      parts=[`Це фото людини: збережи обличчя і статуру. Реалістично покажи ${name} в образі: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')||'святковий образ'}. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, personPart];
+      // нема ні образу, ні манекена — синтез із опорних фото (обличчя + зріст)
+      const refs=[]; const desc=[];
+      if(facePhoto){ refs.push(dataUrlToPart(facePhoto)); desc.push('портрет (ТОЧНО це обличчя)'); }
+      if(bodyPhoto && bodyPhoto!==facePhoto){ refs.push(dataUrlToPart(bodyPhoto)); desc.push('повний зріст (статура, поза)'); }
+      if(!refs.length){ refs.push(dataUrlToPart(facePhoto||bodyPhoto)); desc.push('фото людини'); }
+      parts=[`Спершу йдуть опорні фото ОДНІЄЇ людини — ${desc.join(', ')}. ОБОВʼЯЗКОВО збережи це САМЕ обличчя, риси, зачіску і статуру (впізнавано та сама людина, без осереднення). Останнє зображення — фото РЕАЛЬНОГО ТОВАРУ з магазину${gt}: вдягни на ${name} саме цей одяг — точно відтвори тканину, колір, візерунок, крій, довжину і деталі. Бери одяг ВИКЛЮЧНО з фото товару, не вигадуй. Якщо там модель — копіюй лише одяг. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, ...refs, garmentPart];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,896,small=>{
@@ -2124,6 +2146,28 @@ async function aiImagine(it){
   }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
 }
 async function srcToPart(src){ if(/^data:/.test(src||'')) return dataUrlToPart(src); return await urlToPart(src); }
+// перетворює будь-яке посилання на вбудоване data:-фото (щоб одяг гарантовано їхав у генерацію)
+async function srcToDataUrl(src){
+  if(/^data:/.test(src||'')) return src;
+  try{ const res=await fetch(src,{mode:'cors'}); const blob=await res.blob();
+    return await new Promise((ok,no)=>{const r=new FileReader();r.onloadend=()=>ok(r.result);r.onerror=no;r.readAsDataURL(blob);}); }
+  catch(e){ return null; }
+}
+// фонова спроба вбудувати обрану картинку одягу для ідеї it
+function embedImg(it){
+  if(!it || !it.img || /^data:/.test(it.img)) return;
+  const url=it.img;
+  srcToDataUrl(url).then(du=>{ if(du && it.img===url){ it.img=du; saveJSON('wed-ideas',ideas); } });
+}
+// проста «лупа» — показати картинку на весь екран
+function showImgBig(src,cap){
+  if(!src) return;
+  let lb=document.getElementById('imgLightbox');
+  if(!lb){ lb=document.createElement('div'); lb.id='imgLightbox'; lb.className='img-lightbox'; document.body.appendChild(lb);
+    lb.onclick=()=>{ lb.style.display='none'; }; }
+  lb.innerHTML=`<img src="${esc(src)}" alt="">${cap?`<div class="img-lightbox-cap">${esc(cap)}</div>`:''}<button class="img-lightbox-x" aria-label="Закрити">✕</button>`;
+  lb.style.display='flex';
+}
 async function aiText(parts){
   const {ai,getGenerativeModel}=await aiCore();
   const model=getGenerativeModel(ai,{model:'gemini-2.5-flash'});
