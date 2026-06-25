@@ -1315,7 +1315,9 @@ function renderGuests(){
       <span class="attr-chip bk ${g.backup?'on':''}" data-attr="backup" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.backup}" title="Кликати в останню чергу">⏳ Запасний</span>
       <span class="attr-chip al ${g.alco?'on':''}" data-attr="alco" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.alco}" title="Пʼє алкоголь">🍷 Алко</span>
       <span class="attr-chip vg ${g.veg?'on':''}" data-attr="veg" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.veg}" title="Вегетаріанець — не їсть мʼясо (решта їдять мʼясо)">🌱 Вега</span>
-      ${weedUnlocked?`<span class="attr-chip wd ${g.weed?'on':''}" data-attr="weed" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.weed}" title="Курить травку">🌿 Травка</span>`:''}
+      ${weedUnlocked
+        ? `<span class="attr-chip wd ${g.weed?'on':''}" data-attr="weed" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.weed}" title="Курить травку">🌿 Травка</span>`
+        : (IS_GUEST?'':`<span class="attr-chip wd" data-weedunlock="1" role="button" tabindex="0" title="Розблокувати приватний розділ паролем">🌿 Травка 🔒</span>`)}
     </div>`;
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}${g.maybe?' maybe':''}${g.backup?' backup':''}`;
@@ -1376,6 +1378,7 @@ function renderGuests(){
     saveJSON('wed-guests',guests); renderGuests();
     if(a==='alco'||a==='veg'||a==='weed') renderBar();
   });
+  listEl.querySelectorAll('[data-weedunlock]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); unlockWeed(); });
 }
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
