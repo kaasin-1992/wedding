@@ -451,6 +451,9 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .backlog-loc{flex:0 0 auto;width:118px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;font-family:var(--sans);font-size:12.5px;background:var(--surface2);color:var(--text);}
 .backlog-row{flex-wrap:wrap;}
 .backlog-empty{font-size:12.5px;color:var(--muted);}
+[contenteditable="true"]{cursor:text;border-radius:6px;outline:none;}
+[contenteditable="true"]:hover{box-shadow:inset 0 -1px 0 var(--line);}
+[contenteditable="true"]:focus{box-shadow:0 0 0 2px var(--sage);background:var(--surface2);padding:1px 4px;margin:-1px -4px;}
 .form-hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:2px 0 8px;}
 .seat-tip{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:14px;}
 .seat-ua-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;}
@@ -876,7 +879,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="bp-full" id="bpFullHis"></div>
     </div>
   </div>
-  <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» можна додати ідею текстом і натиснути 🪄 «Уявити». Спершу обери розділ.</div>
+  <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». Одяг можна додати й без посилання — напиши опис (напр. «шовкова сукня кольору шампань, міді») і тисни 🪄 «Уявити річ», ШІ намалює сам предмет, далі — 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» так само 🪄 «Уявити». Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
     <button class="filt-btn" data-i="his">🤵 Він</button>
@@ -885,9 +888,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
   <div class="add-section" style="margin-bottom:16px;">
     <details open>
-      <summary>＋ Додати посилання</summary>
+      <summary>＋ Додати (посилання або текстом)</summary>
       <div class="add-form">
-        <input type="url" id="iUrl" placeholder="Встав посилання (Instagram, магазин, Pinterest…)" autocapitalize="none" spellcheck="false">
+        <input type="url" id="iUrl" placeholder="Посилання (необовʼязково — можна лишити порожнім)" autocapitalize="none" spellcheck="false">
         <div class="form-row">
           <input type="text" id="iName" placeholder="Назва (підтягнеться сама)">
           <input type="text" id="iPrice" placeholder="Ціна (напр. 4500 грн)">
@@ -1056,7 +1059,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1243,6 +1246,7 @@ let budgetCap= loadJSON('wed-cap', 0);
 let ideas       = loadJSON('wed-ideas', []);
 let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
+let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже додані українські традиції в беклог (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
@@ -1426,6 +1430,7 @@ function renderGuests(){
     const attrRow=`<div class="attr-row">
       <span class="attr-chip rl ${g.role?'on':''}" data-attr="role" data-id="${g.id}" role="button" tabindex="0" title="Роль на весіллі — одна людина на роль (тицяй, щоб змінити)">${g.role&&GUEST_ROLES[g.role]?GUEST_ROLES[g.role]:'🎬 Роль'}</span>
       <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.wparty}">${wpLbl}</span>
+      <span class="attr-chip p1 ${g.plus1&&g.plus1!=='none'?'on':''}" data-attr="plus1" data-id="${g.id}" role="button" tabindex="0" title="Чи буде +1 (тицяй: нема → під питанням → точно буде)">${g.plus1==='confirmed'?'➕ +1 ✓':g.plus1&&g.plus1!=='none'?'➕ +1 ?':'➕ +1'}</span>
       <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
       <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}" role="button" tabindex="0" aria-label="Діти: ${kids}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
       <span class="attr-chip bk ${g.backup?'on':''}" data-attr="backup" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.backup}" title="Кликати в останню чергу">⏳ Запасний</span>
@@ -1440,7 +1445,7 @@ function renderGuests(){
     card.innerHTML=`
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
-        <div class="guest-name">${esc(g.name)}</div>
+        <div class="guest-name" data-gname="${g.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб виправити імʼя'}">${esc(g.name)}</div>
         <div class="guest-sub">${grpBadge}${evBadge}${roleBadge}${p1}</div>
         ${attrRow}
       </div>
@@ -1496,10 +1501,20 @@ function renderGuests(){
       g.role=next;
     }
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
+    else if(a==='plus1'){ const order=['none','pending','confirmed']; let cur=order.indexOf(g.plus1); if(cur<0)cur=0; g.plus1=order[(cur+1)%order.length]; }
     saveJSON('wed-guests',guests); renderGuests();
     if(a==='alco'||a==='veg'||a==='weed') renderBar();
   });
   listEl.querySelectorAll('[data-weedunlock]').forEach(el=>el.onclick=e=>{ e.stopPropagation(); unlockWeed(); });
+  if(!IS_GUEST) listEl.querySelectorAll('[data-gname]').forEach(el=>{
+    const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gname); if(!g)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=g.name; return; }
+      if(v!==g.name){ g.name=v; saveJSON('wed-guests',guests); renderGuests(); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
 }
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -1907,7 +1922,9 @@ function renderIdeas(){
     let aiBtns='';
     if(it.cat==='her'||it.cat==='his'){
       const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(g):'тип речі…'}</option>`).join('')}</select>`;
-      aiBtns=gsel+`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
+      aiBtns=gsel
+        +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
+        +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
@@ -1965,6 +1982,9 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-imagine]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.imagine); if(it) aiImagine(it);
+  });
+  listEl.querySelectorAll('[data-imagineg]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.imagineg); if(it) aiImagineGarment(it);
   });
   listEl.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
@@ -2429,6 +2449,26 @@ async function aiImagine(it){
     },0.78);
   }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
 }
+// уявити САМ предмет одягу з опису (для розділів «Вона»/«Він») — результат стає фото товару it.img,
+// після чого його можна 🪄 «Приміряти». Дає змогу додавати одяг, придуманий з голови, без посилання.
+async function aiImagineGarment(it){
+  const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
+  if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка) — напр. «шовкова сукня кольору шампань, міді»'); return; }
+  aiBusy(it.id,true);
+  try{
+    const g=(it.gtype||'').trim();
+    const gline=g&&g!=='образ цілком'?` Це саме ${g}.`:'';
+    const img=await aiGenerate([`Створи чисте студійне фото предмета одягу/аксесуара для віртуальної примірки: ${text}.${gline} Покажи САМ предмет — без людини й без манекена — рівно на світлому однотонному фоні, повністю в кадрі, м'яке рівне освітлення, без тексту й водяних знаків. Фотореалістично, як фото товару в каталозі.`]);
+    downscaleSrc(img,768,small=>{
+      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
+      const res=small||img;
+      cur.img=res; cur.imgChoices=[res, ...((cur.imgChoices||[]).filter(s=>!/^data:/.test(s)))].slice(0,8);
+      cur._ai=false;
+      saveJSON('wed-ideas',ideas); renderIdeas();
+      showToast('🪄 Готово — тепер натисни «Приміряти»');
+    },0.8);
+  }catch(e){ console.warn('imagineGarment',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
+}
 async function srcToPart(src){ const du=await srcToDataUrl(src); return du?dataUrlToPart(du):null; }
 // тягне URL -> data: (через FileReader). null якщо не вдалось (CORS/мережа)
 async function fetchToDataUrl(url){
@@ -2546,7 +2586,7 @@ function renderScripts(){
       const row=document.createElement('div'); row.className='script-row';
       row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
         <div class="script-time">${esc(m.time)}</div>
-        <div class="script-text">${esc(m.text)}${m.loc?`<br><span class="script-loc">📍 ${esc(m.loc)}</span>`:''}</div>
+        <div class="script-text"><span data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати'}">${esc(m.text)}</span>${m.loc?`<br><span class="script-loc">📍 ${esc(m.loc)}</span>`:''}</div>
         <button class="script-untime" data-suntime="${m.id}" title="Прибрати час → назад у беклог">↩︎</button>`;
       listEl.appendChild(row);
     });
@@ -2560,7 +2600,7 @@ function renderScripts(){
     backlog.forEach(m=>{
       const row=document.createElement('div'); row.className='script-row backlog-row';
       row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
-        <div class="script-text">${esc(m.text)}</div>
+        <div class="script-text" data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати текст'}">${esc(m.text)}</div>
         <input type="text" class="backlog-loc" data-sloc="${m.id}" list="locOptions" placeholder="📍 локація" value="${esc(m.loc||'')}">
         <input type="time" class="backlog-time" data-stime="${m.id}" title="Поставити час → у таймлайн">`;
       bl.appendChild(row);
@@ -2594,6 +2634,15 @@ function renderScripts(){
     const f=findScript(b.dataset.suntime); if(!f)return;
     f.it.time=''; saveJSON(f.key,f.arr); renderScripts();
   });
+  if(!IS_GUEST) listEl.querySelectorAll('[data-stext]').forEach(el=>{
+    const save=()=>{ const f=findScript(el.dataset.stext); if(!f)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=f.it.text; return; }
+      if(v!==f.it.text){ f.it.text=v; saveJSON(f.key,f.arr); renderScripts(); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
 }
 document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#scriptTabs .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -2606,6 +2655,37 @@ document.getElementById('addScriptBtn').onclick=()=>{
   document.getElementById('sText').value=''; document.getElementById('sTime').value=''; document.getElementById('sLoc').value='';
   saveJSON(scriptKey(),scriptRef()); renderScripts();
 };
+/* ── УКРАЇНСЬКІ ВЕСІЛЬНІ ТРАДИЦІЇ (Київщина / Житомирщина — Полісся й Наддніпрянщина) ──
+   Трушні, етнографічно вкорінені обряди — НЕ шароварщина. Додаються в спільний беклог
+   ОДИН раз; кожен пункт можна вільно редагувати, перенести в таймлайн або видалити. */
+const TRADITIONS=[
+  {text:'🌾 Сватання: старости з рушниками; згода — перев’язують рушниками, відмова — гарбуз',loc:'Збори / дім'},
+  {text:'🌾 Випікання короваю: коровайниці (щасливі заміжні жінки) місять одне тісто й співають',loc:'Збори / дім'},
+  {text:'🌾 Гільце (вільце): прикрашають весільне деревце барвінком, калиною, колосками',loc:'Збори / дім'},
+  {text:'🌾 Плетіння вінка нареченій з барвінку — символ дівоцтва',loc:'Збори / дім'},
+  {text:'🌾 Розплітання коси нареченій (мати/дружки) перед виходом',loc:'Збори / дім'},
+  {text:'🌾 Благословення батьків іконою та рушником перед виїздом',loc:'Збори / дім'},
+  {text:'🌾 Викуп нареченої дружками: загадки, пісні, символічний викуп коси',loc:'Збори / дім'},
+  {text:'🌾 Перейма дороги (брама): сусіди «перепиняють» молодих — частування й жарти',loc:'Дорога / трансфер'},
+  {text:'🌾 Рушник під ноги на розписі — хто перший стане, той «голова»',loc:'Бути Софі'},
+  {text:'🌾 Мед і чарка від батьків — благословення на солодке життя',loc:'Бути Софі'},
+  {text:'🌾 Посад молодих: садять на лаву, застелену кожухом (вовною догори) — на добробут',loc:'Бути Софі'},
+  {text:'🌾 Перев’язування рушниками весільних батьків і старостів',loc:'Бути Софі'},
+  {text:'🌾 Поділ короваю наприкінці гостини — по шматочку кожному роду',loc:'Бути Софі'},
+  {text:'🌾 Покривання молодої: знімають вінок, пов’язують хустку — перехід у заміжні',loc:'Бути Софі'},
+  {text:'🌾 Танець нареченої з батьком / нареченого з матір’ю',loc:'Бар «Хвильовий»'},
+  {text:'🌾 Калина й барвінок у декорі та на короваї — символи вірності й роду',loc:''},
+  {text:'🌾 Перезва на другий день: ряджені, жартівлива «циганщина», обхід родини (за бажанням)',loc:''}
+];
+function seedTraditions(){
+  if(traditionsSeeded || IS_GUEST) return;
+  traditionsSeeded=true;
+  const base=Date.now();
+  TRADITIONS.forEach((t,i)=>scriptSofia.push({id:'trad'+base+'_'+i, time:'', text:t.text, loc:t.loc||'', trad:true}));
+  saveJSON('wed-scriptS',scriptSofia);
+  saveJSON('wed-trad-seed',true);
+  renderScripts();
+}
 
 /* ════ РОЗСАДКА ════ */
 let activeSeat='sofia';
@@ -3189,6 +3269,7 @@ function startSync(){
     if(d.mannequin && typeof d.mannequin==='object') legacyMedia.mannequin=d.mannequin;
     if(d.outfit && typeof d.outfit==='object') legacyMedia.outfit=d.outfit;
     if(typeof d.weedPass==='string') weedPassHash=d.weedPass;
+    if(typeof d.traditionsSeeded==='boolean') traditionsSeeded=d.traditionsSeeded;
     // одноразова міграція старих картинок зі state в окремі документи
     if(!IS_GUEST) ['photos','photosFull','mannequin','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
@@ -3211,6 +3292,7 @@ function startSync(){
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
+    DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
     DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-invites',JSON.stringify(invites));
     DB.set('wed-invite-game',JSON.stringify(inviteGame));
@@ -3220,6 +3302,7 @@ function startSync(){
     DB.set('wed-team',JSON.stringify(team));
     applyingSnapshot=false;
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
+    seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
   }, err=>{ console.warn('snapshot', err); });
   startMediaSync();
 }
@@ -3260,6 +3343,8 @@ if(auth){
   document.getElementById('login').style.display='none';
   maybeSwipeHint();
 }
+// якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
