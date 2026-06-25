@@ -2380,28 +2380,36 @@ async function aiExtractGarment(it){
   const src=it.img;
   if(!src){ showToast('Спершу зроби скрін або додай картинку 👆'); return; }
   aiBusy(it.id,true);
+  // читаємо картинку (з проксі-фолбеком). Якщо взагалі не читається — чесно кажемо.
+  let part=null;
+  try{ part=await srcToPart(src); }catch(e){ console.warn('extract read',e); }
+  if(!part){ aiBusy(it.id,false); showToast('Не вдалось прочитати картинку 😕 Спробуй 📁 завантажити фото товару вручну.'); return; }
+  // 1) ціна — окремо, помилка тут не валить усе
+  let price='';
   try{
-    const part=await srcToPart(src);
-    if(!part){ throw new Error('Не вдалось прочитати картинку'); }
-    // 1) вирізати одяг у повний зріст на чистому фоні
-    const img=await aiGenerate([`На зображенні — скрін з товаром (одяг чи аксесуар). Виокрем САМЕ предмет одягу і покажи його окремо у повний зріст на чистому світлому однотонному фоні, без тексту, цін, кнопок та інтерфейсу сайту. Студійне фото товару, рівне освітлення.`, part]);
-    // 2) прочитати ціну зі скріна
-    let price='';
-    try{
-      const txt=await aiText([`Це скрін товару з інтернет-магазину. Напиши ТІЛЬКИ ціну товару цифрами у гривнях, наприклад "4500". Якщо ціни не видно — напиши "немає".`, part]);
-      price=extractPrice(txt)|| (/(\d{3,6})/.test(txt)? (txt.match(/(\d{3,6})/)[1]+' грн'):'');
-    }catch(e){}
-    downscaleSrc(img,768,small=>{
-      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
-      cur.img=small||img;
-      if(Array.isArray(cur.imgChoices)) cur.imgChoices.unshift(cur.img); else cur.imgChoices=[cur.img];
-      if(price&&!cur.price) cur.price=price;
-      cur._ai=false;
-      saveJSON('wed-ideas',ideas); renderIdeas();
-      if(typeof renderImgPick==='function' && _pickId===cur.id) renderImgPick();
-      showToast(price?('Готово ✨ Ціна: '+price):'Одяг витягнуто ✨');
-    },0.8);
-  }catch(e){ console.warn('extractGarment',e); aiBusy(it.id,false); showToast('Не вдалось витягнути 😕 '+aiErr(e)); }
+    const txt=await aiText([`Це скрін товару з інтернет-магазину. Напиши ТІЛЬКИ ціну товару цифрами у гривнях, наприклад "4500". Якщо ціни не видно — напиши "немає".`, part]);
+    price=extractPrice(txt)|| (/(\d{3,6})/.test(txt)? (txt.match(/(\d{3,6})/)[1]+' грн'):'');
+  }catch(e){ console.warn('extract price',e); }
+  // 2) чисте фото одягу — теж окремо; якщо модель не змогла, ЛИШАЄМО скрін як є
+  let gen=null, genErr=null;
+  try{
+    gen=await aiGenerate([`На зображенні — скрін з товаром (одяг чи аксесуар). Виокрем САМЕ предмет одягу і покажи його окремо у повний зріст на чистому світлому однотонному фоні, без тексту, цін, кнопок та інтерфейсу сайту. Студійне фото товару, рівне освітлення.`, part]);
+  }catch(e){ genErr=e; console.warn('extract garment img',e); }
+  const apply=(imgSrc)=>{
+    const cur=ideas.find(x=>x.id===it.id); if(!cur){ aiBusy(it.id,false); return; }
+    if(imgSrc){
+      cur.img=imgSrc;
+      if(Array.isArray(cur.imgChoices)) cur.imgChoices.unshift(imgSrc); else cur.imgChoices=[imgSrc];
+    }
+    if(price&&!cur.price) cur.price=price;
+    cur._ai=false;
+    saveJSON('wed-ideas',ideas); renderIdeas(); aiBusy(it.id,false);
+    if(typeof renderImgPick==='function' && _pickId===cur.id) renderImgPick();
+    if(gen) showToast(price?('Готово ✨ Ціна: '+price):'Одяг витягнуто ✨');
+    else showToast(price?('Ціну взяла: '+price+' · фото лишила як скрін (ШІ не виокремив одяг)'):'Фото лишила як скрін — ШІ не зміг виокремити одяг. '+aiErr(genErr));
+  };
+  if(gen) downscaleSrc(gen,768,small=>apply(small||gen),0.8);
+  else apply(null);   // лишаємо наявний скрін, але зберігаємо ціну
 }
 
 /* ════ SCRIPT / SCENARIO ════ */
