@@ -278,6 +278,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .party-note{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
 .party-row .del-x{opacity:.5;}
 .party-row:hover .del-x{opacity:1;}
+.party-pick-hint{font-size:12px;color:var(--muted);margin:8px 0 10px;line-height:1.4;}
+.party-pick-list{display:flex;flex-wrap:wrap;gap:7px;}
+.party-pick-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:.15s;}
+.party-pick-chip:hover{border-color:var(--terra);}
+.party-pick-chip.on{background:var(--terra);color:#fff;border-color:var(--terra);}
+.party-pick-empty{font-size:12.5px;color:var(--muted);padding:6px 0;}
 
 /* ── BAR / MENU CALCULATOR ── */
 .bar-mode{display:flex;gap:8px;margin-bottom:14px;}
@@ -363,6 +369,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .modal-btn:hover{filter:brightness(.94);}
 .modal-btn.ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--line);}
 .modal-btn.ghost:hover{background:var(--surface2);color:var(--text);}
+/* вибір картинки для ідеї */
+.imgpick-box{max-width:420px;text-align:left;}
+.imgpick-title{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:4px;}
+.imgpick-sub{font-size:12.5px;color:var(--muted);line-height:1.45;margin-bottom:14px;}
+.imgpick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:46vh;overflow:auto;}
+.imgpick-cell{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:2px solid var(--line);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.imgpick-cell.sel{border-color:var(--terra);box-shadow:0 0 0 2px var(--terra);}
+.imgpick-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+.imgpick-cell .ic-tag{position:absolute;left:0;bottom:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:9.5px;padding:2px 4px;text-align:center;}
+.imgpick-empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
+.imgpick-tools{display:flex;gap:8px;margin-top:14px;}
+.imgpick-tools .modal-btn{font-size:13px;padding:9px;}
+.imgpick-cell.busy::after{content:'…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);color:#fff;font-size:20px;}
 </style>
 </head>
 <body>
@@ -390,6 +409,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <div class="modal-actions">
       <button class="modal-btn ghost" id="modalNo">Не додати</button>
       <button class="modal-btn" id="modalYes">Додати</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imgPick" style="display:none">
+  <div class="modal-box imgpick-box">
+    <div class="imgpick-title">Обери картинку 🖼</div>
+    <div class="imgpick-sub" id="imgPickSub">Якщо за посиланням не та картинка — обери іншу або завантаж свою.</div>
+    <div class="imgpick-grid" id="imgPickGrid"></div>
+    <div class="imgpick-tools">
+      <button class="modal-btn ghost" id="imgPickShot">📸 Скрін сторінки</button>
+      <button class="modal-btn ghost" id="imgPickUp">⬆️ Своє фото</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="imgPickClose">Закрити</button>
     </div>
   </div>
 </div>
@@ -630,10 +664,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <button class="filt-btn active" data-p="her">👰 Дівич-вечір</button>
     <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
   </div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <details>
+      <summary>👥 Обрати зі списку гостей</summary>
+      <div class="party-pick-hint" id="partyPickHint"></div>
+      <div id="partyPickList" class="party-pick-list"></div>
+    </details>
+  </div>
   <div id="partyList"></div>
   <div class="add-section" style="margin-top:16px;">
     <details open>
-      <summary>＋ Додати людину</summary>
+      <summary>＋ Додати людину вручну</summary>
       <div class="add-form">
         <input type="text" id="pName" placeholder="Імʼя…">
         <input type="text" id="pNote" placeholder="Нотатка (необовʼязково)">
@@ -1264,19 +1305,23 @@ async function fetchPreview(url){
   const favicon=faviconOf(host);
   const d=await microlink(url);
   let title='', desc='', img='', icon=favicon;
+  const cands=[];                          // кандидати-картинки (для вибору вручну)
   if(d){
     title=d.title||''; desc=d.description||'';
     img=(d.image&&d.image.url)||'';
     icon=(d.logo&&d.logo.url)||favicon;
+    if(d.image&&d.image.url) cands.push(d.image.url);
+    if(d.logo&&d.logo.url) cands.push(d.logo.url);
   }
   // нема картинки товару/посту — пробуємо скрін самої сторінки
   if(!img){
     const s=await microlink(url,'&screenshot=true');
-    if(s&&s.screenshot&&s.screenshot.url) img=s.screenshot.url;
+    if(s&&s.screenshot&&s.screenshot.url){ img=s.screenshot.url; cands.push(s.screenshot.url); }
     if(s&&!title&&s.title) title=s.title;
   }
+  if(favicon) cands.push(favicon);
   // прев'ю є завжди: хоч фавікон + назва сайту
-  return {title, desc, img, icon, host};
+  return {title, desc, img, icon, host, candidates:[...new Set(cands.filter(Boolean))]};
 }
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
@@ -1303,6 +1348,7 @@ function renderIdeas(){
     }
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
+    const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
     const card=document.createElement('div'); card.className='idea-card'+(it.approved?' approved':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
@@ -1314,7 +1360,7 @@ function renderIdeas(){
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${photoBtn}${aiBtns}${approveBtn}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${aiBtns}${approveBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -1341,6 +1387,9 @@ function renderIdeas(){
       },0.8);
     };
     inp.click();
+  });
+  listEl.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -1370,8 +1419,61 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   const prev=await fetchPreview(url);
   const cur=ideas.find(x=>x.id===id); if(!cur)return;
   cur.loading=false;
-  if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
+  if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; cur.imgChoices=prev.candidates; }
   saveJSON('wed-ideas',ideas); renderIdeas();
+};
+
+/* ── ВИБІР КАРТИНКИ ДЛЯ ІДЕЇ ── */
+let _pickId=null;
+function imgCandidates(it){
+  const host=hostOf(it.url);
+  const list=[...(it.imgChoices||[]), it.img, it.icon, faviconOf(host)];
+  return [...new Set(list.filter(Boolean))];
+}
+function renderImgPick(){
+  const it=ideas.find(x=>x.id===_pickId); const grid=document.getElementById('imgPickGrid');
+  if(!it){ grid.innerHTML=''; return; }
+  const cands=imgCandidates(it);
+  if(!cands.length){ grid.innerHTML='<div class="imgpick-empty">Картинок не знайдено.<br>Зроби скрін сторінки або завантаж своє фото 👇</div>'; return; }
+  grid.innerHTML='';
+  cands.forEach(src=>{
+    const cell=document.createElement('div');
+    cell.className='imgpick-cell'+(it.img===src?' sel':'');
+    const tag=/s2\/favicons/.test(src)?'іконка':(/screenshot|microlink.*screenshot/.test(src)?'скрін':'');
+    cell.innerHTML=`<img src="${esc(src)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'">${tag?`<span class="ic-tag">${tag}</span>`:''}`;
+    cell.onclick=()=>{ it.img=src; saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas(); };
+    grid.appendChild(cell);
+  });
+}
+function openImgPicker(it){
+  _pickId=it.id;
+  document.getElementById('imgPickSub').textContent = it.title||hostOf(it.url)||'Обери картинку для цієї ідеї.';
+  renderImgPick();
+  document.getElementById('imgPick').style.display='flex';
+}
+document.getElementById('imgPickClose').onclick=()=>{ document.getElementById('imgPick').style.display='none'; _pickId=null; };
+document.getElementById('imgPick').addEventListener('click',e=>{ if(e.target.id==='imgPick'){ document.getElementById('imgPick').style.display='none'; _pickId=null; } });
+document.getElementById('imgPickShot').onclick=async()=>{
+  const it=ideas.find(x=>x.id===_pickId); if(!it||!it.url) return;
+  const btn=document.getElementById('imgPickShot'); const old=btn.textContent; btn.textContent='📸 Роблю скрін…'; btn.disabled=true;
+  const s=await microlink(it.url,'&screenshot=true');
+  btn.textContent=old; btn.disabled=false;
+  const url=s&&s.screenshot&&s.screenshot.url;
+  if(!url){ showToast('Скрін не вдався 😕 спробуй ще раз'); return; }
+  it.imgChoices=[...new Set([url, ...(it.imgChoices||[])])]; it.img=url;
+  saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas();
+};
+document.getElementById('imgPickUp').onclick=()=>{
+  const it=ideas.find(x=>x.id===_pickId); if(!it) return;
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    downscaleSrc(URL.createObjectURL(f),768,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      it.img=data; it.imgChoices=[...new Set([data, ...(it.imgChoices||[])])];
+      saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas();
+    },0.8);
+  };
+  inp.click();
 };
 
 /* ── БАЗОВІ ФОТО ПАРИ ── */
@@ -1439,18 +1541,42 @@ function approveIdea(it){
 
 /* ── ШІ-ГЕНЕРАЦІЯ ЗОБРАЖЕНЬ (Firebase AI Logic · Gemini) ── */
 const FB_VER='11.10.0';
-const AI_MODEL='gemini-2.5-flash-image';
-let _aiModelPromise=null;
-function getImageModel(){
-  if(_aiModelPromise) return _aiModelPromise;
-  _aiModelPromise=(async()=>{
+const AI_MODELS=['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation','gemini-2.0-flash-exp'];
+let _aiCorePromise=null;
+function aiCore(){
+  if(_aiCorePromise) return _aiCorePromise;
+  _aiCorePromise=(async()=>{
     const {initializeApp}=await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`);
     const {getAI,getGenerativeModel,GoogleAIBackend,ResponseModality}=await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-ai.js`);
     const aiApp=initializeApp(firebaseConfig,'ai');
     const ai=getAI(aiApp,{backend:new GoogleAIBackend()});
-    return getGenerativeModel(ai,{model:AI_MODEL,generationConfig:{responseModalities:[ResponseModality.TEXT,ResponseModality.IMAGE]}});
-  })().catch(e=>{ _aiModelPromise=null; throw e; });
-  return _aiModelPromise;
+    return {ai,getGenerativeModel,ResponseModality};
+  })().catch(e=>{ _aiCorePromise=null; throw e; });
+  return _aiCorePromise;
+}
+function aiErr(e){
+  let m=(e&&(e.message||e.code))||String(e||'невідома помилка');
+  if(/api[\s-]?key|API_KEY/i.test(m)) return 'Firebase AI не активовано (ключ/доступ). Перевір, що увімкнено Firebase AI Logic + Blaze.';
+  if(/quota|RESOURCE_EXHAUSTED|429/i.test(m)) return 'Перевищено ліміт запитів до ШІ. Спробуй пізніше.';
+  if(/billing|PERMISSION_DENIED|403/i.test(m)) return 'Доступ заборонено: перевір білінг (Blaze) і що Firebase AI Logic увімкнено в консолі.';
+  if(/not found|404|NOT_FOUND/i.test(m)) return 'Модель ШІ недоступна для проєкту. Можливо, треба ще раз увімкнути Firebase AI Logic.';
+  if(/network|fetch|Failed to fetch|load/i.test(m)) return 'Проблема зі звʼязком — ШІ не відповів. Перевір інтернет.';
+  return m.length>140?m.slice(0,140)+'…':m;
+}
+// генерує зображення, по черзі пробуючи моделі зі списку; кидає останню помилку
+async function aiGenerate(parts){
+  const {ai,getGenerativeModel,ResponseModality}=await aiCore();
+  let lastErr=null;
+  for(const name of AI_MODELS){
+    try{
+      const model=getGenerativeModel(ai,{model:name,generationConfig:{responseModalities:[ResponseModality.TEXT,ResponseModality.IMAGE]}});
+      const resp=await model.generateContent(parts);
+      const img=aiImageOf(resp);
+      if(img) return img;
+      lastErr=new Error('Модель '+name+' не повернула зображення');
+    }catch(e){ lastErr=e; console.warn('aiGenerate model '+name+' failed',e); }
+  }
+  throw lastErr||new Error('no image');
 }
 function dataUrlToPart(dataUrl){
   const m=/^data:([^;]+);base64,(.*)$/s.exec(dataUrl||'');
@@ -1477,7 +1603,6 @@ async function aiTryOn(it){
   if(!personUrl){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
   aiBusy(it.id,true);
   try{
-    const model=await getImageModel();
     const personPart=dataUrlToPart(personUrl);
     const garmentPart=it.img?await urlToPart(it.img):null;
     const name=who==='her'?'жінці':'чоловіку';
@@ -1487,32 +1612,27 @@ async function aiTryOn(it){
     }else{
       parts=[`Це фото людини. Реалістично покажи, як на ${name} виглядав би образ: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')}. Збережи обличчя і статуру. Фотореалізм.`, personPart];
     }
-    const resp=await model.generateContent(parts);
-    const img=aiImageOf(resp);
-    if(!img) throw new Error('no image');
+    const img=await aiGenerate(parts);
     downscaleSrc(img,768,small=>{
       const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
       cur.tryon=small||img; cur._ai=false;
       saveJSON('wed-ideas',ideas); renderIdeas();
     },0.78);
-  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); showToast('ШІ-примірка не вдалась 😕 Перевір Firebase AI / звʼязок'); }
+  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); showToast('ШІ-примірка не вдалась 😕 '+aiErr(e)); }
 }
 async function aiImagine(it){
   const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
   if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка)'); return; }
   aiBusy(it.id,true);
   try{
-    const model=await getImageModel();
     const pre=it.cat==='rings'?'Обручка / каблучка: ':'Ідея для весілля: ';
-    const resp=await model.generateContent([`${pre}${text}. Створи гарне фотореалістичне зображення цього. Світла естетика.`]);
-    const img=aiImageOf(resp);
-    if(!img) throw new Error('no image');
+    const img=await aiGenerate([`${pre}${text}. Створи гарне фотореалістичне зображення цього. Світла естетика.`]);
     downscaleSrc(img,768,small=>{
       const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
       cur.gen=small||img; cur._ai=false;
       saveJSON('wed-ideas',ideas); renderIdeas();
     },0.78);
-  }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 Перевір Firebase AI'); }
+  }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
 }
 
 /* ════ SCRIPT / SCENARIO ════ */
@@ -1550,17 +1670,44 @@ document.getElementById('addScriptBtn').onclick=()=>{
 let activeParty='her';
 const partyRef=()=> activeParty==='her'?partyHer:partyHis;
 const partyKey=()=> activeParty==='her'?'wed-party-her':'wed-party-his';
+function renderPartyPick(){
+  const wrap=document.getElementById('partyPickList'); const hint=document.getElementById('partyPickHint');
+  if(!wrap) return;
+  const side=activeParty;                       // her→дівич, his→мальчішник
+  const pool=guests.filter(g=>g.side===side);
+  if(hint) hint.textContent = pool.length
+    ? `Гості з боку ${side==='her'?'Катерини':'Дмитра'}. Тапни, щоб додати/прибрати у список.`
+    : `Гостей з боку ${side==='her'?'Катерини':'Дмитра'} ще немає у вкладці «Гості».`;
+  wrap.innerHTML='';
+  if(!pool.length){ wrap.innerHTML='<div class="party-pick-empty">Спершу додай гостей у вкладці «Гості» 👥</div>'; return; }
+  const arr=partyRef();
+  pool.forEach(g=>{
+    const inList=arr.some(p=>p.gid===g.id || p.name===g.name);
+    const chip=document.createElement('button'); chip.type='button';
+    chip.className='party-pick-chip'+(inList?' on':'');
+    chip.innerHTML=`${inList?'✓ ':''}${esc(g.name)}`;
+    chip.onclick=()=>{
+      const cur=partyRef();
+      const idx=cur.findIndex(p=>p.gid===g.id || p.name===g.name);
+      if(idx>-1) cur.splice(idx,1);
+      else cur.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,5),name:g.name,note:'',gid:g.id});
+      saveJSON(partyKey(),partyRef()); renderParties();
+    };
+    wrap.appendChild(chip);
+  });
+}
 function renderParties(){
+  renderPartyPick();
   const listEl=document.getElementById('partyList'); if(!listEl) return;
   const arr=partyRef(); listEl.innerHTML='';
   const cnt=document.createElement('div'); cnt.className='party-count';
   cnt.textContent=arr.length?`Людей у списку: ${arr.length}`:'';
   listEl.appendChild(cnt);
-  if(!arr.length){ listEl.innerHTML='<div class="empty-state">Список порожній.<br>Додай першу людину 🥳</div>'; return; }
+  if(!arr.length){ const e=document.createElement('div'); e.className='empty-state'; e.innerHTML='Список порожній.<br>Обери гостей зверху або додай вручну 🥳'; listEl.appendChild(e); return; }
   arr.forEach(p=>{
     const row=document.createElement('div'); row.className='party-row';
     row.innerHTML=`<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
-      <div class="party-info"><div class="party-name">${esc(p.name)}</div>${p.note?`<div class="party-note">${esc(p.note)}</div>`:''}</div>`;
+      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${p.note?`<div class="party-note">${esc(p.note)}</div>`:''}</div>`;
     listEl.appendChild(row);
   });
   listEl.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>delUndo(partyKey(),b.dataset.pdel,'Прибрано'));
