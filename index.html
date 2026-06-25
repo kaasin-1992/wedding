@@ -239,6 +239,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
+/* картка-ряд: текст ліворуч, фото маленьке праворуч і у повний зріст */
+.idea-card.idea-row{display:flex;flex-direction:row-reverse;align-items:stretch;min-height:210px;}
+.idea-card.idea-row .idea-thumb-wrap{width:124px;flex:0 0 124px;height:auto;align-self:stretch;border-left:1px solid var(--line);}
+.idea-card.idea-row .idea-thumb{object-fit:contain;background:#fff;}
+.idea-card.idea-row .idea-body{flex:1;min-width:0;}
+.idea-card.idea-row .idea-ai-overlay{font-size:11.5px;padding:6px;}
+.idea-card.idea-row .idea-ai-overlay small{font-size:9px;}
+.idea-card.idea-row .idea-fav{width:34px;height:34px;}
+.idea-card.idea-row .idea-fallback-host{font-size:10.5px;}
 .idea-thumb-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
   background:linear-gradient(135deg,var(--surface2),var(--terra-dim));text-align:center;padding:14px;}
 .idea-fav{width:46px;height:46px;border-radius:11px;background:#fff;padding:6px;object-fit:contain;box-shadow:0 3px 10px rgba(74,65,56,.12);}
@@ -1339,6 +1348,15 @@ document.getElementById('addNoteBtn').onclick=()=>{
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
+// витягуємо ціну з тексту прев'ю: "1 250 грн", "₴1250", "3200 UAH", "від 4500 грн"
+function extractPrice(t){
+  const s=String(t||'');
+  let m=s.match(/(?:₴|UAH)\s*([\d][\d\s.,]{1,9}\d|\d)/i);
+  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
+  m=s.match(/([\d][\d\s.,]{1,9}\d|\d)\s*(?:грн|₴|uah|грн\.|гривень)/i);
+  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
+  return '';
+}
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
 async function microlink(url, extra){
   const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), 14000);
@@ -1398,7 +1416,7 @@ function renderIdeas(){
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
     const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
-    const card=document.createElement('div'); card.className='idea-card'+(it.approved?' approved':'');
+    const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
       ${thumb}
@@ -1468,7 +1486,11 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   const prev=await fetchPreview(url);
   const cur=ideas.find(x=>x.id===id); if(!cur)return;
   cur.loading=false;
-  if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; cur.imgChoices=prev.candidates; }
+  if(prev){
+    if(!cur.title) cur.title=prev.title;
+    cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; cur.imgChoices=prev.candidates;
+    if(!cur.price){ const p=extractPrice(prev.title+' '+prev.desc); if(p) cur.price=p; }
+  }
   saveJSON('wed-ideas',ideas); renderIdeas();
 };
 
@@ -1605,6 +1627,7 @@ function aiCore(){
 }
 function aiErr(e){
   let m=(e&&(e.message||e.code))||String(e||'невідома помилка');
+  if(/firebasevertexai|enable this|to be enabled|Firebase AI API/i.test(m)) return 'Треба увімкнути Firebase AI у консолі: Firebase → Build → AI Logic → Get started (увімкне API firebasevertexai). Потім спробуй ще раз.';
   if(/api[\s-]?key|API_KEY/i.test(m)) return 'Firebase AI не активовано (ключ/доступ). Перевір, що увімкнено Firebase AI Logic + Blaze.';
   if(/quota|RESOURCE_EXHAUSTED|429/i.test(m)) return 'Перевищено ліміт запитів до ШІ. Спробуй пізніше.';
   if(/billing|PERMISSION_DENIED|403/i.test(m)) return 'Доступ заборонено: перевір білінг (Blaze) і що Firebase AI Logic увімкнено в консолі.';
