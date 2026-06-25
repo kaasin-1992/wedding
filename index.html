@@ -306,8 +306,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cmt-add input,.cmt-add textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:var(--sans);font-size:14px;background:var(--surface);color:var(--text);resize:vertical;}
 .cmt-send{margin-top:2px;}
 /* ── гостьовий лінк / банер ── */
-.guest-link-btn{position:absolute;top:14px;left:14px;background:none;border:none;font-size:18px;cursor:pointer;opacity:.7;}
-.guest-link-btn:hover{opacity:1;}
+.guest-link-btn{position:absolute;top:12px;left:12px;background:var(--surface2);border:1px solid var(--line);border-radius:99px;font-size:12px;font-weight:600;color:var(--muted);padding:6px 12px;cursor:pointer;}
+.guest-link-btn:active{transform:scale(.94);}
 .guest-banner{display:none;background:var(--terra);color:#fff;text-align:center;font-size:12.5px;padding:7px 14px;line-height:1.4;}
 body.guest .guest-banner{display:block;}
 body.guest .guest-link-btn{display:none;}
@@ -662,7 +662,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <div class="hero">
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
-  <button class="guest-link-btn" id="guestLinkBtn" title="Скопіювати лінк для гостей" aria-label="Лінк для гостей">🔗</button>
+  <button class="guest-link-btn" id="guestLinkBtn" title="Скопіювати лінк для гостей" aria-label="Лінк для гостей">🔗 Лінк для гостей</button>
   <div class="hero-eyebrow">6 вересня 2026 · Київ</div>
   <h1 class="hero-title">Катерина <em>&</em> Дмитро</h1>
   <div class="hero-surname">Люті</div>
@@ -2159,6 +2159,12 @@ const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. Фотореалізм, реалістичні пропорції, без тексту і водяних знаків.';
 // зріст для реалістичних пропорцій
 function heightLine(who){ return who==='her'?'Жінка зростом приблизно 170 см, реалістична статура.':'Чоловік трохи вищий за 170 см (≈175–182 см), реалістична статура.'; }
+// одне суворе правило обличчя для манекена і примірки
+function faceRule(hasPortrait){
+  return hasPortrait
+    ? ' НАЙГОЛОВНІШЕ — ОБЛИЧЧЯ: бери його ВИКЛЮЧНО з фото [ПОРТРЕТ]. На результаті це має бути беззаперечно ТА САМА людина: точно збережи риси — розріз і колір очей, форму носа, губ, брів, овал обличчя, скули, шкіру і зачіску, як на [ПОРТРЕТ]. Дозволено лише підправити ракурс, освітлення і якість, але НЕ змінюй ЖОДНОЇ риси обличчя, НЕ усереднюй з іншими фото, НЕ домішуй чужих облич і НЕ «прикрашай» зовнішність.'
+    : ' Збережи обличчя, зачіску і статуру людини без змін (та сама людина).';
+}
 // типи речей (щоб ШІ розумів: спідниця = лише спідниця)
 const GTYPES=['','сукня','спідниця','топ / блуза','костюм','піджак','сорочка','штани','верхній одяг','взуття','аксесуар','образ цілком'];
 function gtypeText(it){
@@ -2237,10 +2243,11 @@ async function aiMakeMannequin(who){
     const base='Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.';
     let parts;
     if(faceSrc && bodySrc){
-      parts=[`Перше зображення — фото людини на повний зріст: бери з нього статуру, пропорції і позу. Друге зображення — портрет тієї ж людини: ОБОВʼЯЗКОВО точно збережи її обличчя, риси і зачіску. ${base} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc), dataUrlToPart(faceSrc)];
+      parts=[`[ПОРТРЕТ] — справжнє фото обличчя людини (ЄДИНЕ джерело обличчя). [ФОТО] — її фото в повний зріст: з нього бери ЛИШЕ статуру, пропорції й позу, але НЕ обличчя. ${base}${faceRule(true)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc), dataUrlToPart(bodySrc)];
     }else{
-      const one=bodySrc||faceSrc;
-      parts=[`Це фото людини — ОБОВʼЯЗКОВО збережи її обличчя, зачіску, риси і статуру максимально точно, щоб упізнавалась. ${base} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(one)];
+      const one=faceSrc||bodySrc;
+      const tag=faceSrc?'[ПОРТРЕТ]':'[ФОТО]';
+      parts=[`${tag} — справжнє фото людини. ${base}${faceRule(!!faceSrc)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(one)];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,768,small=>{
@@ -2273,9 +2280,7 @@ async function aiTryOn(it){
     const onlyThis=typeWord?`саме «${typeWord}»`:'саме цю одну річ (того ж типу)';
 
     // СУВОРЕ ПРАВИЛО ОБЛИЧЧЯ — обличчя береться ВИКЛЮЧНО з реального портрета [ПОРТРЕТ]
-    const faceRule=facePhoto
-      ? ` НАЙГОЛОВНІШЕ — ОБЛИЧЧЯ: бери його ВИКЛЮЧНО з фото [ПОРТРЕТ]. На результаті це має бути беззаперечно ТА САМА людина: точно збережи риси — розріз і колір очей, форму носа, губ, брів, овал обличчя, скули, шкіру і зачіску, як на [ПОРТРЕТ]. Дозволено лише підправити ракурс, освітлення і якість, але НЕ змінюй ЖОДНОЇ риси обличчя, НЕ усереднюй з іншими фото, НЕ домішуй чужих облич і НЕ «прикрашай» зовнішність.`
-      : ' Збережи обличчя, зачіску і статуру людини без змін (та сама людина).';
+    const faceRuleTxt=faceRule(!!facePhoto);
 
     // база (поза/тіло/решта одягу): поточний образ → манекен → повний зріст → портрет
     const baseSrc=current||manq||bodyPhoto||facePhoto;
@@ -2294,11 +2299,11 @@ async function aiTryOn(it){
     let parts;
     if(facePhoto && baseSrc!==facePhoto){
       // окремий якір обличчя + база для пози/одягу + товар (ролі чітко розмічені — без усереднення)
-      parts=[`[ПОРТРЕТ] — справжнє фото обличчя людини (єдине джерело обличчя). ${baseTag} — фото для пози, тіла й наявного одягу. [ТОВАР] — фото реального одягу з магазину${gt}. ${task}${faceRule}${tail}`, dataUrlToPart(facePhoto), dataUrlToPart(baseSrc), garmentPart];
+      parts=[`[ПОРТРЕТ] — справжнє фото обличчя людини (єдине джерело обличчя). ${baseTag} — фото для пози, тіла й наявного одягу. [ТОВАР] — фото реального одягу з магазину${gt}. ${task}${faceRuleTxt}${tail}`, dataUrlToPart(facePhoto), dataUrlToPart(baseSrc), garmentPart];
     }else{
       // одне реальне фото — воно і портрет, і база
       const tag=facePhoto?'[ПОРТРЕТ]':baseTag;
-      parts=[`${tag} — справжнє фото людини. [ТОВАР] — фото реального одягу з магазину${gt}. Вдягни на людину з ${tag} одяг з [ТОВАР].${faceRule}${tail}`, dataUrlToPart(baseSrc), garmentPart];
+      parts=[`${tag} — справжнє фото людини. [ТОВАР] — фото реального одягу з магазину${gt}. Вдягни на людину з ${tag} одяг з [ТОВАР].${faceRuleTxt}${tail}`, dataUrlToPart(baseSrc), garmentPart];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,896,small=>{
