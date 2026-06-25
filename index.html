@@ -1667,8 +1667,8 @@ function extractPrice(t){
   return '';
 }
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
-async function microlink(url, extra){
-  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), 14000);
+async function microlink(url, extra, timeout){
+  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), timeout||14000);
   try{
     const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url)+(extra||''), {signal:ctrl.signal});
     const j=await r.json();
@@ -1844,12 +1844,17 @@ document.getElementById('imgPick').addEventListener('click',e=>{ if(e.target.id=
 document.getElementById('imgPickShot').onclick=async()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it||!it.url) return;
   const btn=document.getElementById('imgPickShot'); const old=btn.textContent; btn.textContent='📸 Роблю скрін…'; btn.disabled=true;
-  const s=await microlink(it.url,'&screenshot=true');
-  btn.textContent=old; btn.disabled=false;
+  const s=await microlink(it.url,'&screenshot=true&meta=false',22000);
   const url=s&&s.screenshot&&s.screenshot.url;
-  if(!url){ showToast('Скрін не вдався 😕 спробуй ще раз'); return; }
-  it.imgChoices=[...new Set([url, ...(it.imgChoices||[])])]; it.img=url;
-  saveJSON('wed-ideas',ideas); embedImg(it); renderImgPick(); renderIdeas();
+  if(!url){ btn.textContent=old; btn.disabled=false; showToast('Скрін не вдався 😕 спробуй ще раз або 📁 завантаж фото товару вручну'); return; }
+  // одразу вбудовуємо як data:-фото, щоб скрін не зник і ШІ зміг його прочитати
+  btn.textContent='💾 Зберігаю…';
+  const du=await srcToDataUrl(url);
+  btn.textContent=old; btn.disabled=false;
+  const img=du||url;
+  it.imgChoices=[...new Set([img, ...(it.imgChoices||[])])]; it.img=img;
+  saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas();
+  if(!du) showToast('Скрін зберегла як посилання — воно може з часом зникнути. Надійніше 📁 завантажити фото товару.');
 };
 document.getElementById('imgPickUp').onclick=()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it) return;
@@ -2232,13 +2237,30 @@ async function aiImagine(it){
     },0.78);
   }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
 }
-async function srcToPart(src){ if(/^data:/.test(src||'')) return dataUrlToPart(src); return await urlToPart(src); }
-// перетворює будь-яке посилання на вбудоване data:-фото (щоб одяг гарантовано їхав у генерацію)
+async function srcToPart(src){ const du=await srcToDataUrl(src); return du?dataUrlToPart(du):null; }
+// тягне URL -> data: (через FileReader). null якщо не вдалось (CORS/мережа)
+async function fetchToDataUrl(url){
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),15000);
+    const res=await fetch(url,{mode:'cors',signal:ctrl.signal}); clearTimeout(t);
+    if(!res.ok) return null;
+    const blob=await res.blob();
+    if(!blob || !/^image\//.test(blob.type||'')) return null;
+    return await new Promise((ok,no)=>{const r=new FileReader();r.onloadend=()=>ok(r.result);r.onerror=no;r.readAsDataURL(blob);});
+  }catch(e){ return null; }
+}
+// перетворює будь-яке посилання на вбудоване data:-фото (щоб одяг/скрін гарантовано зберігся й поїхав у генерацію)
 async function srcToDataUrl(src){
   if(/^data:/.test(src||'')) return src;
-  try{ const res=await fetch(src,{mode:'cors'}); const blob=await res.blob();
-    return await new Promise((ok,no)=>{const r=new FileReader();r.onloadend=()=>ok(r.result);r.onerror=no;r.readAsDataURL(blob);}); }
-  catch(e){ return null; }
+  if(!/^https?:\/\//.test(src||'')) return null;
+  // 1) прямий fetch
+  let du=await fetchToDataUrl(src);
+  if(du) return du;
+  // 2) через проксі-картинок з CORS — для сайтів, що не віддають фото напряму
+  const noScheme=src.replace(/^https?:\/\//,'');
+  const prox='https://images.weserv.nl/?url='+encodeURIComponent((/^https:/i.test(src)?'ssl:':'')+noScheme);
+  du=await fetchToDataUrl(prox);
+  return du||null;
 }
 // фонова спроба вбудувати обрану картинку одягу для ідеї it
 function embedImg(it){
