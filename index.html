@@ -346,6 +346,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .team-add input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--sans);font-size:13px;color:var(--text);}
 .team-add input.ta-name{flex:2;min-width:120px;} .team-add input.ta-role{flex:1.5;min-width:90px;} .team-add input.ta-cnt{width:64px;text-align:center;}
 .team-add button{flex-basis:100%;padding:9px;border-radius:9px;border:none;background:var(--terra);color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+.tm-price{font-size:10.5px;padding:3px 7px;border-radius:999px;border:1px solid var(--gold);background:var(--gold-dim,transparent);color:var(--gold);cursor:pointer;white-space:nowrap;}
+.link-ask{display:inline-block;margin-top:6px;background:none;border:none;color:var(--terra);font-family:var(--sans);font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0;}
 
 /* ── SCRIPT / SCENARIO ── */
 .script-row{position:relative;display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 15px;margin-bottom:8px;}
@@ -862,9 +864,9 @@ const DEFAULT_BAR = {
 };
 // команда/службові, що теж присутні (рахуються в кількість людей)
 const DEFAULT_TEAM = [
-  {id:'tm1', name:'Подруга-ведуча', role:'Ведуча', count:1, sofia:true, wave:true},
-  {id:'tm2', name:'Друг-відеограф', role:'Відеограф', count:1, sofia:true, wave:true},
-  {id:'tm3', name:'Традиційний колектив', role:'Артисти', count:3, sofia:true, wave:false}
+  {id:'tm1', name:'Подруга-ведуча', role:'Ведуча', count:1, sofia:true, wave:true, full:true},
+  {id:'tm2', name:'Друг-відеограф', role:'Відеограф', count:1, sofia:true, wave:true, full:true},
+  {id:'tm3', name:'Традиційний колектив', role:'Артисти', count:3, sofia:true, wave:false, full:false}
 ];
 
 let tasks    = loadJSON('wed-tasks', DEFAULT_TASKS);
@@ -1811,22 +1813,30 @@ function barAuto(loc){
   return {adults, kids};
 }
 const COUPLE=2;                                   // ми з нареченим теж люди
+const isFull=m=> m.full!==false;
 function teamCount(loc){ return team.reduce((s,m)=> s + (m[loc]?(Number(m.count)||0):0), 0); }
+function teamSofia(){ let full=0,feed=0; team.forEach(m=>{ if(!m.sofia)return; const c=Number(m.count)||0; if(isFull(m))full+=c; else feed+=c; }); return {full,feed}; }
 function fmtUAH(n){ return Math.round(n).toLocaleString('uk-UA').replace(/ /g,' '); }
 function teamEditorHTML(loc){
-  const rows=team.map(m=>`
+  const rows=team.map(m=>{
+    const sofiaPrice = loc==='sofia' && m.sofia ? `<button class="tm-price" data-tfull="${m.id}">${isFull(m)?'💰 повна':'🍽 погодувати'}</button>` : '';
+    const cntTag = loc==='sofia' ? (m.sofia?(isFull(m)?'+'+(Number(m.count)||0):'🍽'):'—') : (m[loc]?'+'+(Number(m.count)||0):'—');
+    return `
     <div class="team-row">
       <div class="tm-main"><div class="tm-name">${esc(m.name||'Без імені')}</div><div class="tm-role">${esc(m.role||'')}${(Number(m.count)||1)>1?` · ${m.count} ос.`:''}</div></div>
       <div class="team-loc">
         <button data-tloc="sofia" data-tid="${m.id}" class="${m.sofia?'on':''}">Софі</button>
         <button data-tloc="wave" data-tid="${m.id}" class="${m.wave?'on':''}">Хвильовий</button>
+        ${sofiaPrice}
       </div>
-      <span class="tm-cnt">${m[loc]?'+'+(Number(m.count)||0):'—'}</span>
+      <span class="tm-cnt">${cntTag}</span>
       <button class="del-x" data-tdel="${m.id}" aria-label="Прибрати">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `<div class="team-wrap">
     <div class="team-title">👫 Команда / службові (теж присутні)</div>
     ${rows||'<div class="bar-autonote">Поки нікого. Додай ведучу, фотографа, артистів…</div>'}
+    ${loc==='sofia'?'<div class="bar-autonote">💰 повна = в ціні банкету · 🍽 погодувати = поза депозитом, лише поїсти</div>':''}
     <div class="team-add">
       <input class="ta-name" id="tmName" placeholder="Імʼя / опис">
       <input class="ta-role" id="tmRole" placeholder="Роль (фото, артисти…)">
@@ -1840,11 +1850,15 @@ function wireTeam(out){
     const m=team.find(x=>x.id===b.dataset.tid); if(!m)return;
     m[b.dataset.tloc]=!m[b.dataset.tloc]; saveJSON('wed-team',team); renderBar();
   });
+  out.querySelectorAll('[data-tfull]').forEach(b=>b.onclick=()=>{
+    const m=team.find(x=>x.id===b.dataset.tfull); if(!m)return;
+    m.full=!isFull(m); saveJSON('wed-team',team); renderBar();
+  });
   out.querySelectorAll('[data-tdel]').forEach(b=>b.onclick=()=>delUndo('wed-team',b.dataset.tdel,'Прибрано з команди'));
   const add=out.querySelector('#tmAdd');
   if(add) add.onclick=()=>{
     const name=val('tmName'); if(!name){ showToast('Впиши імʼя / опис'); return; }
-    team.push({id:'tm'+Date.now(),name,role:val('tmRole'),count:Number(val('tmCnt'))||1,sofia:true,wave:true});
+    team.push({id:'tm'+Date.now(),name,role:val('tmRole'),count:Number(val('tmCnt'))||1,sofia:true,wave:true,full:true});
     saveJSON('wed-team',team); renderBar();
   };
 }
@@ -1857,12 +1871,13 @@ function renderBar(){
     if(cfg.price==null) cfg.price=4500; if(cfg.fee==null) cfg.fee=12;
     const gAdults = cfg.adults!=='' && cfg.adults!=null ? Number(cfg.adults) : auto.adults;
     const gKids   = cfg.kids!=='' && cfg.kids!=null ? Number(cfg.kids) : auto.kids;
-    const tc=teamCount('sofia');
-    const people = gAdults + gKids + COUPLE + tc;
+    const ts=teamSofia();                          // {full, feed}
+    const people = gAdults + gKids + COUPLE + ts.full;   // за повною ціною
     const price=Number(cfg.price)||0, fee=Number(cfg.fee)||0;
     const base=people*price;
     const feeSum=base*fee/100;
     const total=base+feeSum;
+    const feedTotal = people + ts.feed;            // скільки порцій їжі готувати взагалі
     out.innerHTML=`
       <div class="bar-note">💒 <b>Софія Київська</b> — банкет за ціною з людини. Меню запропонує шеф пізніше (старе — лише орієнтир). Тут рахуємо скільки людей × ціна + сервіс.</div>
       <div class="bar-head">
@@ -1875,9 +1890,12 @@ function renderBar(){
       <div class="head-box">
         <div class="head-row"><span>Гості (дор. + діти)</span><span class="hr-v">${gAdults + gKids}</span></div>
         <div class="head-row"><span>Наречені</span><span class="hr-v">${COUPLE}</span></div>
-        <div class="head-row"><span>Команда / службові (Софі)</span><span class="hr-v">${tc}</span></div>
-        <div class="head-row tot"><span>Разом людей</span><span class="hr-v">${people}</span></div>
+        <div class="head-row"><span>Команда · повна ціна</span><span class="hr-v">${ts.full}</span></div>
+        <div class="head-row tot"><span>За повною ціною</span><span class="hr-v">${people}</span></div>
+        ${ts.feed?`<div class="head-row"><span>🍽 Команда · тільки погодувати</span><span class="hr-v">${ts.feed}</span></div>
+        <div class="head-row"><span>Порцій їжі всього</span><span class="hr-v">${feedTotal}</span></div>`:''}
       </div>
+      ${ts.feed?`<div class="bar-note" style="border-style:solid;">❗ <b>Уточнити в Софі:</b> чи діє ліміт депозиту (4500 ₴) на команду — артистів/фото/відео. Можливо, їх годують поза депозитом. Позначка 🍽 = поза ціною. <button class="link-ask" id="barAskDeposit">＋ нагадати в завданнях</button></div>`:''}
       <div class="cost-box">
         <div class="cost-line"><span>${people} × ${fmtUAH(price)} ₴</span><span class="cl-v">${fmtUAH(base)} ₴</span></div>
         <div class="cost-line"><span>Сервіс ${fee}%</span><span class="cl-v">${fmtUAH(feeSum)} ₴</span></div>
@@ -1893,6 +1911,13 @@ function renderBar(){
     if(ki) ki.onchange=()=>{ cfg.kids=ki.value.trim(); saveJSON('wed-bar',bar); renderBar(); };
     const tb=out.querySelector('#barToBudget');
     if(tb) tb.onclick=()=>barToBudget(total);
+    const ask=out.querySelector('#barAskDeposit');
+    if(ask) ask.onclick=()=>{
+      const txt='Уточнити в Софі: чи діє ліміт депозиту на команду (артисти/фото/відео)';
+      if(tasks.some(t=>t.text===txt)){ showToast('Таке нагадування вже є у завданнях'); return; }
+      tasks.push({id:'u'+Date.now(),text:txt,deadline:null,done:false});
+      saveJSON('wed-tasks',tasks); renderTasks(); showToast('Додала в завдання ✓');
+    };
     wireTeam(out);
     return;
   }
