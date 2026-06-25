@@ -378,6 +378,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .backlog-time{flex:0 0 auto;width:88px;border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-family:var(--sans);font-size:12.5px;background:var(--surface2);color:var(--text);}
 .backlog-empty{font-size:12.5px;color:var(--muted);}
 .form-hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:2px 0 8px;}
+.seat-tip{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:14px;}
+.seat-ua-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;}
+.seat-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
+.seat-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:12.5px;color:var(--text);}
+.seat-chip.her{border-color:var(--rose);}
+.seat-chip.his{border-color:var(--sage);}
+.seat-chip.rm{cursor:pointer;}
+.seat-chip .seat-hc{color:var(--terra);font-weight:700;}
+.seat-chip .seat-x{color:var(--muted);font-weight:400;font-size:11px;margin-left:1px;}
+.seat-chip.rm:hover .seat-x{color:var(--danger);}
+.seat-zone{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+.seat-zone-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.seat-zone-name{flex:1;min-width:0;font-family:var(--serif);font-size:15px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--line);padding:2px 0;}
+.seat-zone-cap{flex:0 0 auto;font-size:11px;color:var(--terra);background:var(--terra-dim);border-radius:12px;padding:2px 8px;font-weight:600;}
+.seat-zone-head .del-x{position:static;opacity:.5;}
+.seat-zone-head:hover .del-x{opacity:1;}
+.seat-empty{font-size:12px;color:var(--muted);}
+.seat-add{width:100%;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12.5px;cursor:pointer;}
 
 /* FORMS */
 .add-section{margin-top:8px;}
@@ -546,6 +564,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
+  <button class="tab-btn" data-tab="seating">🪑 Розсадка</button>
   <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
   <button class="tab-btn" data-tab="notes">📝 Нотатки</button>
@@ -814,6 +833,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   </div>
 </div>
 
+<!-- SEATING -->
+<div class="panel" id="tab-seating">
+  <div class="section-hint">Хто де сидить. Окремо для Софі та Хвильового. Спершу постав фото/гостей у «Гості» — тут зʼявляться їхні імена. Створи столи/зони і розсади перетягуючи гостей.</div>
+  <div class="filters" id="seatTabs">
+    <button class="filt-btn active" data-st="sofia">💒 Софі</button>
+    <button class="filt-btn" data-st="wave">🥂 Хвильовий</button>
+  </div>
+  <div class="seat-tip" id="seatTip"></div>
+  <div id="seatUnassigned"></div>
+  <div id="seatZones"></div>
+  <div class="add-section" style="margin-top:14px;">
+    <div class="add-form" style="flex-direction:row;gap:8px;">
+      <input type="text" id="zoneName" placeholder="Назва столу / зони (напр. «Стіл молодят»)">
+      <button class="submit-btn" id="addZoneBtn" style="flex:0 0 auto;width:auto;padding:11px 16px;">＋ Стіл</button>
+    </div>
+  </div>
+</div>
+
 <!-- HOTEL -->
 <div class="panel" id="tab-hotel">
   <div class="section-hint">Ночівля до/після свята — нам, і якщо раптом хтось приїде з іншого міста. Встав посилання на готель — підтягнеться фото й опис. Тицьни на статус, щоб позначити бронь.</div>
@@ -853,7 +890,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -944,6 +981,11 @@ let scriptWave  = loadJSON('wed-scriptW', []);
 let hotels      = loadJSON('wed-hotels', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
+const DEFAULT_SEATING={
+  sofia:{tip:'У Софі камерно — найкраще підковою або колом біля молодят, рідні ближче. Тут небагато людей.', zones:[{id:'z-s1',name:'Стіл молодят',seats:[]}]},
+  wave:{tip:'У Хвильовому є сцена і танцпол — лиши цю зону вільною, гостей розсади навколо. Це весела частина, можна вільніше.', zones:[{id:'z-w0',name:'🎤 Зона сцени / танцпол (вільна)',seats:[]},{id:'z-w1',name:'Стіл 1',seats:[]}]}
+};
+let seating     = loadJSON('wed-seating', DEFAULT_SEATING);
 let partyHer    = loadJSON('wed-party-her', []);
 let partyHis    = loadJSON('wed-party-his', []);
 let bar         = loadJSON('wed-bar', DEFAULT_BAR);
@@ -1981,6 +2023,68 @@ document.getElementById('addScriptBtn').onclick=()=>{
   saveJSON(scriptKey(),scriptRef()); renderScripts();
 };
 
+/* ════ РОЗСАДКА ════ */
+let activeSeat='sofia';
+function seatRef(){ if(!seating[activeSeat]) seating[activeSeat]={tip:'',zones:[]}; if(!Array.isArray(seating[activeSeat].zones)) seating[activeSeat].zones=[]; return seating[activeSeat]; }
+const seatEvent=()=> activeSeat==='sofia'?'ceremony':'party';
+function seatGuests(){ const ev=seatEvent(); return guests.filter(g=>g.status!=='declined' && (g.event===ev||g.event==='both')); }
+function seatChip(g,zoneId){
+  const hc=headCount(g); const extra=hc>1?`<span class="seat-hc">·${hc}</span>`:'';
+  const side=g.side==='her'?'her':(g.side==='his'?'his':'');
+  return `<span class="seat-chip ${side}${zoneId?' rm':''}" data-seatchip="${g.id}" data-zone="${zoneId||''}">${esc(g.name||'Гість')}${extra}${zoneId?'<b class="seat-x">✕</b>':''}</span>`;
+}
+function renderSeating(){
+  const loc=seatRef(); const all=seatGuests();
+  loc.zones.forEach(z=>{ if(!Array.isArray(z.seats)) z.seats=[]; z.seats=z.seats.filter(id=>all.some(g=>g.id===id)); });
+  document.getElementById('seatTip').textContent=loc.tip||'';
+  const assigned=new Set(); loc.zones.forEach(z=>z.seats.forEach(id=>assigned.add(id)));
+  const unassigned=all.filter(g=>!assigned.has(g.id));
+  const ua=document.getElementById('seatUnassigned');
+  ua.innerHTML=`<div class="seat-ua-title">Не розсаджені (${unassigned.length})</div>`+
+    (all.length? (unassigned.length?`<div class="seat-chips">${unassigned.map(g=>seatChip(g,null)).join('')}</div>`:`<div class="backlog-empty">Усіх розсаджено 🎉</div>`)
+     : `<div class="backlog-empty">Ще нема гостей на цю локацію. Додай їх у вкладці «Гості».</div>`);
+  const zc=document.getElementById('seatZones'); zc.innerHTML='';
+  loc.zones.forEach(z=>{
+    const cap=z.seats.reduce((s,id)=>{const g=all.find(x=>x.id===id);return s+(g?headCount(g):0);},0);
+    const card=document.createElement('div'); card.className='seat-zone';
+    card.innerHTML=`<div class="seat-zone-head">
+        <input class="seat-zone-name" data-zname="${z.id}" value="${esc(z.name)}" aria-label="Назва зони">
+        <span class="seat-zone-cap">${cap} ос.</span>
+        <button class="del-x" data-zdel="${z.id}" aria-label="Видалити зону">✕</button>
+      </div>
+      <div class="seat-chips">${z.seats.map(id=>{const g=all.find(x=>x.id===id);return g?seatChip(g,z.id):'';}).join('')||'<span class="seat-empty">порожньо — обери гостя нижче</span>'}</div>
+      ${unassigned.length?`<select class="seat-add" data-zadd="${z.id}"><option value="">＋ додати гостя…</option>${unassigned.map(g=>`<option value="${g.id}">${esc(g.name||'Гість')}</option>`).join('')}</select>`:''}`;
+    zc.appendChild(card);
+  });
+  zc.querySelectorAll('[data-zname]').forEach(inp=>inp.onchange=()=>{
+    const z=loc.zones.find(x=>x.id===inp.dataset.zname); if(!z)return;
+    z.name=inp.value.trim()||'Зона'; saveJSON('wed-seating',seating);
+  });
+  zc.querySelectorAll('[data-zdel]').forEach(b=>b.onclick=()=>{
+    const i=loc.zones.findIndex(x=>x.id===b.dataset.zdel); if(i<0)return;
+    loc.zones.splice(i,1); saveJSON('wed-seating',seating); renderSeating();
+  });
+  zc.querySelectorAll('[data-zadd]').forEach(sel=>sel.onchange=()=>{
+    const z=loc.zones.find(x=>x.id===sel.dataset.zadd); if(!z||!sel.value)return;
+    loc.zones.forEach(x=>{ x.seats=x.seats.filter(id=>id!==sel.value); });
+    z.seats.push(sel.value); saveJSON('wed-seating',seating); renderSeating();
+  });
+  zc.querySelectorAll('[data-seatchip][data-zone]').forEach(ch=>{ if(!ch.dataset.zone) return; ch.onclick=()=>{
+    const z=loc.zones.find(x=>x.id===ch.dataset.zone); if(!z)return;
+    z.seats=z.seats.filter(id=>id!==ch.dataset.seatchip); saveJSON('wed-seating',seating); renderSeating();
+  };});
+}
+document.querySelectorAll('#seatTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#seatTabs .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeSeat=btn.dataset.st; renderSeating();
+});
+document.getElementById('addZoneBtn').onclick=()=>{
+  const name=val('zoneName'); if(!name)return;
+  seatRef().zones.push({id:'z'+Date.now(),name,seats:[]});
+  document.getElementById('zoneName').value='';
+  saveJSON('wed-seating',seating); renderSeating();
+};
+
 /* ════ ВЕЧІРКИ: ДІВИЧ-ВЕЧІР / МАЛЬЧІШНИК ════ */
 let activeParty='her';
 const partyRef=()=> activeParty==='her'?partyHer:partyHis;
@@ -2320,7 +2424,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar(); renderSeating();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -2343,7 +2447,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,outfit,partyHer,partyHis,bar,team,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,outfit,partyHer,partyHis,bar,team,seating,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -2360,6 +2464,7 @@ function startSync(){
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(d.photos && typeof d.photos==='object') photos=d.photos;
     if(d.outfit && typeof d.outfit==='object') outfit=d.outfit;
+    if(d.seating && typeof d.seating==='object') seating=d.seating;
     if(Array.isArray(d.partyHer)) partyHer=d.partyHer;
     if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
     if(d.bar && typeof d.bar==='object') bar=d.bar;
@@ -2377,6 +2482,7 @@ function startSync(){
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-photos',JSON.stringify(photos));
     DB.set('wed-outfit',JSON.stringify(outfit));
+    DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-party-her',JSON.stringify(partyHer));
     DB.set('wed-party-his',JSON.stringify(partyHis));
     DB.set('wed-bar',JSON.stringify(bar));
