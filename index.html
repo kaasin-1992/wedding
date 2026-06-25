@@ -224,6 +224,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .note-text{font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
 
 /* ── IDEAS / LINKS ── */
+.base-photos{display:flex;gap:14px;justify-content:center;margin-bottom:18px;}
+.base-photo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto;}
+.base-photo-frame{width:92px;height:92px;border-radius:50%;background:var(--surface2);border:2px solid var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--muted);}
+.base-photo[data-who="her"] .base-photo-frame{border-color:var(--rose);}
+.base-photo[data-who="his"] .base-photo-frame{border-color:var(--sage);}
+.base-photo-cap{font-size:12px;font-weight:600;color:var(--text);}
+.base-photo-btn{font-size:11px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:3px 12px;cursor:pointer;font-weight:600;}
+.base-photo-btn:hover{filter:brightness(.94);}
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
@@ -525,6 +533,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 <!-- IDEAS / LOOK -->
 <div class="panel" id="tab-ideas">
+  <div class="base-photos" id="basePhotos">
+    <div class="base-photo" data-who="her">
+      <div class="base-photo-frame" id="bpHerFrame"></div>
+      <div class="base-photo-cap">Катерина</div>
+      <label class="base-photo-btn">Фото<input type="file" accept="image/*" id="bpHer" hidden></label>
+    </div>
+    <div class="base-photo" data-who="his">
+      <div class="base-photo-frame" id="bpHisFrame"></div>
+      <div class="base-photo-cap">Дмитро</div>
+      <label class="base-photo-btn">Фото<input type="file" accept="image/*" id="bpHis" hidden></label>
+    </div>
+  </div>
   <div class="section-hint">Кидай сюди посилання — апка сама підтягне фото, назву й опис. Магазини одягу, каблучки, ідеї та конкурси з Instagram чи Pinterest. Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
@@ -610,7 +630,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -689,6 +709,7 @@ let ideas       = loadJSON('wed-ideas', []);
 let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let hotels      = loadJSON('wed-hotels', []);
+let photos      = loadJSON('wed-photos', {her:'',his:''});
 
 /* ── HELPERS ── */
 const today = ()=> new Date(new Date().toDateString());
@@ -1223,6 +1244,48 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   saveJSON('wed-ideas',ideas); renderIdeas();
 };
 
+/* ── БАЗОВІ ФОТО ПАРИ ── */
+function downscaleImage(file, maxSide, cb){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>h && w>maxSide){ h=Math.round(h*maxSide/w); w=maxSide; }
+      else if(h>=w && h>maxSide){ w=Math.round(w*maxSide/h); h=maxSide; }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.7));
+    };
+    img.onerror=()=>cb(null);
+    img.src=reader.result;
+  };
+  reader.onerror=()=>cb(null);
+  reader.readAsDataURL(file);
+}
+function renderBasePhotos(){
+  const her=document.getElementById('bpHerFrame'), his=document.getElementById('bpHisFrame');
+  if(her) her.style.cssText = photos.her ? `background-image:url('${photos.her}')` : '';
+  if(her && !photos.her) her.textContent='👰';
+  else if(her) her.textContent='';
+  if(his) his.style.cssText = photos.his ? `background-image:url('${photos.his}')` : '';
+  if(his && !photos.his) his.textContent='🤵';
+  else if(his) his.textContent='';
+}
+['Her','His'].forEach(W=>{
+  const inp=document.getElementById('bp'+W);
+  if(!inp) return;
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    downscaleImage(f,512,data=>{
+      if(!data){ alert('Не вдалося обробити фото'); return; }
+      photos[W==='Her'?'her':'his']=data;
+      saveJSON('wed-photos',photos); renderBasePhotos();
+    });
+    inp.value='';
+  };
+});
+
 /* ════ SCRIPT / SCENARIO ════ */
 let activeScript='sofia';
 const scriptRef=()=> activeScript==='sofia'?scriptSofia:scriptWave;
@@ -1355,7 +1418,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -1378,7 +1441,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -1393,6 +1456,7 @@ function startSync(){
     if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
+    if(d.photos && typeof d.photos==='object') photos=d.photos;
     // оновлюємо локальний кеш
     DB.set('wed-tasks',JSON.stringify(tasks));
     DB.set('wed-guests',JSON.stringify(guests));
@@ -1404,6 +1468,7 @@ function startSync(){
     DB.set('wed-scriptS',JSON.stringify(scriptSofia));
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
+    DB.set('wed-photos',JSON.stringify(photos));
     applyingSnapshot=false;
     renderAll();
   }, err=>{ console.warn('snapshot', err); });
