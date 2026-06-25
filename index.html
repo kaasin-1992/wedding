@@ -1961,14 +1961,13 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.photo); if(!it) return;
-    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    pickImageFile(f=>{ if(!f) return;
       loadPhotoFile(f,768,data=>{
         if(!data){ showToast('Не вдалося обробити фото'); return; }
         it.img=data; saveJSON('wed-ideas',ideas); renderIdeas();
+        showToast('📷 Фото додано');
       },0.8);
-    };
-    inp.click();
+    });
   });
   listEl.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
@@ -2065,15 +2064,14 @@ document.getElementById('imgPickShot').onclick=async()=>{
 };
 document.getElementById('imgPickUp').onclick=()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it) return;
-  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+  pickImageFile(f=>{
+    if(!f) return;
     loadPhotoFile(f,768,data=>{
       if(!data){ showToast('Не вдалося обробити фото'); return; }
       it.img=data; it.imgChoices=[...new Set([data, ...(it.imgChoices||[])])];
       saveJSON('wed-ideas',ideas); renderImgPick(); renderIdeas();
     },0.8);
-  };
-  inp.click();
+  });
 };
 document.getElementById('imgPickExtract').onclick=async()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it) return;
@@ -2113,6 +2111,18 @@ function loadPhotoFile(file, maxSide, cb, q){
   };
   reader.onerror=()=>cb(null);
   reader.readAsDataURL(file);
+}
+/* надійний вибір файлу: на iPhone у режимі застосунку (PWA) кліки по input, який НЕ доданий
+   у сторінку, часто не відкривають галерею. Тому додаємо input у DOM, клікаємо, потім прибираємо. */
+function pickImageFile(onPick){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(inp);
+  const cleanup=()=>{ setTimeout(()=>{ try{ inp.remove(); }catch(e){} }, 300); };
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; onPick(f||null); cleanup(); };
+  inp.oncancel=cleanup;
+  inp.click();
 }
 function renderBasePhotos(){
   [['her','bpHerFrame','bpManqHer','👰','Катерини'],['his','bpHisFrame','bpManqHis','🤵','Дмитра']].forEach(([who,fid,mid,emoji,nameG])=>{
