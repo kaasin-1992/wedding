@@ -168,6 +168,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 /* ── HOTEL ── */
 .hotel-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.hotel-thumb-wrap{height:150px;}
+.hotel-price-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;}
+.hotel-pl{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);}
+.hotel-pinp{font:inherit;font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);width:118px;max-width:42vw;}
 .hotel-status{cursor:pointer;}
 .hotel-status.booked{background:var(--done-dim);color:var(--done);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
@@ -252,6 +256,42 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
+/* метрики тіла під базовим фото */
+.bp-metrics{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;justify-content:center;}
+.bp-metrics .bp-m{font-size:12px;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text);min-width:0;}
+.bp-metrics select.bp-m{max-width:118px;}
+.bp-metrics input.bp-m{width:74px;}
+.base-photo-btn.cam{background:var(--rose);color:#fff;border-color:var(--rose);}
+/* сортування одягу */
+.idea-sort{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
+.idea-sort-lbl{font-size:12px;color:var(--muted);}
+.idea-sort select{font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);}
+/* вечірки: загальний коментар, празькі позначки, групи */
+.party-general{margin:0 0 14px;}
+.party-general-lbl{display:block;font-size:13px;color:var(--text);margin-bottom:5px;}
+.party-general-note{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:9px 11px;border-radius:11px;border:1px solid var(--line);background:var(--surface2);color:var(--text);resize:vertical;}
+.party-legend{font-size:11.5px;color:var(--muted);background:var(--surface2);border-radius:9px;padding:7px 9px;margin:4px 0 10px;line-height:1.5;}
+.party-group-h{font-size:12.5px;font-weight:600;color:var(--text);margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--line);}
+.party-row .party-prague{flex:none;font-size:11px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;white-space:nowrap;}
+.party-prague.pg-always{background:rgba(76,175,80,.16);border-color:rgba(76,175,80,.5);}
+.party-prague.pg-ifNobody{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.55);}
+.party-prague.pg-ifStay{background:rgba(33,150,243,.16);border-color:rgba(33,150,243,.5);}
+.party-note[contenteditable="true"]{outline:none;cursor:text;min-height:1em;border-radius:6px;padding:1px 3px;margin:-1px -3px;}
+.party-note[contenteditable="true"]:hover{background:var(--surface2);}
+.party-note[contenteditable="true"]:focus{background:var(--surface2);box-shadow:0 0 0 2px var(--line);}
+.party-note[contenteditable="true"]:empty:before{content:'＋ коментар…';color:var(--muted);}
+/* камера з овальним гайдом */
+.cam-modal{position:fixed;inset:0;background:#000;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+.cam-modal.show{display:flex;}
+.cam-stage{position:relative;width:100%;max-width:460px;aspect-ratio:3/4;background:#000;overflow:hidden;}
+.cam-stage video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+.cam-oval{position:absolute;inset:0;pointer-events:none;}
+.cam-oval::after{content:'';position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:62%;height:46%;border:3px dashed rgba(255,255,255,.92);border-radius:50%;box-shadow:0 0 0 2000px rgba(0,0,0,.46);}
+.cam-hint{color:#fff;font-size:14px;margin:12px 16px;text-align:center;opacity:.88;}
+.cam-btns{display:flex;gap:14px;margin:6px 0 14px;}
+.cam-btns button{padding:12px 22px;border-radius:14px;border:none;font-size:16px;font-weight:600;cursor:pointer;}
+.cam-shot{background:#fff;color:#111;}
+.cam-cancel{background:#333;color:#fff;}
 .couple-slot img{width:100%;height:100%;object-fit:cover;display:block;}
 .couple-slot .cs-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:12px;text-align:center;padding:8px;}
 .couple-slot .cs-ph .cs-emoji{font-size:34px;line-height:1;}
@@ -368,6 +408,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 /* ── PARTIES (дівич / мальчішник) ── */
 .party-count{font-size:12px;color:var(--muted);margin-bottom:10px;}
 .party-row{position:relative;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 40px 12px 15px;margin-bottom:8px;}
+.party-info{flex:1;min-width:0;}
 .party-name{font-size:14.5px;font-weight:500;}
 .party-note{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
 .party-row .del-x{opacity:.5;}
@@ -863,8 +904,17 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="base-photo-cap">Катерина</div>
       <div class="bp-manq" id="bpManqHer"></div>
       <div class="bp-btns">
+        <button type="button" class="base-photo-btn cam" data-cam="her">📷 Камера</button>
         <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHer" hidden></label>
         <label class="base-photo-btn ghost">Зріст<input type="file" accept="image/*" id="bpHerFull" hidden></label>
+      </div>
+      <div class="bp-metrics" data-who="her">
+        <select class="bp-m" data-m="build" title="Статура">
+          <option value="">статура…</option>
+          <option>худорлява</option><option>струнка</option><option>середня</option><option>спортивна</option><option>пишна</option><option>повніша</option>
+        </select>
+        <input class="bp-m" data-m="height" inputmode="numeric" maxlength="3" placeholder="зріст, см">
+        <input class="bp-m" data-m="size" maxlength="6" placeholder="розмір">
       </div>
       <div class="bp-full" id="bpFullHer"></div>
     </div>
@@ -873,10 +923,30 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="base-photo-cap">Дмитро</div>
       <div class="bp-manq" id="bpManqHis"></div>
       <div class="bp-btns">
+        <button type="button" class="base-photo-btn cam" data-cam="his">📷 Камера</button>
         <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHis" hidden></label>
         <label class="base-photo-btn ghost">Зріст<input type="file" accept="image/*" id="bpHisFull" hidden></label>
       </div>
+      <div class="bp-metrics" data-who="his">
+        <select class="bp-m" data-m="build" title="Статура">
+          <option value="">статура…</option>
+          <option>худорлявий</option><option>стрункий</option><option>середній</option><option>спортивний</option><option>міцний</option><option>кремезний</option>
+        </select>
+        <input class="bp-m" data-m="height" inputmode="numeric" maxlength="3" placeholder="зріст, см">
+        <input class="bp-m" data-m="size" maxlength="6" placeholder="розмір">
+      </div>
       <div class="bp-full" id="bpFullHis"></div>
+    </div>
+  </div>
+  <div class="cam-modal" id="camModal">
+    <div class="cam-stage">
+      <video id="camVideo" playsinline autoplay muted></video>
+      <div class="cam-oval"></div>
+    </div>
+    <div class="cam-hint">Розмісти обличчя в овалі · рівне фронтальне світло 🙂</div>
+    <div class="cam-btns">
+      <button type="button" class="cam-cancel" id="camCancel">Скасувати</button>
+      <button type="button" class="cam-shot" id="camShot">📸 Зняти</button>
     </div>
   </div>
   <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». Одяг можна додати й без посилання — напиши опис (напр. «шовкова сукня кольору шампань, міді») і тисни 🪄 «Уявити річ», ШІ намалює сам предмет, далі — 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» так само 🪄 «Уявити». Спершу обери розділ.</div>
@@ -885,6 +955,15 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-i="his">🤵 Він</button>
     <button class="filt-btn" data-i="rings">💍 Каблучки</button>
     <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
+  </div>
+  <div class="idea-sort" id="ideaSortBar" style="display:none;">
+    <span class="idea-sort-lbl">Сортувати:</span>
+    <select id="ideaSort" aria-label="Сортування одягу">
+      <option value="">за датою (нові згори)</option>
+      <option value="gtype">за одиницею гардеробу</option>
+      <option value="price-asc">за ціною ↑ (дешевші)</option>
+      <option value="price-desc">за ціною ↓ (дорожчі)</option>
+    </select>
   </div>
   <div class="add-section" style="margin-bottom:16px;">
     <details open>
@@ -919,6 +998,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="filters" id="partyTabs">
     <button class="filt-btn active" data-p="her">👰 Дівич-вечір</button>
     <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
+  </div>
+  <div class="party-general">
+    <label class="party-general-lbl" id="partyGenLbl" for="partyGenNote">💬 Загальний коментар про вечірку</label>
+    <textarea id="partyGenNote" class="party-general-note" rows="2" placeholder="Спільні думки — місце, бюджет, ідеї, дата…"></textarea>
   </div>
   <div class="add-section" style="margin-bottom:14px;">
     <details>
@@ -1031,8 +1114,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
           <input type="date" id="hIn">
           <input type="date" id="hOut">
         </div>
+        <div class="form-row">
+          <input type="text" id="hPrice" inputmode="numeric" placeholder="Ціна за ніч, грн">
+          <input type="text" id="hSur" placeholder="Доплата (туристичний збір, прибирання…)">
+        </div>
         <input type="text" id="hWho" placeholder="Для кого (напр. Ми / гості зі Львова)">
-        <input type="text" id="hNote" placeholder="Нотатка (ціна, деталі…)">
+        <input type="text" id="hNote" placeholder="Нотатка (деталі…)">
         <button class="submit-btn" id="addHotelBtn">Додати</button>
       </div>
     </details>
@@ -1059,7 +1146,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1252,6 +1339,7 @@ let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
+let bodyMetrics = loadJSON('wed-metrics', {her:{build:'',height:'',size:''}, his:{build:'',height:'',size:''}}); // параметри тіла для промптів {her,his}
 let manqBusy    = {her:false,his:false};
 // 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
 // Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
@@ -1293,6 +1381,7 @@ let invites     = loadJSON('wed-invites', []);
 let inviteGame  = loadJSON('wed-invite-game', {concept:'',url:'',steps:[]});
 let partyHer    = loadJSON('wed-party-her', []);
 let partyHis    = loadJSON('wed-party-his', []);
+let partyNotes  = loadJSON('wed-party-notes', {her:'',his:''}); // загальний коментар про вечірку {her,his}
 let bar         = loadJSON('wed-bar', DEFAULT_BAR);
 let team        = loadJSON('wed-team', DEFAULT_TEAM);
 
@@ -1856,6 +1945,7 @@ document.getElementById('addNoteBtn').onclick=()=>{
 
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
+let ideaSort='';
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 // витягуємо ціну з тексту прев'ю: "1 250 грн", "₴1250", "3200 UAH", "від 4500 грн"
 function extractPrice(t){
@@ -1901,7 +1991,21 @@ async function fetchPreview(url){
 }
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
-  const items=ideas.filter(i=>i.cat===activeIdea);
+  // панель сортування — лише для одягу (Вона/Він)
+  const sortBar=document.getElementById('ideaSortBar');
+  const isCloth=(activeIdea==='her'||activeIdea==='his');
+  if(sortBar) sortBar.style.display=isCloth?'flex':'none';
+  let items=ideas.filter(i=>i.cat===activeIdea);
+  if(isCloth && ideaSort){
+    const arr=items.slice();
+    if(ideaSort==='gtype'){
+      arr.sort((a,b)=>{ const ia=GTYPES.indexOf(a.gtype||''), ib=GTYPES.indexOf(b.gtype||''); const na=ia<0?99:ia, nb=ib<0?99:ib; return na-nb || (b.ts||0)-(a.ts||0); });
+    }else if(ideaSort==='price-asc'||ideaSort==='price-desc'){
+      const pv=it=>{ const n=parseMoney(it.price); return (n&&n>0)?n:null; };
+      arr.sort((a,b)=>{ const pa=pv(a), pb=pv(b); if(pa==null&&pb==null) return (b.ts||0)-(a.ts||0); if(pa==null) return 1; if(pb==null) return -1; return ideaSort==='price-asc'?pa-pb:pb-pa; });
+    }
+    items=arr;
+  }
   if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
   items.forEach(it=>{
     const host=hostOf(it.url);
@@ -1994,6 +2098,7 @@ document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
 });
+{ const ss=document.getElementById('ideaSort'); if(ss) ss.onchange=()=>{ ideaSort=ss.value; renderIdeas(); }; }
 document.getElementById('addIdeaBtn').onclick=async()=>{
   let url=val('iUrl');
   const note=val('iNote'), name=val('iName'), price=val('iPrice'), id='i'+Date.now();
@@ -2151,6 +2256,10 @@ function renderBasePhotos(){
   document.querySelectorAll('[data-fulldel]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.fulldel; photosFull[who]=''; saveJSON('wed-photos-full',photosFull); renderBasePhotos();
   });
+  document.querySelectorAll('.bp-metrics').forEach(wrap=>{
+    const m=bodyMetrics[wrap.dataset.who]||{};
+    wrap.querySelectorAll('.bp-m').forEach(el=>{ if(document.activeElement!==el) el.value=m[el.dataset.m]||''; });
+  });
 }
 function renderCouple(){
   const slots=[{who:'her',id:'csHer',emoji:'👰',name:'Катерина'},{who:'his',id:'csHis',emoji:'🤵',name:'Дмитро'}];
@@ -2206,6 +2315,57 @@ function renderCouple(){
     finp.value='';
   };
 });
+/* ── МЕТРИКИ ТІЛА (статура/зріст/розмір) ── */
+document.querySelectorAll('.bp-metrics').forEach(wrap=>{
+  const who=wrap.dataset.who;
+  wrap.querySelectorAll('.bp-m').forEach(el=>{
+    const save=()=>{ bodyMetrics[who]={...bodyMetrics[who], [el.dataset.m]: el.value.trim()}; saveJSON('wed-metrics',bodyMetrics); };
+    el.addEventListener('change',save);
+    el.addEventListener('blur',save);
+  });
+});
+/* ── КАМЕРА (селфі з овальним гайдом) ── */
+let _camWho=null, _camStream=null;
+function openCamera(who){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ showToast('Камера недоступна тут — додай фото через «Портрет».'); return; }
+  _camWho=who;
+  const modal=document.getElementById('camModal'), vid=document.getElementById('camVideo');
+  modal.classList.add('show');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:1280}},audio:false})
+    .then(stream=>{ _camStream=stream; vid.srcObject=stream; const p=vid.play&&vid.play(); if(p&&p.catch)p.catch(()=>{}); })
+    .catch(e=>{ console.warn('cam',e); closeCamera(); showToast('Не вдалось увімкнути камеру — дай дозвіл у налаштуваннях браузера.'); });
+}
+function closeCamera(){
+  const modal=document.getElementById('camModal'), vid=document.getElementById('camVideo');
+  if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; }
+  if(vid) vid.srcObject=null;
+  if(modal) modal.classList.remove('show');
+  _camWho=null;
+}
+function shootCamera(){
+  const vid=document.getElementById('camVideo'), who=_camWho;
+  if(!vid || !who || !vid.videoWidth){ return; }
+  const vw=vid.videoWidth, vh=vid.videoHeight, R=3/4;       // кадруємо у 3:4 з центру
+  let cw=vw, ch=vw/R; if(ch>vh){ ch=vh; cw=vh*R; }
+  const sx=(vw-cw)/2, sy=(vh-ch)/2;
+  const cv=document.createElement('canvas'); cv.width=Math.round(cw); cv.height=Math.round(ch);
+  const ctx=cv.getContext('2d');
+  ctx.translate(cv.width,0); ctx.scale(-1,1);               // дзеркало, як у прев'ю
+  ctx.drawImage(vid, sx, sy, cw, ch, 0, 0, cv.width, cv.height);
+  const raw=cv.toDataURL('image/jpeg',0.92);
+  closeCamera();
+  downscaleSrc(raw,896,data=>{
+    const d=data||raw;
+    photos[who]=d; saveJSON('wed-photos',photos);
+    mannequin[who]=''; saveJSON('wed-mannequin',mannequin);
+    renderBasePhotos(); renderCouple();
+    aiMakeMannequin(who);
+    showToast('📷 Селфі збережено');
+  },0.9);
+}
+document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>openCamera(b.dataset.cam));
+{ const cc=document.getElementById('camCancel'); if(cc) cc.onclick=closeCamera;
+  const cs=document.getElementById('camShot');  if(cs) cs.onclick=shootCamera; }
 /* ── ОБРІЗКА ОБЛИЧЧЯ (для парних фото) ── */
 let _cropState=null;
 function openCrop(file, cb){
@@ -2288,6 +2448,14 @@ const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру (співвідношення 3:4) на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. ЄДИНЕ КАДРУВАННЯ: постать заповнює майже всю висоту кадру — маківка біля верхнього краю, ступні біля нижнього, з однаковими невеликими полями зверху і знизу (≈5%); той самий масштаб і та сама відстань камери, що для стандартного лукбуку на повний зріст (щоб різні картинки були в одному розмірі). Фотореалізм, реалістичні пропорції; голова РЕАЛІСТИЧНОГО розміру (≈1/7–1/8 зросту), НЕ збільшена; без тексту і водяних знаків.';
 // зріст для реалістичних пропорцій
 function heightLine(who){ return who==='her'?'Жінка зростом приблизно 170 см, реалістична статура.':'Чоловік трохи вищий за 170 см (≈175–182 см), реалістична статура.'; }
+// параметри тіла, які ввела людина (статура/зріст/розмір) — текстова підказка для моделі
+function metricsLine(who){
+  const m=bodyMetrics[who]||{}, p=[];
+  if((m.build||'').trim())  p.push('статура — '+m.build.trim());
+  if((m.height||'').trim()) p.push('зріст — '+m.height.trim()+' см');
+  if((m.size||'').trim())   p.push('розмір одягу — '+m.size.trim());
+  return p.length ? ` Орієнтовні параметри людини: ${p.join('; ')}. Зроби пропорції тіла та посадку одягу відповідними цим параметрам.` : '';
+}
 // одне суворе правило обличчя для манекена і примірки
 function faceRule(hasPortrait){
   return hasPortrait
@@ -2295,12 +2463,15 @@ function faceRule(hasPortrait){
     : ' Збережи обличчя, зачіску і статуру людини без змін (та сама людина).';
 }
 // типи речей (щоб ШІ розумів: спідниця = лише спідниця)
-const GTYPES=['','сукня','спідниця','топ / блуза','костюм','піджак','сорочка','штани','верхній одяг','взуття','аксесуар','образ цілком'];
+const GTYPES=['','сукня','спідниця','топ / блуза','костюм','піджак','сорочка','штани','верхній одяг','взуття','вінок (головний убор)','передник','прикраса на шию','прикраса на серце','сумочка на пояс','сумочка на плече','аксесуар','образ цілком'];
+// куди саме вдягати конкретний тип речі (щоб генерація не плутала місце)
+const GPLACE={'вінок (головний убор)':'на голові як вінок/головний убір','передник':'спереду на талії, поверх спідниці','прикраса на шию':'на шиї','прикраса на серце':'на грудях, біля серця','сумочка на пояс':'на поясі','сумочка на плече':'на плечі або через плече','взуття':'на ногах'};
 function gtypeText(it){
   const g=(it.gtype||'').trim();
   if(!g) return '';
   if(g==='образ цілком') return ' (це цілісний образ — можна відтворити все, що видно на фото товару)';
-  return ` (це саме ${g} — вдягни ЛИШЕ цей предмет, без вигаданого іншого одягу)`;
+  const place=GPLACE[g]?`, розмісти ${GPLACE[g]}`:'';
+  return ` (це саме ${g} — вдягни/додай ЛИШЕ цей предмет${place}, без вигаданого іншого одягу)`;
 }
 let coupleBusy={her:false,his:false};
 let _aiCorePromise=null;
@@ -2373,10 +2544,10 @@ async function aiMakeMannequin(who){
     if(bodySrc){
       // Є справжнє фото в повний зріст → РЕДАГУЄМО його: лишаємо людину 1:1, міняємо ЛИШЕ одяг.
       // (синтез тіла з портрета давав велику голову й «чуже» обличчя — тому редагуємо реальне фото)
-      parts=[`Відредагуй це фото людини: заміни ЛИШЕ її одяг на простий базовий СІРИЙ — однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу. КРИТИЧНО: НЕ перемальовуй саму людину — збережи ТОЧНО як на фото обличчя, зачіску, голову та її розмір, пропорції тіла, зріст, статуру й позу. Міняй виключно тканину/одяг, більше нічого. Не збільшуй голову, не «прикрашай», не змінюй риси. Покажи людину на повний зріст. Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc)];
+      parts=[`Відредагуй це фото людини: заміни ЛИШЕ її одяг на простий базовий СІРИЙ — однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу. КРИТИЧНО: НЕ перемальовуй саму людину — збережи ТОЧНО як на фото обличчя, зачіску, голову та її розмір, пропорції тіла, зріст, статуру й позу. Міняй виключно тканину/одяг, більше нічого. Не збільшуй голову, не «прикрашай», не змінюй риси. Покажи людину на повний зріст.${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc)];
     }else{
       // тільки портрет → доводиться домалювати тіло; суворо тримаємо обличчя й реалістичну голову
-      parts=[`[ПОРТРЕТ] — справжнє фото людини. Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.${faceRule(true)} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc)];
+      parts=[`[ПОРТРЕТ] — справжнє фото людини. Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.${faceRule(true)} ${heightLine(who)}${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc)];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,768,small=>{
@@ -2385,6 +2556,22 @@ async function aiMakeMannequin(who){
       showToast(`🧍 Манекен ${who==='her'?'Катерини':'Дмитра'} готовий`);
     },0.8);
   }catch(e){ console.warn('mannequin',e); manqBusy[who]=false; renderBasePhotos(); renderCouple(); showToast('Не вдалось зробити манекен 😕 '+aiErr(e)); }
+}
+// КРОК Б — окремий прохід «закріплення обличчя»: на готовому фото лишаємо одяг/тіло 1:1,
+// виправляємо ЛИШЕ обличчя під реальний портрет і м'яко вписуємо в світло сцени.
+async function aiAnchorFace(resultDataUrl, who){
+  const face=photos[who];
+  if(!face || !resultDataUrl) return resultDataUrl;
+  try{
+    const facePart=dataUrlToPart(await srcToDataUrl(face)||face);
+    const scenePart=dataUrlToPart(resultDataUrl);
+    if(!facePart || !scenePart) return resultDataUrl;
+    const prompt=`[СЦЕНА] — готове фото людини в одязі. [ПОРТРЕТ] — справжнє обличчя цієї самої людини.
+Завдання: на [СЦЕНА] залиш АБСОЛЮТНО без змін одяг, тіло, позу, руки, зачіску, фон, кадрування й освітлення — піксель у піксель. Зміни ЛИШЕ саме обличчя: зроби його точно як на [ПОРТРЕТ] — розріз і колір очей, форму носа, губ, брів, овал, скули, шкіру. Це має бути беззаперечно ТА САМА людина з [ПОРТРЕТ], впізнавана.
+Вписуй обличчя природно: узгодь напрямок світла й тіні на шиї та підборідді зі сценою, зроби мʼякий природний перехід по лінії волосся, вух і шиї, БЕЗ різких колірних кордонів і БЕЗ ефекту наклейки/фотошопу. Не усереднюй з іншими, не «прикрашай», не міняй одяг і пропорції голови.`;
+    const img=await aiGenerate([prompt, scenePart, facePart]);
+    return img||resultDataUrl;
+  }catch(e){ console.warn('anchorFace',e); return resultDataUrl; }
 }
 async function aiTryOn(it){
   const who=it.cat==='his'?'his':'her';
@@ -2423,7 +2610,7 @@ async function aiTryOn(it){
       task=`Вдягни на людину з ${baseTag} одяг з фото [ТОВАР].`;
     }
 
-    const tail=` Точно відтвори тканину, колір, візерунок, крій, довжину і деталі товару; бери одяг ВИКЛЮЧНО з [ТОВАР], не вигадуй інший. Якщо на фото товару є модель — копіюй лише сам одяг, НЕ її обличчя. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`;
+    const tail=` Точно відтвори тканину, колір, візерунок, крій, довжину і деталі товару; бери одяг ВИКЛЮЧНО з [ТОВАР], не вигадуй інший. Якщо на фото товару є модель — копіюй лише сам одяг, НЕ її обличчя. ${heightLine(who)}${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`;
 
     let parts;
     if(facePhoto && baseSrc!==facePhoto){
@@ -2434,7 +2621,8 @@ async function aiTryOn(it){
       const tag=facePhoto?'[ПОРТРЕТ]':baseTag;
       parts=[`${tag} — справжнє фото людини. [ТОВАР] — фото реального одягу з магазину${gt}. Вдягни на людину з ${tag} одяг з [ТОВАР].${faceRuleTxt}${tail}`, dataUrlToPart(baseSrc), garmentPart];
     }
-    const img=await aiGenerate(parts);
+    let img=await aiGenerate(parts);
+    img=await aiAnchorFace(img, who);   // Крок Б — закріплення обличчя
     downscaleSrc(img,896,small=>{
       const res=small||img;
       const cur=ideas.find(x=>x.id===it.id);
@@ -2888,21 +3076,52 @@ function renderPartyPick(){
     wrap.appendChild(chip);
   });
 }
+// Празька позначка (тільки дівич-вечір): хто цікавить за яких умов — щоб дружка бачила сортування
+const PRAGUE_ORDER=['always','ifNobody','ifStay',''];
+const PRAGUE_NEXT={'':'always',always:'ifNobody',ifNobody:'ifStay',ifStay:''};
+const PRAGUE_LBL={always:'🟢 У будь-якому разі', ifNobody:'🟡 Якщо в Прагу не буде кому', ifStay:'🔵 Якщо НЕ їдемо в Прагу', '':'⚪ Без позначки'};
+const PRAGUE_SHORT={always:'🟢 будь-як', ifNobody:'🟡 нема кому', ifStay:'🔵 не їдемо', '':'⚪ Прага?'};
 function renderParties(){
   renderPartyPick();
+  const isHer=activeParty==='her';
+  // загальний коментар про вечірку
+  const gen=document.getElementById('partyGenNote');
+  if(gen && document.activeElement!==gen) gen.value=partyNotes[activeParty]||'';
+  const glbl=document.getElementById('partyGenLbl');
+  if(glbl) glbl.textContent=isHer?'💬 Загальний коментар про дівич-вечір':'💬 Загальний коментар про мальчішник';
   const listEl=document.getElementById('partyList'); if(!listEl) return;
   const arr=partyRef(); listEl.innerHTML='';
   const cnt=document.createElement('div'); cnt.className='party-count';
   cnt.textContent=arr.length?`Людей у списку: ${arr.length}`:'';
   listEl.appendChild(cnt);
   if(!arr.length){ const e=document.createElement('div'); e.className='empty-state'; e.innerHTML='Список порожній.<br>Обери гостей зверху або додай вручну 🥳'; listEl.appendChild(e); return; }
-  arr.forEach(p=>{
-    const row=document.createElement('div'); row.className='party-row';
-    row.innerHTML=`<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
-      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${p.note?`<div class="party-note">${esc(p.note)}</div>`:''}</div>`;
-    listEl.appendChild(row);
-  });
+  if(isHer) listEl.insertAdjacentHTML('beforeend','<div class="party-legend">🇨🇿 Прага: тапни позначку біля людини. 🟢 — у будь-якому разі · 🟡 — лише якщо в Прагу не буде кому їхати · 🔵 — лише якщо не їдемо в Прагу.</div>');
+  const rowHTML=p=>{
+    const tag=isHer?`<button class="party-prague pg-${p.prague||'none'}" data-pprag="${p.id}" title="Празька позначка — тапни, щоб змінити">${PRAGUE_SHORT[p.prague||'']}</button>`:'';
+    const note=`<div class="party-note" data-pnote="${p.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false">${esc(p.note||'')}</div>`;
+    return `<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
+      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${note}</div>${tag}`;
+  };
+  if(isHer){
+    const groups={}; arr.forEach(p=>{ const k=p.prague||''; (groups[k]=groups[k]||[]).push(p); });
+    PRAGUE_ORDER.forEach(k=>{
+      const g=groups[k]; if(!g||!g.length) return;
+      const h=document.createElement('div'); h.className='party-group-h'; h.textContent=`${PRAGUE_LBL[k]} · ${g.length}`; listEl.appendChild(h);
+      g.forEach(p=>{ const row=document.createElement('div'); row.className='party-row'; row.innerHTML=rowHTML(p); listEl.appendChild(row); });
+    });
+  }else{
+    arr.forEach(p=>{ const row=document.createElement('div'); row.className='party-row'; row.innerHTML=rowHTML(p); listEl.appendChild(row); });
+  }
   listEl.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>delUndo(partyKey(),b.dataset.pdel,'Прибрано'));
+  listEl.querySelectorAll('[data-pprag]').forEach(b=>b.onclick=()=>{
+    const cur=partyRef(); const p=cur.find(x=>x.id===b.dataset.pprag); if(!p) return;
+    p.prague=PRAGUE_NEXT[p.prague||'']; saveJSON(partyKey(),cur); renderParties();
+  });
+  listEl.querySelectorAll('[data-pnote]').forEach(el=>{
+    const save=()=>{ const cur=partyRef(); const p=cur.find(x=>x.id===el.dataset.pnote); if(!p) return; const v=el.textContent.trim(); if(v===(p.note||'')) return; p.note=v; saveJSON(partyKey(),cur); };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+  });
 }
 document.querySelectorAll('#partyTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#partyTabs .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -2914,6 +3133,11 @@ document.getElementById('addPartyBtn').onclick=()=>{
   document.getElementById('pName').value=''; document.getElementById('pNote').value='';
   saveJSON(partyKey(),partyRef()); renderParties();
 };
+{ const gen=document.getElementById('partyGenNote');
+  if(gen && !IS_GUEST){ const save=()=>{ partyNotes[activeParty]=gen.value; saveJSON('wed-party-notes',partyNotes); };
+    gen.addEventListener('change',save); gen.addEventListener('blur',save); }
+  else if(gen && IS_GUEST){ gen.readOnly=true; }
+}
 
 /* ════ БАР ТА МЕНЮ (калькулятор від кількості людей) ════ */
 let activeBar='sofia';
@@ -3134,16 +3358,24 @@ function renderHotels(){
     const host=hostOf(h.url);
     const dates=(h.checkin||h.checkout)?`<span class="badge">🗓 ${h.checkin?fmtDate(h.checkin):'?'}${h.checkout?' – '+fmtDate(h.checkout):''}</span>`:'';
     const who=h.who?`<span class="badge">👤 ${esc(h.who)}</span>`:'';
+    const nights=(h.checkin&&h.checkout)?Math.max(0,Math.round((new Date(h.checkout)-new Date(h.checkin))/86400000)):0;
+    const pn=parseMoney(h.pricePerNight), sur=parseMoney(h.surcharge);
+    const total=(pn?pn*(nights||1):0)+(sur||0);
+    const totalBadge=(pn||sur)?`<span class="badge">💰 разом ≈ ${fmtUAH(total)} грн${nights?` · ${nights} ноч.`:(pn?' / ніч':'')}</span>`:'';
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-hdel="${h.id}" aria-label="Видалити готель">✕</button>
-      ${h.img?`<img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}
+      ${h.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
         ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
         <div class="idea-title">${esc(h.title||h.url||'Готель')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${h.desc?`<div class="idea-desc">${esc(h.desc)}</div>`:''}
-        <div class="hotel-meta">${dates}${who}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span></div>
+        <div class="hotel-price-row">
+          <label class="hotel-pl">🛏 за ніч<input class="hotel-pinp" data-hpn="${h.id}" inputmode="numeric" value="${esc(h.pricePerNight||'')}" placeholder="грн"></label>
+          <label class="hotel-pl">➕ доплата<input class="hotel-pinp" data-hsur="${h.id}" value="${esc(h.surcharge||'')}" placeholder="грн / опис"></label>
+        </div>
+        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span></div>
         ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
         ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
@@ -3156,14 +3388,22 @@ function renderHotels(){
     const h=hotels.find(x=>x.id===b.dataset.hbook); if(!h)return;
     h.booked=!h.booked; saveJSON('wed-hotels',hotels); renderHotels();
   });
+  listEl.querySelectorAll('[data-hpn]').forEach(inp=>inp.onchange=()=>{
+    const h=hotels.find(x=>x.id===inp.dataset.hpn); if(!h)return;
+    h.pricePerNight=inp.value.trim(); saveJSON('wed-hotels',hotels); renderHotels();
+  });
+  listEl.querySelectorAll('[data-hsur]').forEach(inp=>inp.onchange=()=>{
+    const h=hotels.find(x=>x.id===inp.dataset.hsur); if(!h)return;
+    h.surcharge=inp.value.trim(); saveJSON('wed-hotels',hotels); renderHotels();
+  });
 }
 document.getElementById('addHotelBtn').onclick=async()=>{
   const name=val('hName'); let url=val('hUrl');
   if(!name&&!url)return;
   if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
   const id='h'+Date.now();
-  hotels.unshift({id,title:name,url,checkin:document.getElementById('hIn').value||'',checkout:document.getElementById('hOut').value||'',who:val('hWho'),note:val('hNote'),img:'',desc:'',booked:false,loading:!!url,ts:Date.now()});
-  ['hName','hUrl','hWho','hNote'].forEach(i=>document.getElementById(i).value='');
+  hotels.unshift({id,title:name,url,checkin:document.getElementById('hIn').value||'',checkout:document.getElementById('hOut').value||'',who:val('hWho'),note:val('hNote'),pricePerNight:val('hPrice'),surcharge:val('hSur'),img:'',desc:'',booked:false,loading:!!url,ts:Date.now()});
+  ['hName','hUrl','hWho','hNote','hPrice','hSur'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('hIn').value=''; document.getElementById('hOut').value='';
   saveJSON('wed-hotels',hotels); renderHotels();
   if(url){
@@ -3284,11 +3524,13 @@ function startSync(){
     if(!IS_GUEST) ['photos','photosFull','mannequin','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
     });
+    if(d.bodyMetrics && typeof d.bodyMetrics==='object') bodyMetrics={her:{...bodyMetrics.her,...(d.bodyMetrics.her||{})},his:{...bodyMetrics.his,...(d.bodyMetrics.his||{})}};
     if(d.seating && typeof d.seating==='object') seating=d.seating;
     if(Array.isArray(d.invites)) invites=d.invites;
     if(d.inviteGame && typeof d.inviteGame==='object') inviteGame=d.inviteGame;
     if(Array.isArray(d.partyHer)) partyHer=d.partyHer;
     if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
+    if(d.partyNotes && typeof d.partyNotes==='object') partyNotes={her:d.partyNotes.her||'',his:d.partyNotes.his||''};
     if(d.bar && typeof d.bar==='object') bar=d.bar;
     if(Array.isArray(d.team)) team=d.team;
     // оновлюємо локальний кеш
@@ -3303,11 +3545,13 @@ function startSync(){
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
+    DB.set('wed-metrics',JSON.stringify(bodyMetrics));
     DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-invites',JSON.stringify(invites));
     DB.set('wed-invite-game',JSON.stringify(inviteGame));
     DB.set('wed-party-her',JSON.stringify(partyHer));
     DB.set('wed-party-his',JSON.stringify(partyHis));
+    DB.set('wed-party-notes',JSON.stringify(partyNotes));
     DB.set('wed-bar',JSON.stringify(bar));
     DB.set('wed-team',JSON.stringify(team));
     applyingSnapshot=false;
