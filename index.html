@@ -1937,7 +1937,9 @@ document.getElementById('imgPickShot').onclick=async()=>{
   if(!url){ btn.textContent=old; btn.disabled=false; showToast('Скрін не вдався 😕 спробуй ще раз або 📁 завантаж фото товару вручну'); return; }
   // одразу вбудовуємо як data:-фото, щоб скрін не зник і ШІ зміг його прочитати
   btn.textContent='💾 Зберігаю…';
-  const du=await srcToDataUrl(url);
+  let du=await srcToDataUrl(url);
+  // скрін сторінки часто дуже довгий — стискаємо, щоб ШІ не давився розміром
+  if(du){ du=await new Promise(ok=>downscaleSrc(du,1280,r=>ok(r||du),0.82)); }
   btn.textContent=old; btn.disabled=false;
   const img=du||url;
   it.imgChoices=[...new Set([img, ...(it.imgChoices||[])])]; it.img=img;
@@ -2380,9 +2382,12 @@ async function aiExtractGarment(it){
   const src=it.img;
   if(!src){ showToast('Спершу зроби скрін або додай картинку 👆'); return; }
   aiBusy(it.id,true);
-  // читаємо картинку (з проксі-фолбеком). Якщо взагалі не читається — чесно кажемо.
+  // читаємо картинку (з проксі-фолбеком) і стискаємо, щоб модель не давилась великим скріном
   let part=null;
-  try{ part=await srcToPart(src); }catch(e){ console.warn('extract read',e); }
+  try{
+    let du=await srcToDataUrl(src);
+    if(du){ du=await new Promise(ok=>downscaleSrc(du,1280,r=>ok(r||du),0.82)); part=dataUrlToPart(du); }
+  }catch(e){ console.warn('extract read',e); }
   if(!part){ aiBusy(it.id,false); showToast('Не вдалось прочитати картинку 😕 Спробуй 📁 завантажити фото товару вручну.'); return; }
   // 1) ціна — окремо, помилка тут не валить усе
   let price='';
