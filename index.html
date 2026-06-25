@@ -228,6 +228,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .note-text{font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
 
 /* ── IDEAS / LINKS ── */
+.couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;}
+.couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;}
+.couple-stage-row{display:flex;gap:10px;}
+.couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;}
+.couple-slot#csHer{border-color:var(--rose);}
+.couple-slot#csHis{border-color:var(--sage);}
+.couple-slot img{width:100%;height:100%;object-fit:cover;display:block;}
+.couple-slot .cs-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:12px;text-align:center;padding:8px;}
+.couple-slot .cs-ph .cs-emoji{font-size:34px;line-height:1;}
+.couple-slot.busy::after{content:'🪄 ШІ вдягає…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;font-size:13px;text-align:center;padding:10px;}
+.couple-slot .cs-cap{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:10.5px;padding:3px 6px;text-align:center;}
+.couple-slot .cs-x{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.couple-stage-hint{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:9px;text-align:center;}
 .base-photos{display:flex;gap:14px;justify-content:center;margin-bottom:18px;}
 .base-photo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto;}
 .base-photo-frame{width:92px;height:92px;border-radius:50%;background:var(--surface2);border:2px solid var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--muted);}
@@ -269,6 +282,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-open:hover{filter:brightness(.94);}
 .idea-ai-btn{display:block;width:100%;text-align:center;background:var(--gold);color:#fff;border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
 .idea-ai-btn:hover{filter:brightness(.94);}
+.idea-gtype{width:100%;margin-bottom:6px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12.5px;cursor:pointer;}
 .idea-ai-btn:disabled{opacity:.55;cursor:default;}
 .idea-ai-badge{position:absolute;top:8px;left:8px;z-index:2;background:var(--gold);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
 .idea-ai-x{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -662,6 +676,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 <!-- IDEAS / LOOK -->
 <div class="panel" id="tab-ideas">
+  <div class="couple-stage" id="coupleStage">
+    <div class="couple-stage-title">🪄 Примірка пари</div>
+    <div class="couple-stage-row">
+      <div class="couple-slot" id="csHer"></div>
+      <div class="couple-slot" id="csHis"></div>
+    </div>
+    <div class="couple-stage-hint" id="csHint"></div>
+  </div>
   <div class="base-photos" id="basePhotos">
     <div class="base-photo" data-who="her">
       <div class="base-photo-frame" id="bpHerFrame"></div>
@@ -796,7 +818,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -886,6 +908,7 @@ let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let hotels      = loadJSON('wed-hotels', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
+let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
 let partyHer    = loadJSON('wed-party-her', []);
 let partyHis    = loadJSON('wed-party-his', []);
 let bar         = loadJSON('wed-bar', DEFAULT_BAR);
@@ -1417,7 +1440,8 @@ function renderIdeas(){
     // кнопки ШІ
     let aiBtns='';
     if(it.cat==='her'||it.cat==='his'){
-      aiBtns=`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
+      const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(g):'тип речі…'}</option>`).join('')}</select>`;
+      aiBtns=gsel+`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
@@ -1465,6 +1489,10 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
+  });
+  listEl.querySelectorAll('[data-gtype]').forEach(sel=>sel.onchange=()=>{
+    const it=ideas.find(x=>x.id===sel.dataset.gtype); if(!it)return;
+    it.gtype=sel.value; saveJSON('wed-ideas',ideas);
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -1591,6 +1619,30 @@ function renderBasePhotos(){
   if(his && !photos.his) his.textContent='🤵';
   else if(his) his.textContent='';
 }
+function renderCouple(){
+  const slots=[{who:'her',id:'csHer',emoji:'👰',name:'Катерина'},{who:'his',id:'csHis',emoji:'🤵',name:'Дмитро'}];
+  slots.forEach(s=>{
+    const el=document.getElementById(s.id); if(!el) return;
+    el.classList.toggle('busy', !!coupleBusy[s.who]);
+    const dressed=outfit[s.who], base=photos[s.who];
+    if(dressed){
+      el.innerHTML=`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap">${s.name}</div>`;
+    }else if(base){
+      el.innerHTML=`<img src="${esc(base)}" alt="" style="opacity:.45;filter:grayscale(.4)"><div class="cs-cap">${s.name} · ще не вдягнено</div>`;
+    }else{
+      el.innerHTML=`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
+    }
+  });
+  const hintEl=document.getElementById('csHint');
+  if(hintEl){
+    hintEl.textContent = (outfit.her||outfit.his)
+      ? 'Образ пари в одному модельному стилі. Натисни 🪄 «Приміряти» на картці — людина перевдягнеться тут.'
+      : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі, поряд із парою.';
+  }
+  document.querySelectorAll('[data-csx]').forEach(b=>b.onclick=()=>{
+    const who=b.dataset.csx; outfit[who]=''; saveJSON('wed-outfit',outfit); renderCouple();
+  });
+}
 ['Her','His'].forEach(W=>{
   const inp=document.getElementById('bp'+W);
   if(!inp) return;
@@ -1629,6 +1681,17 @@ function approveIdea(it){
 const FB_VER='11.10.0';
 // лише актуальні моделі (Gemini 2.0 Flash та Imagen вимкнені у 2026; 2.5-flash-image = «Nano Banana»)
 const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
+// єдиний стиль для ВСІХ примірок — щоб усі картинки виглядали як модельний лукбук
+const TRYON_STYLE='повний зріст від голови до взуття, рівно по центру кадру; нейтральний світло-сірий однотонний фон; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці; вертикальний кадр. Фотореалізм, реалістичні пропорції, без тексту і водяних знаків.';
+// типи речей (щоб ШІ розумів: спідниця = лише спідниця)
+const GTYPES=['','сукня','спідниця','топ / блуза','костюм','піджак','сорочка','штани','верхній одяг','взуття','аксесуар','образ цілком'];
+function gtypeText(it){
+  const g=(it.gtype||'').trim();
+  if(!g) return '';
+  if(g==='образ цілком') return ' (це цілісний образ — можна відтворити все, що видно на фото товару)';
+  return ` (це саме ${g} — вдягни ЛИШЕ цей предмет, без вигаданого іншого одягу)`;
+}
+let coupleBusy={her:false,his:false};
 let _aiCorePromise=null;
 function aiCore(){
   if(_aiCorePromise) return _aiCorePromise;
@@ -1690,23 +1753,28 @@ async function aiTryOn(it){
   const personUrl=photos[who];
   if(!personUrl){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
   aiBusy(it.id,true);
+  coupleBusy[who]=true; renderCouple();
   try{
     const personPart=dataUrlToPart(personUrl);
-    const garmentPart=it.img?await urlToPart(it.img):null;
-    const name=who==='her'?'жінці':'чоловіку';
+    const garmentPart=it.img?await srcToPart(it.img):null;
+    const name=who==='her'?'нареченій (жінці)':'нареченому (чоловіку)';
+    const gt=gtypeText(it);
     let parts;
     if(garmentPart){
-      parts=[`Перше зображення — фото людини. Друге — предмет одягу/аксесуар${it.title?' ("'+it.title+'")':''}. Реалістично вдягни цей предмет на ${name} з першого фото. Збережи її обличчя, зачіску, статуру і фон. Фотореалізм, природне освітлення.`, personPart, garmentPart];
+      parts=[`Перше зображення — фото людини. Друге — фото ТОВАРУ (предмет одягу або аксесуар${it.title?' «'+it.title+'»':''})${gt}. Реалістично вдягни цей предмет на ${name} з першого фото. Бери одяг саме з фото товару — його колір, крій і деталі; не вигадуй того, чого на фото товару нема. Решту образу лиши нейтральною і простою. Збережи обличчя, зачіску і статуру людини. Стиль зображення: ${TRYON_STYLE}`, personPart, garmentPart];
     }else{
-      parts=[`Це фото людини. Реалістично покажи, як на ${name} виглядав би образ: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')}. Збережи обличчя і статуру. Фотореалізм.`, personPart];
+      parts=[`Це фото людини. Реалістично покажи ${name} в образі: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')||'святковий образ'}. Збережи обличчя і статуру. Стиль зображення: ${TRYON_STYLE}`, personPart];
     }
     const img=await aiGenerate(parts);
-    downscaleSrc(img,768,small=>{
-      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
-      cur.tryon=small||img; cur._ai=false;
-      saveJSON('wed-ideas',ideas); renderIdeas();
-    },0.78);
-  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); showToast('ШІ-примірка не вдалась 😕 '+aiErr(e)); }
+    downscaleSrc(img,896,small=>{
+      const res=small||img;
+      const cur=ideas.find(x=>x.id===it.id);
+      if(cur){ cur.tryon=res; cur._ai=false; saveJSON('wed-ideas',ideas); }
+      outfit[who]=res; saveJSON('wed-outfit',outfit);
+      coupleBusy[who]=false;
+      renderIdeas(); renderCouple();
+    },0.8);
+  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); coupleBusy[who]=false; renderCouple(); showToast('ШІ-примірка не вдалась 😕 '+aiErr(e)); }
 }
 async function aiImagine(it){
   const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
@@ -2127,7 +2195,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderParties(); renderBar();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -2150,7 +2218,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,partyHer,partyHis,bar,team,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,outfit,partyHer,partyHis,bar,team,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -2166,6 +2234,7 @@ function startSync(){
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(d.photos && typeof d.photos==='object') photos=d.photos;
+    if(d.outfit && typeof d.outfit==='object') outfit=d.outfit;
     if(Array.isArray(d.partyHer)) partyHer=d.partyHer;
     if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
     if(d.bar && typeof d.bar==='object') bar=d.bar;
@@ -2182,6 +2251,7 @@ function startSync(){
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-photos',JSON.stringify(photos));
+    DB.set('wed-outfit',JSON.stringify(outfit));
     DB.set('wed-party-her',JSON.stringify(partyHer));
     DB.set('wed-party-his',JSON.stringify(partyHis));
     DB.set('wed-bar',JSON.stringify(bar));
