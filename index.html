@@ -156,6 +156,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .attr-chip.on.wp{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
 .attr-chip.on.mb{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
 .attr-chip.on.kd{background:var(--sage-dim);border-color:var(--sage);color:var(--sage);}
+.attr-chip.on.bk{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
+.guest-card.backup{border-left:3px solid var(--terra);}
 
 /* ── HOTEL ── */
 .hotel-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
@@ -228,6 +230,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-fav{width:46px;height:46px;border-radius:11px;background:#fff;padding:6px;object-fit:contain;box-shadow:0 3px 10px rgba(74,65,56,.12);}
 .idea-fav-emoji{font-size:34px;line-height:1;}
 .idea-fallback-host{font-size:13px;color:var(--terra);font-weight:600;letter-spacing:.02em;word-break:break-word;}
+.idea-price-row{display:flex;align-items:center;gap:7px;margin-top:10px;}
+.idea-price-row .pl{font-size:14px;}
+.idea-price-inp{flex:1;max-width:180px;border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:7px 11px;font-family:var(--sans);font-size:14.5px;font-weight:700;color:var(--terra);}
+.idea-price-inp:focus{outline:none;border-color:var(--terra);}
+.idea-price-inp::placeholder{color:var(--muted);font-weight:400;}
 .idea-body{padding:13px 15px;}
 .idea-loading{font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:6px;}
 .idea-title{font-size:14.5px;font-weight:600;line-height:1.32;word-break:break-word;}
@@ -388,6 +395,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <button class="filt-btn" data-f="party">Вечірка</button>
     <button class="filt-btn" data-f="plus1">+1</button>
     <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
+    <button class="filt-btn" data-f="backup">⏳ Запасні</button>
     <button class="filt-btn" data-f="wparty">💐 Дружки</button>
     <button class="filt-btn" data-f="pending">Не підтвердили</button>
   </div>
@@ -521,17 +529,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <button class="filt-btn" data-i="rings">💍 Каблучки</button>
     <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
   </div>
-  <div id="ideaList"></div>
-  <div class="add-section" style="margin-top:16px;">
-    <details>
+  <div class="add-section" style="margin-bottom:16px;">
+    <details open>
       <summary>＋ Додати посилання</summary>
       <div class="add-form">
         <input type="url" id="iUrl" placeholder="Встав посилання (Instagram, магазин, Pinterest…)" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <input type="text" id="iName" placeholder="Назва (підтягнеться сама)">
+          <input type="text" id="iPrice" placeholder="Ціна (напр. 4500 грн)">
+        </div>
         <input type="text" id="iNote" placeholder="Підпис / нотатка (необовʼязково)">
         <button class="submit-btn" id="addIdeaBtn">Додати</button>
       </div>
     </details>
   </div>
+  <div id="ideaList"></div>
 </div>
 
 <!-- SCRIPT -->
@@ -761,14 +773,16 @@ function applyFilter(g,f){
   if(f==='party')return g.event==='party'||g.event==='both';
   if(f==='plus1')return g.plus1!=='none';
   if(f==='maybe')return !!g.maybe;
+  if(f==='backup')return !!g.backup;
   if(f==='wparty')return !!g.wparty;
   if(f==='pending')return g.status==='pending';
   return true;
 }
-/* порядок у списку: підтверджені → запрошені (чекаємо) → під питанням → відмовили */
+/* порядок у списку: підтверджені → запрошені → під питанням → запасні → відмовили */
 function guestRank(g){
   if(g.status==='confirmed') return 0;
-  if(g.status==='declined')  return 3;
+  if(g.status==='declined')  return 4;
+  if(g.backup)               return 3;
   if(g.maybe)                return 2;
   return 1;
 }
@@ -803,9 +817,10 @@ function renderGuests(){
       <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.wparty}">${wpLbl}</span>
       <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
       <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}" role="button" tabindex="0" aria-label="Діти: ${kids}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
+      <span class="attr-chip bk ${g.backup?'on':''}" data-attr="backup" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.backup}" title="Кликати в останню чергу">⏳ Запасний</span>
     </div>`;
     const card=document.createElement('div');
-    card.className=`guest-card ${g.status}${g.maybe?' maybe':''}`;
+    card.className=`guest-card ${g.status}${g.maybe?' maybe':''}${g.backup?' backup':''}`;
     card.innerHTML=`
       <div class="guest-avatar ${g.side==='her'?'av-her':'av-his'}">${esc(initials)}</div>
       <div class="guest-info">
@@ -855,6 +870,7 @@ function renderGuests(){
     const a=el.dataset.attr;
     if(a==='wparty') g.wparty=!g.wparty;
     else if(a==='maybe') g.maybe=!g.maybe;
+    else if(a==='backup') g.backup=!g.backup;
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     saveJSON('wed-guests',guests); renderGuests();
   });
@@ -1172,6 +1188,7 @@ function renderIdeas(){
         <div class="idea-title">${esc(it.title||host||it.url)}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
+        <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
         <div class="idea-actions"><a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>
       </div>`;
@@ -1179,6 +1196,10 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
     delUndo('wed-ideas',b.dataset.idel,'Видалено');
+  });
+  listEl.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
+    const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
+    it.price=inp.value.trim(); saveJSON('wed-ideas',ideas);
   });
 }
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -1188,14 +1209,14 @@ document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=
 document.getElementById('addIdeaBtn').onclick=async()=>{
   let url=val('iUrl'); if(!url)return;
   if(!/^https?:\/\//i.test(url)) url='https://'+url;
-  const note=val('iNote'), id='i'+Date.now();
-  ideas.unshift({id,cat:activeIdea,url,title:'',desc:'',img:'',note,loading:true,ts:Date.now()});
-  document.getElementById('iUrl').value=''; document.getElementById('iNote').value='';
+  const note=val('iNote'), name=val('iName'), price=val('iPrice'), id='i'+Date.now();
+  ideas.unshift({id,cat:activeIdea,url,title:name,desc:'',img:'',icon:'',note,price,loading:true,ts:Date.now()});
+  ['iUrl','iName','iPrice','iNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   saveJSON('wed-ideas',ideas); renderIdeas();
   const prev=await fetchPreview(url);
   const cur=ideas.find(x=>x.id===id); if(!cur)return;
   cur.loading=false;
-  if(prev){ cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
+  if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
   saveJSON('wed-ideas',ideas); renderIdeas();
 };
 
