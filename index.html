@@ -1078,7 +1078,7 @@ let weedPassHash = loadJSON('wed-weed-pass', '');   // хеш пароля (си
 // ти і Дмитро вводите пароль раз на своєму телефоні — далі видно завжди; дружки на своїх пристроях пароля не мають.
 let weedUnlocked = (()=>{ try{ return localStorage.getItem('wed-weed-ok')==='1'; }catch(e){ return false; } })();
 function hashStr(s){ let h=5381; s=String(s); for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return 'h'+h.toString(36); }
-function isWeed(text){ return /трав(а|и|к|ʼ|')|weed|🌿|канабіс|каннабіс|косяк|джойнт|шишк/i.test(String(text||'')); }
+function isWeed(text){ return /(?<![а-яіїєґ])трав(а|и|у|і|о|к|ичк|ʼ|')|weed|🌿|канабіс|каннабіс|косяк|джойнт|шишк/i.test(String(text||'')); }
 function reRenderWeedAreas(){ try{ renderGuests(); renderBar(); renderBudget(); renderTasks(); renderScripts(); }catch(e){} }
 function unlockWeed(){
   if(weedUnlocked) return true;
