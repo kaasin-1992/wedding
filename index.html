@@ -369,6 +369,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .script-text{flex:1;font-size:14px;line-height:1.45;padding-right:14px;word-break:break-word;}
 .script-row .del-x{opacity:.5;}
 .script-row:hover .del-x{opacity:1;}
+.script-untime{align-self:center;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 4px;}
+.script-untime:hover{color:var(--terra);}
+.backlog-block{margin-top:18px;border-top:1px dashed var(--line);padding-top:14px;}
+.backlog-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;}
+.backlog-row{gap:10px;align-items:center;}
+.backlog-row .script-text{padding-right:6px;}
+.backlog-time{flex:0 0 auto;width:88px;border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-family:var(--sans);font-size:12.5px;background:var(--surface2);color:var(--text);}
+.backlog-empty{font-size:12.5px;color:var(--muted);}
+.form-hint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:2px 0 8px;}
 
 /* FORMS */
 .add-section{margin-top:8px;}
@@ -784,7 +793,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
-  <div class="section-hint">Хід дня по хвилинах. Окремо розпис у Софі та святкування у Хвильовому.</div>
+  <div class="section-hint">Хід дня по хвилинах. Окремо розпис у Софі та святкування у Хвильовому. Можна спершу накидати всі плани без часу в беклог, а потім розставити їм час.</div>
   <div class="filters" id="scriptTabs">
     <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
     <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
@@ -792,12 +801,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <div id="scriptList"></div>
   <div class="add-section" style="margin-top:16px;">
     <details>
-      <summary>＋ Додати пункт сценарію</summary>
+      <summary>＋ Додати пункт</summary>
       <div class="add-form">
         <div class="form-row">
           <input type="time" id="sTime">
           <input type="text" id="sText" placeholder="Що відбувається…">
         </div>
+        <div class="form-hint">Залиш час порожнім → пункт піде в беклог. Постав час → одразу в таймлайн.</div>
         <button class="submit-btn" id="addScriptBtn">Додати</button>
       </div>
     </details>
@@ -1910,18 +1920,53 @@ let activeScript='sofia';
 const scriptRef=()=> activeScript==='sofia'?scriptSofia:scriptWave;
 const scriptKey=()=> activeScript==='sofia'?'wed-scriptS':'wed-scriptW';
 function renderScripts(){
-  const arr=[...scriptRef()].sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  const all=scriptRef();
+  const timed=all.filter(m=>m.time).sort((a,b)=>a.time.localeCompare(b.time));
+  const backlog=all.filter(m=>!m.time);
   const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
-  if(!arr.length){ listEl.innerHTML='<div class="empty-state">Сценарій ще порожній ✍️</div>'; return; }
-  arr.forEach(m=>{
-    const row=document.createElement('div'); row.className='script-row';
-    row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
-      <div class="script-time">${esc(m.time||'—')}</div>
-      <div class="script-text">${esc(m.text)}</div>`;
-    listEl.appendChild(row);
+  // ── Таймлайн (з часом) ──
+  if(!timed.length){
+    const e=document.createElement('div'); e.className='empty-state';
+    e.innerHTML='Поки жоден пункт не має часу.<br>Накидай ідеї в беклог нижче і постав їм час ⏱';
+    listEl.appendChild(e);
+  }else{
+    timed.forEach(m=>{
+      const row=document.createElement('div'); row.className='script-row';
+      row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
+        <div class="script-time">${esc(m.time)}</div>
+        <div class="script-text">${esc(m.text)}</div>
+        <button class="script-untime" data-suntime="${m.id}" title="Прибрати час → назад у беклог">↩︎</button>`;
+      listEl.appendChild(row);
+    });
+  }
+  // ── Беклог (без часу) ──
+  const bl=document.createElement('div'); bl.className='backlog-block';
+  const head=document.createElement('div'); head.className='backlog-title';
+  head.textContent=`📋 Беклог — плани без часу (${backlog.length})`;
+  bl.appendChild(head);
+  if(backlog.length){
+    backlog.forEach(m=>{
+      const row=document.createElement('div'); row.className='script-row backlog-row';
+      row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
+        <div class="script-text">${esc(m.text)}</div>
+        <input type="time" class="backlog-time" data-stime="${m.id}" title="Поставити час → у таймлайн">`;
+      bl.appendChild(row);
+    });
+  }else{
+    const be=document.createElement('div'); be.className='backlog-empty';
+    be.textContent='Порожньо. Додай пункт без часу — і він зʼявиться тут, поки не розставиш.';
+    bl.appendChild(be);
+  }
+  listEl.appendChild(bl);
+  // handlers
+  listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>delUndo(scriptKey(),b.dataset.sdel,'Пункт видалено'));
+  listEl.querySelectorAll('[data-stime]').forEach(inp=>inp.onchange=()=>{
+    const m=scriptRef().find(x=>x.id===inp.dataset.stime); if(!m)return;
+    m.time=inp.value||''; saveJSON(scriptKey(),scriptRef()); renderScripts();
   });
-  listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{
-    delUndo(scriptKey(),b.dataset.sdel,'Пункт видалено');
+  listEl.querySelectorAll('[data-suntime]').forEach(b=>b.onclick=()=>{
+    const m=scriptRef().find(x=>x.id===b.dataset.suntime); if(!m)return;
+    m.time=''; saveJSON(scriptKey(),scriptRef()); renderScripts();
   });
 }
 document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
