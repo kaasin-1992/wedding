@@ -444,6 +444,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .imgpick-tools .modal-btn{font-size:13px;padding:9px;}
 .imgpick-extract{width:100%;margin-top:10px;font-size:13.5px;}
 .imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
+.crop-box{max-width:420px;text-align:left;}
+.crop-stage{position:relative;margin:12px 0;border-radius:12px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;}
+.crop-stage img{display:block;max-width:100%;max-height:56vh;width:auto;height:auto;pointer-events:none;}
+.crop-frame{position:absolute;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,.5);cursor:move;touch-action:none;}
+.crop-size-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+.crop-size-row input{flex:1;}
 .imgpick-cell.busy::after{content:'…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);color:#fff;font-size:20px;}
 </style>
 </head>
@@ -489,6 +495,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     <div class="imgpick-extract-hint">Якщо тут скрін з магазину — ШІ виріже сам одяг у повний зріст і прочитає ціну.</div>
     <div class="modal-actions">
       <button class="modal-btn ghost" id="imgPickClose">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cropModal" style="display:none">
+  <div class="modal-box crop-box">
+    <div class="imgpick-title">Обери обличчя ✂️</div>
+    <div class="imgpick-sub">Пересунь рамку на потрібне обличчя (зручно для парних фото) і підлаштуй розмір.</div>
+    <div class="crop-stage" id="cropStage">
+      <img id="cropImg" alt="">
+      <div class="crop-frame" id="cropFrame"></div>
+    </div>
+    <div class="crop-size-row">
+      <span>Розмір</span>
+      <input type="range" id="cropSize" min="20" max="100" value="60">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="cropCancel">Скасувати</button>
+      <button class="modal-btn" id="cropOk">Обрізати ✓</button>
     </div>
   </div>
 </div>
@@ -1648,14 +1673,67 @@ function renderCouple(){
   if(!inp) return;
   inp.onchange=()=>{
     const f=inp.files&&inp.files[0]; if(!f) return;
-    downscaleImage(f,512,data=>{
-      if(!data){ alert('Не вдалося обробити фото'); return; }
+    openCrop(f,data=>{
+      if(!data){ return; }
       photos[W==='Her'?'her':'his']=data;
-      saveJSON('wed-photos',photos); renderBasePhotos();
+      saveJSON('wed-photos',photos); renderBasePhotos(); renderCouple();
     });
     inp.value='';
   };
 });
+/* ── ОБРІЗКА ОБЛИЧЧЯ (для парних фото) ── */
+let _cropState=null;
+function openCrop(file, cb){
+  const url=URL.createObjectURL(file);
+  const modal=document.getElementById('cropModal');
+  const img=document.getElementById('cropImg');
+  const frame=document.getElementById('cropFrame');
+  const sizeInp=document.getElementById('cropSize');
+  img.onload=()=>{
+    const dw=img.clientWidth, dh=img.clientHeight;
+    const side=Math.round(Math.min(dw,dh)*0.6);
+    _cropState={img,frame,dw,dh,side,left:(dw-side)/2,top:(dh-side)/2,cb,url};
+    sizeInp.value=Math.round(side/Math.min(dw,dh)*100);
+    placeCrop();
+  };
+  img.src=url;
+  modal.style.display='flex';
+}
+function placeCrop(){
+  const s=_cropState; if(!s) return;
+  s.left=Math.max(0,Math.min(s.left,s.dw-s.side));
+  s.top=Math.max(0,Math.min(s.top,s.dh-s.side));
+  s.frame.style.width=s.side+'px'; s.frame.style.height=s.side+'px';
+  s.frame.style.left=s.left+'px'; s.frame.style.top=s.top+'px';
+}
+(function wireCrop(){
+  const frame=document.getElementById('cropFrame');
+  const sizeInp=document.getElementById('cropSize');
+  if(!frame) return;
+  let drag=null;
+  frame.addEventListener('pointerdown',e=>{ const s=_cropState; if(!s)return; drag={x:e.clientX,y:e.clientY,l:s.left,t:s.top}; frame.setPointerCapture(e.pointerId); e.preventDefault(); });
+  frame.addEventListener('pointermove',e=>{ const s=_cropState; if(!s||!drag)return; s.left=drag.l+(e.clientX-drag.x); s.top=drag.t+(e.clientY-drag.y); placeCrop(); });
+  frame.addEventListener('pointerup',()=>{ drag=null; });
+  frame.addEventListener('pointercancel',()=>{ drag=null; });
+  sizeInp.addEventListener('input',()=>{ const s=_cropState; if(!s)return; const min=Math.min(s.dw,s.dh); const ns=Math.round(min*sizeInp.value/100); const cx=s.left+s.side/2, cy=s.top+s.side/2; s.side=ns; s.left=cx-ns/2; s.top=cy-ns/2; placeCrop(); });
+  document.getElementById('cropCancel').onclick=()=>closeCrop(null);
+  document.getElementById('cropOk').onclick=()=>{
+    const s=_cropState; if(!s){ closeCrop(null); return; }
+    const scale=s.img.naturalWidth/s.dw;
+    const sx=s.left*scale, sy=s.top*scale, ss=s.side*scale;
+    const target=Math.min(512,Math.round(ss))||512;
+    const cv=document.createElement('canvas'); cv.width=target; cv.height=target;
+    cv.getContext('2d').drawImage(s.img,sx,sy,ss,ss,0,0,target,target);
+    let out=''; try{ out=cv.toDataURL('image/jpeg',0.85); }catch(e){ out=''; }
+    closeCrop(out);
+  };
+})();
+function closeCrop(result){
+  const modal=document.getElementById('cropModal');
+  const s=_cropState;
+  modal.style.display='none';
+  if(s){ try{ URL.revokeObjectURL(s.url); }catch(e){} const cb=s.cb; _cropState=null; if(cb) cb(result); }
+}
 
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
 function parseMoney(s){ const n=parseInt(String(s||'').replace(/[^\d]/g,''),10); return isNaN(n)?0:n; }
@@ -1682,7 +1760,9 @@ const FB_VER='11.10.0';
 // лише актуальні моделі (Gemini 2.0 Flash та Imagen вимкнені у 2026; 2.5-flash-image = «Nano Banana»)
 const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 // єдиний стиль для ВСІХ примірок — щоб усі картинки виглядали як модельний лукбук
-const TRYON_STYLE='повний зріст від голови до взуття, рівно по центру кадру; нейтральний світло-сірий однотонний фон; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці; вертикальний кадр. Фотореалізм, реалістичні пропорції, без тексту і водяних знаків.';
+const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. Фотореалізм, реалістичні пропорції, без тексту і водяних знаків.';
+// зріст для реалістичних пропорцій
+function heightLine(who){ return who==='her'?'Жінка зростом приблизно 170 см, реалістична статура.':'Чоловік трохи вищий за 170 см (≈175–182 см), реалістична статура.'; }
 // типи речей (щоб ШІ розумів: спідниця = лише спідниця)
 const GTYPES=['','сукня','спідниця','топ / блуза','костюм','піджак','сорочка','штани','верхній одяг','взуття','аксесуар','образ цілком'];
 function gtypeText(it){
@@ -1761,9 +1841,9 @@ async function aiTryOn(it){
     const gt=gtypeText(it);
     let parts;
     if(garmentPart){
-      parts=[`Перше зображення — фото людини. Друге — фото ТОВАРУ (предмет одягу або аксесуар${it.title?' «'+it.title+'»':''})${gt}. Реалістично вдягни цей предмет на ${name} з першого фото. Бери одяг саме з фото товару — його колір, крій і деталі; не вигадуй того, чого на фото товару нема. Решту образу лиши нейтральною і простою. Збережи обличчя, зачіску і статуру людини. Стиль зображення: ${TRYON_STYLE}`, personPart, garmentPart];
+      parts=[`Перше зображення — фото людини: збережи її обличчя, зачіску і статуру без змін. Друге зображення — фото ТОВАРУ${gt}. ГОЛОВНЕ ЗАВДАННЯ: точно відтворити одяг саме з фото товару — його тканину, колір, візерунок, крій, довжину, фурнітуру та всі деталі — і реалістично вдягти цей предмет на ${name} з першого фото. Орієнтуйся передусім на ФОТО товару, а не на слова; не змінюй і не додавай деталей одягу, яких нема на фото товару. Решту образу лиши нейтральною і простою. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, personPart, garmentPart];
     }else{
-      parts=[`Це фото людини. Реалістично покажи ${name} в образі: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')||'святковий образ'}. Збережи обличчя і статуру. Стиль зображення: ${TRYON_STYLE}`, personPart];
+      parts=[`Це фото людини: збережи обличчя і статуру. Реалістично покажи ${name} в образі: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')||'святковий образ'}. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, personPart];
     }
     const img=await aiGenerate(parts);
     downscaleSrc(img,896,small=>{
