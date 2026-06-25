@@ -252,6 +252,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .base-photo-cap{font-size:12px;font-weight:600;color:var(--text);}
 .base-photo-btn{font-size:11px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:3px 12px;cursor:pointer;font-weight:600;}
 .base-photo-btn:hover{filter:brightness(.94);}
+.bp-btns{display:flex;gap:5px;}
+.base-photo-btn.ghost{color:var(--muted);background:var(--surface2);border-color:var(--line);}
+.bp-full{min-height:14px;}
+.bp-full-info{font-size:10px;color:var(--terra);display:inline-flex;align-items:center;gap:4px;}
+.bp-full-x{font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0 2px;}
 .base-photo-frame.busy{opacity:.55;animation:bpPulse 1.1s ease-in-out infinite;}
 @keyframes bpPulse{50%{opacity:.85;}}
 .bp-manq{display:flex;align-items:center;gap:6px;min-height:18px;flex-wrap:wrap;justify-content:center;}
@@ -783,13 +788,21 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="base-photo-frame" id="bpHerFrame"></div>
       <div class="base-photo-cap">Катерина</div>
       <div class="bp-manq" id="bpManqHer"></div>
-      <label class="base-photo-btn">Фото<input type="file" accept="image/*" id="bpHer" hidden></label>
+      <div class="bp-btns">
+        <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHer" hidden></label>
+        <label class="base-photo-btn ghost">Зріст<input type="file" accept="image/*" id="bpHerFull" hidden></label>
+      </div>
+      <div class="bp-full" id="bpFullHer"></div>
     </div>
     <div class="base-photo" data-who="his">
       <div class="base-photo-frame" id="bpHisFrame"></div>
       <div class="base-photo-cap">Дмитро</div>
       <div class="bp-manq" id="bpManqHis"></div>
-      <label class="base-photo-btn">Фото<input type="file" accept="image/*" id="bpHis" hidden></label>
+      <div class="bp-btns">
+        <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHis" hidden></label>
+        <label class="base-photo-btn ghost">Зріст<input type="file" accept="image/*" id="bpHisFull" hidden></label>
+      </div>
+      <div class="bp-full" id="bpFullHis"></div>
     </div>
   </div>
   <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» можна додати ідею текстом і натиснути 🪄 «Уявити». Спершу обери розділ.</div>
@@ -964,7 +977,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-mannequin':'mannequin','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1054,18 +1067,40 @@ let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let hotels      = loadJSON('wed-hotels', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
+let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
 let manqBusy    = {her:false,his:false};
-// 🌿 інфа про травку — лише за паролем (сесійно, не зберігається/не синхронізується)
-const WEED_PASS = '420';
-let weedUnlocked = false;
+// 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
+// Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
+let weedPassHash = loadJSON('wed-weed-pass', '');   // хеш пароля (синхронізується), не сам пароль
+// розблоковано на ЦЬОМУ пристрої (зберігається локально, НЕ синхронізується):
+// ти і Дмитро вводите пароль раз на своєму телефоні — далі видно завжди; дружки на своїх пристроях пароля не мають.
+let weedUnlocked = (()=>{ try{ return localStorage.getItem('wed-weed-ok')==='1'; }catch(e){ return false; } })();
+function hashStr(s){ let h=5381; s=String(s); for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return 'h'+h.toString(36); }
+function isWeed(text){ return /трав(а|и|к|ʼ|')|weed|🌿|канабіс|каннабіс|косяк|джойнт|шишк/i.test(String(text||'')); }
+function reRenderWeedAreas(){ try{ renderGuests(); renderBar(); renderBudget(); renderTasks(); renderScripts(); }catch(e){} }
 function unlockWeed(){
   if(weedUnlocked) return true;
-  const p=prompt('🔒 Пароль для розділу «травка»:');
+  if(!weedPassHash){
+    const np=prompt('🔒 Розділ «травка» бачите тільки ви двоє.\nПридумай пароль (його знатимеш лише ти і Дмитро):');
+    if(np===null) return false;
+    const t=np.trim(); if(t.length<3){ showToast('Пароль закороткий — мін. 3 символи'); return false; }
+    weedPassHash=hashStr(t); saveJSON('wed-weed-pass',weedPassHash);
+    weedUnlocked=true; try{localStorage.setItem('wed-weed-ok','1');}catch(e){}
+    reRenderWeedAreas(); showToast('🔒 Пароль збережено · відкрито на цьому пристрої'); return true;
+  }
+  const p=prompt('🔒 Пароль для приватного розділу:');
   if(p===null) return false;
-  if(p.trim()===WEED_PASS){ weedUnlocked=true; renderGuests(); renderBar(); showToast('🌿 Розділ розблоковано'); return true; }
+  if(hashStr(p.trim())===weedPassHash){ weedUnlocked=true; try{localStorage.setItem('wed-weed-ok','1');}catch(e){} reRenderWeedAreas(); showToast('🌿 Розблоковано на цьому пристрої'); return true; }
   showToast('Невірний пароль 🔒'); return false;
+}
+function lockWeed(){ weedUnlocked=false; try{localStorage.removeItem('wed-weed-ok');}catch(e){} reRenderWeedAreas(); showToast('🔒 Сховано на цьому пристрої'); }
+function changeWeedPass(){
+  if(!weedUnlocked && weedPassHash){ if(!unlockWeed()) return; }
+  const np=prompt('🔑 Новий пароль для розділу «травка»:'); if(np===null) return;
+  const t=np.trim(); if(t.length<3){ showToast('Пароль закороткий — мін. 3 символи'); return; }
+  weedPassHash=hashStr(t); saveJSON('wed-weed-pass',weedPassHash); showToast('🔑 Пароль змінено');
 }
 const DEFAULT_SEATING={
   sofia:{tip:'У Софі камерно — найкраще підковою або колом біля молодят, рідні ближче. Тут небагато людей.', zones:[{id:'z-s1',name:'Стіл молодят',seats:[]}]},
@@ -1099,11 +1134,13 @@ function getStatus(t){
 
 /* ════ TASKS ════ */
 function renderTasks(){
-  const total=tasks.length, done=tasks.filter(t=>t.done).length;
+  // 🌿 завдання про травку приховані, поки не введено пароль
+  const vtasks = weedUnlocked ? tasks : tasks.filter(t=>!isWeed(t.text));
+  const total=vtasks.length, done=vtasks.filter(t=>t.done).length;
   document.getElementById('pbarFill').style.width=(total?Math.round(done/total*100):0)+'%';
   document.getElementById('pbarLabel').textContent=`${done} / ${total} виконано`;
 
-  const sorted=[...tasks].sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  const sorted=[...vtasks].sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
   const groups={};
   sorted.forEach(t=>{
     const key=t.deadline?`${MONTHS[+t.deadline.split('-')[1]]} ${t.deadline.split('-')[0]}`:'no-deadline';
@@ -1425,8 +1462,10 @@ document.getElementById('capInput').addEventListener('input',e=>{
   budgetCap=Number(e.target.value)||0; saveJSON('wed-cap',budgetCap); renderBudget();
 });
 function renderBudget(){
-  const planned=budget.reduce((s,b)=>s+(Number(b.planned)||0),0);
-  const paid=budget.reduce((s,b)=>s+(Number(b.paid)||0),0);
+  // 🌿 статті про травку приховані, поки не введено пароль
+  const vbudget = weedUnlocked ? budget : budget.filter(b=>!isWeed(b.name+' '+(b.note||'')));
+  const planned=vbudget.reduce((s,b)=>s+(Number(b.planned)||0),0);
+  const paid=vbudget.reduce((s,b)=>s+(Number(b.paid)||0),0);
   document.getElementById('sumPlanned').textContent=fmtMoney(planned);
   document.getElementById('sumPaid').textContent=fmtMoney(paid);
   document.getElementById('sumRemain').textContent=fmtMoney(planned-paid);
@@ -1439,9 +1478,9 @@ function renderBudget(){
   } else noteEl.className='', noteEl.textContent='';
 
   const groups={};
-  budget.forEach(b=>{(groups[b.cat]=groups[b.cat]||[]).push(b);});
+  vbudget.forEach(b=>{(groups[b.cat]=groups[b.cat]||[]).push(b);});
   const listEl=document.getElementById('budgetList'); listEl.innerHTML='';
-  if(!budget.length){ listEl.innerHTML='<div class="empty-state">Статей витрат ще немає</div>'; return; }
+  if(!vbudget.length){ listEl.innerHTML='<div class="empty-state">Статей витрат ще немає</div>'; return; }
   Object.entries(groups).forEach(([cat,items])=>{
     const catTotal=items.reduce((s,b)=>s+(Number(b.planned)||0),0);
     const h=document.createElement('div'); h.className='budget-cat';
@@ -1601,7 +1640,10 @@ function renderIdeas(){
   items.forEach(it=>{
     const host=hostOf(it.url);
     const fav=it.icon||faviconOf(host);
-    const aiImg=it.tryon||it.gen;            // ШІ-результат має пріоритет на показ
+    const isTry=(it.cat==='her'||it.cat==='his');
+    // у СПИСКУ для одягу лишаємо фото ТОВАРУ; примірка з людиною показується лише зверху (couple stage).
+    // для каблучок/ідей (без верхнього стейджу) показуємо згенероване зображення.
+    const aiImg=isTry?null:it.gen;
     const showImg=aiImg||it.img;
     const fallback=`<div class="idea-thumb-fallback">
         ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${it.cat==='rings'?'💍':'💡'}</div>`}
@@ -1794,12 +1836,18 @@ function renderBasePhotos(){
       fr.classList.toggle('busy', !!manqBusy[who]);
     }
     const mc=document.getElementById(mid); if(!mc) return;
+    const hasPhoto=photos[who]||photosFull[who];
     if(manqBusy[who]) mc.innerHTML='<span class="bp-manq-info">🧍 роблю манекен…</span>';
     else if(mannequin[who]) mc.innerHTML=`<span class="bp-manq-info ok">🧍 манекен готовий</span> <button class="bp-manq-btn" data-manq="${who}">↻</button>`;
-    else if(photos[who]) mc.innerHTML=`<button class="bp-manq-btn" data-manq="${who}">🧍 зробити манекен</button>`;
+    else if(hasPhoto) mc.innerHTML=`<button class="bp-manq-btn" data-manq="${who}">🧍 зробити манекен</button>`;
     else mc.innerHTML='';
+    const fc=document.getElementById('bpFull'+(who==='her'?'Her':'His'));
+    if(fc) fc.innerHTML = photosFull[who] ? `<span class="bp-full-info">📏 фото в зріст є <button class="bp-full-x" data-fulldel="${who}" title="Прибрати">✕</button></span>` : '';
   });
   document.querySelectorAll('[data-manq]').forEach(b=>b.onclick=()=>aiMakeMannequin(b.dataset.manq));
+  document.querySelectorAll('[data-fulldel]').forEach(b=>b.onclick=()=>{
+    const who=b.dataset.fulldel; photosFull[who]=''; saveJSON('wed-photos-full',photosFull); renderBasePhotos();
+  });
 }
 function renderCouple(){
   const slots=[{who:'her',id:'csHer',emoji:'👰',name:'Катерина'},{who:'his',id:'csHis',emoji:'🤵',name:'Дмитро'}];
@@ -1839,6 +1887,20 @@ function renderCouple(){
       aiMakeMannequin(who);                                      // одразу робимо манекен у сірому базовому одязі
     });
     inp.value='';
+  };
+  // повний зріст — без обрізки, просто стискаємо
+  const finp=document.getElementById('bp'+W+'Full');
+  if(finp) finp.onchange=()=>{
+    const f=finp.files&&finp.files[0]; if(!f) return;
+    const who=W==='Her'?'her':'his';
+    downscaleImage(f,1024,data=>{
+      if(!data){ showToast('Не вдалось завантажити фото'); return; }
+      photosFull[who]=data; saveJSON('wed-photos-full',photosFull);
+      mannequin[who]=''; saveJSON('wed-mannequin',mannequin);   // тіло змінилось — манекен оновимо
+      renderBasePhotos(); renderCouple();
+      aiMakeMannequin(who);
+    });
+    finp.value='';
   };
 });
 /* ── ОБРІЗКА ОБЛИЧЧЯ (для парних фото) ── */
@@ -1989,16 +2051,23 @@ function aiBusy(id,on){
   it._ai=on; renderIdeas();
 }
 // базове фото-основа для примірки: спершу манекен (сірий базовий одяг), інакше сире фото
-function personBase(who){ return mannequin[who] || photos[who] || ''; }
+function personBase(who){ return mannequin[who] || photos[who] || photosFull[who] || ''; }
 // робить «манекен»: людина в сірому базовому одязі на повний зріст (основа для примірок)
 async function aiMakeMannequin(who){
-  const src=photos[who];
-  if(!src){ showToast(`Спершу додай фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
+  const faceSrc=photos[who];          // портрет (обличчя)
+  const bodySrc=photosFull[who];      // повний зріст (тіло/пропорції), необовʼязково
+  if(!faceSrc && !bodySrc){ showToast(`Спершу додай фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
   if(manqBusy[who]) return;
   manqBusy[who]=true; renderBasePhotos(); renderCouple();
   try{
-    const personPart=dataUrlToPart(src);
-    const parts=[`Це фото людини — ОБОВʼЯЗКОВО збережи її обличчя, зачіску, риси і статуру максимально точно, щоб упізнавалась. Зроби зображення цієї самої людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу. ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, personPart];
+    const base='Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.';
+    let parts;
+    if(faceSrc && bodySrc){
+      parts=[`Перше зображення — фото людини на повний зріст: бери з нього статуру, пропорції і позу. Друге зображення — портрет тієї ж людини: ОБОВʼЯЗКОВО точно збережи її обличчя, риси і зачіску. ${base} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc), dataUrlToPart(faceSrc)];
+    }else{
+      const one=bodySrc||faceSrc;
+      parts=[`Це фото людини — ОБОВʼЯЗКОВО збережи її обличчя, зачіску, риси і статуру максимально точно, щоб упізнавалась. ${base} ${heightLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(one)];
+    }
     const img=await aiGenerate(parts);
     downscaleSrc(img,768,small=>{
       mannequin[who]=small||img; saveJSON('wed-mannequin',mannequin);
@@ -2094,7 +2163,8 @@ let activeScript='sofia';
 const scriptRef=()=> activeScript==='sofia'?scriptSofia:scriptWave;
 const scriptKey=()=> activeScript==='sofia'?'wed-scriptS':'wed-scriptW';
 function renderScripts(){
-  const all=scriptRef();
+  // 🌿 пункти сценарію про травку приховані, поки не введено пароль
+  const all = weedUnlocked ? scriptRef() : scriptRef().filter(m=>!isWeed(m.text));
   const timed=all.filter(m=>m.time).sort((a,b)=>a.time.localeCompare(b.time));
   const backlog=all.filter(m=>!m.time);
   const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
@@ -2559,10 +2629,13 @@ function renderBar(){
       ${weedCard}
     </div>
     <div class="bar-note">🍽 <b>Уподобання гостей вечірки</b>: 🍷 пʼють алко — <b>${someAlco?cAlcoMarked:'~'+drinkers}</b> · 🥩 мʼясоїди — <b>${cMeat}</b> · 🌱 вега — <b>${cVeg}</b>${weedUnlocked?` · 🌿 травка — <b>${cWeed}</b>`:''}. <span class="bar-mini">(тицяй позначки у вкладці «Гості»; пиво — головний напій)</span></div>
+    ${weedUnlocked?`<div class="bar-mini" style="margin-top:-4px">🔒 Розділ «травка» відкрито · <a href="#" id="weedLockBtn">сховати</a> · <a href="#" id="weedChangeBtn">змінити пароль</a></div>`:''}
     <div class="bar-foot">Розрахунок на <b>${adults}</b> дорослих${kids?` і <b>${kids}</b> дітей`:''} · режим: <b>${n.label}</b></div>
     ${teamEditorHTML('wave')}`;
   out.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ cfg.mode=b.dataset.mode; saveJSON('wed-bar',bar); renderBar(); });
   const wl=out.querySelector('#weedLock'); if(wl) wl.onclick=()=>unlockWeed();
+  const wlb=out.querySelector('#weedLockBtn'); if(wlb) wlb.onclick=e=>{ e.preventDefault(); lockWeed(); };
+  const wcb=out.querySelector('#weedChangeBtn'); if(wcb) wcb.onclick=e=>{ e.preventDefault(); changeWeedPass(); };
   const ai=out.querySelector('#barAdults'), ki=out.querySelector('#barKids');
   if(ai) ai.onchange=()=>{ cfg.adults=ai.value.trim(); saveJSON('wed-bar',bar); renderBar(); };
   if(ki) ki.onchange=()=>{ cfg.kids=ki.value.trim(); saveJSON('wed-bar',bar); renderBar(); };
@@ -2705,7 +2778,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,mannequin,outfit,partyHer,partyHis,bar,team,seating,invites,inviteGame,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,photosFull,mannequin,weedPass:weedPassHash,outfit,partyHer,partyHis,bar,team,seating,invites,inviteGame,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -2721,7 +2794,9 @@ function startSync(){
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(d.photos && typeof d.photos==='object') photos=d.photos;
+    if(d.photosFull && typeof d.photosFull==='object') photosFull=d.photosFull;
     if(d.mannequin && typeof d.mannequin==='object') mannequin=d.mannequin;
+    if(typeof d.weedPass==='string') weedPassHash=d.weedPass;
     if(d.outfit && typeof d.outfit==='object') outfit=d.outfit;
     if(d.seating && typeof d.seating==='object') seating=d.seating;
     if(Array.isArray(d.invites)) invites=d.invites;
@@ -2742,7 +2817,9 @@ function startSync(){
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-photos',JSON.stringify(photos));
+    DB.set('wed-photos-full',JSON.stringify(photosFull));
     DB.set('wed-mannequin',JSON.stringify(mannequin));
+    DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-outfit',JSON.stringify(outfit));
     DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-invites',JSON.stringify(invites));
