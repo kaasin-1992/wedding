@@ -1614,7 +1614,8 @@ function approveIdea(it){
 
 /* ── ШІ-ГЕНЕРАЦІЯ ЗОБРАЖЕНЬ (Firebase AI Logic · Gemini) ── */
 const FB_VER='11.10.0';
-const AI_MODELS=['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation','gemini-2.0-flash-exp'];
+// лише актуальні моделі (Gemini 2.0 Flash та Imagen вимкнені у 2026; 2.5-flash-image = «Nano Banana»)
+const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 let _aiCorePromise=null;
 function aiCore(){
   if(_aiCorePromise) return _aiCorePromise;
