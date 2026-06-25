@@ -159,6 +159,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .attr-chip.on.mb{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
 .attr-chip.on.kd{background:var(--sage-dim);border-color:var(--sage);color:var(--sage);}
 .attr-chip.on.bk{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
+.attr-chip.on.al{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.attr-chip.on.mt{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
+.attr-chip.on.wd{background:var(--sage-dim);border-color:var(--sage);color:var(--sage);}
 .guest-card.backup{border-left:3px solid var(--terra);}
 
 /* ── HOTEL ── */
@@ -331,6 +334,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bar-foot{font-size:12.5px;color:var(--muted);margin-top:14px;text-align:center;line-height:1.5;}
 /* банкет-вартість (Софія) */
 .bar-note{font-size:12px;color:var(--muted);line-height:1.45;background:var(--surface2);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+.bar-mini{font-size:10.5px;opacity:.75;}
 .cost-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:16px;}
 .cost-line{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;color:var(--text);padding:5px 0;}
 .cost-line .cl-v{font-variant-numeric:tabular-nums;}
@@ -381,13 +385,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .seat-tip{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin-bottom:14px;}
 .seat-ua-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;}
 .seat-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
-.seat-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:12.5px;color:var(--text);}
+.seat-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:12.5px;color:var(--text);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
 .seat-chip.her{border-color:var(--rose);}
 .seat-chip.his{border-color:var(--sage);}
 .seat-chip.rm{cursor:pointer;}
 .seat-chip .seat-hc{color:var(--terra);font-weight:700;}
 .seat-chip .seat-x{color:var(--muted);font-weight:400;font-size:11px;margin-left:1px;}
 .seat-chip.rm:hover .seat-x{color:var(--danger);}
+.seat-ghost{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:.95;background:var(--surface);}
+.seat-source{opacity:.35;}
+.seat-over{outline:2px dashed var(--terra);outline-offset:3px;border-radius:14px;background:var(--terra-dim);}
+#seatUnassigned.seat-over{outline-offset:6px;}
+body.seat-dragging{cursor:grabbing;}
+body.seat-dragging .seat-chip{cursor:grabbing;}
 .seat-zone{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
 .seat-zone-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
 .seat-zone-name{flex:1;min-width:0;font-family:var(--serif);font-size:15px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--line);padding:2px 0;}
@@ -396,6 +406,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .seat-zone-head:hover .del-x{opacity:1;}
 .seat-empty{font-size:12px;color:var(--muted);}
 .seat-add{width:100%;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12.5px;cursor:pointer;}
+
+/* INVITES + GAME */
+.game-card{background:linear-gradient(135deg,#2a2440,#1c1830);border:1px solid #3d3560;border-radius:16px;padding:16px;margin-bottom:22px;color:#e8e4f5;box-shadow:0 4px 18px rgba(20,16,40,.25);}
+.game-head{font-family:var(--serif);font-size:17px;color:#ffd166;margin-bottom:4px;display:flex;align-items:center;gap:7px;}
+.game-desc{font-size:12px;color:#b8b0d8;margin-bottom:12px;line-height:1.45;}
+.game-concept{width:100%;min-height:84px;resize:vertical;background:rgba(255,255,255,.06);border:1px solid #4a4170;border-radius:10px;padding:10px 12px;color:#f0edfa;font-family:var(--sans);font-size:13px;line-height:1.5;}
+.game-concept::placeholder{color:#7d75a0;}
+.game-steps-title,.game-embed-title{font-size:12px;font-weight:700;color:#ffd166;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;}
+.game-step{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid #3d3560;border-radius:9px;padding:7px 10px;margin-bottom:6px;font-size:13px;color:#e8e4f5;cursor:pointer;}
+.game-step input{accent-color:#ffd166;width:16px;height:16px;flex:0 0 auto;}
+.game-step span{flex:1;min-width:0;}
+.game-step.done span{text-decoration:line-through;opacity:.55;}
+.game-step .del-x{position:static;opacity:.5;color:#e8e4f5;background:none;width:22px;height:22px;}
+.game-step:hover .del-x{opacity:1;}
+.game-add-row{display:flex;gap:8px;margin-top:8px;}
+.game-add-row input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid #4a4170;border-radius:9px;padding:8px 11px;color:#f0edfa;font-family:var(--sans);font-size:13px;}
+.game-add-row button{flex:0 0 auto;background:#ffd166;color:#2a2440;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;}
+.game-url{width:100%;background:rgba(255,255,255,.06);border:1px solid #4a4170;border-radius:9px;padding:8px 11px;color:#f0edfa;font-family:var(--mono,monospace);font-size:12px;margin-bottom:10px;}
+.game-frame{width:100%;height:300px;border:none;border-radius:12px;background:#000;display:block;}
+.game-slot{display:flex;align-items:center;justify-content:center;text-align:center;min-height:160px;border:2px dashed #4a4170;border-radius:12px;color:#9890b8;font-size:13px;padding:18px;line-height:1.5;}
+.inv-ideas-title{font-family:var(--serif);font-size:16px;color:var(--text);margin:6px 0 12px;}
 
 /* FORMS */
 .add-section{margin-top:8px;}
@@ -564,6 +595,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
+  <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
   <button class="tab-btn" data-tab="seating">🪑 Розсадка</button>
   <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
@@ -833,6 +865,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   </div>
 </div>
 
+<!-- INVITES -->
+<div class="panel" id="tab-invites">
+  <div class="section-hint">Ідеї запрошень: збирай приклади-посилання чи свої думки. Окремо — задумка 8-бітної гри-запрошення.</div>
+  <div class="game-card" id="gameCard">
+    <div class="game-head">🎮 8-бітна гра-запрошення</div>
+    <div class="game-desc">Запрошення-гра у стилі 8-біт: гість проходить і дізнається деталі весілля. Тут плануємо концепт і кроки, а саме вікно гри зʼявиться нижче, коли буде готова демка.</div>
+    <textarea id="gameConcept" class="game-concept" placeholder="Концепт гри: сюжет, рівні, що гість має зробити, який фінал-запрошення…"></textarea>
+    <div class="game-steps-title">Кроки розробки</div>
+    <div id="gameSteps"></div>
+    <div class="game-add-row">
+      <input type="text" id="gameStepInp" placeholder="Новий крок (напр. «намалювати спрайт пари»)">
+      <button class="submit-btn" id="gameStepAdd" style="flex:0 0 auto;width:auto;padding:9px 14px;">＋</button>
+    </div>
+    <div class="game-embed-title">Вікно гри</div>
+    <input type="url" id="gameUrl" class="game-url" placeholder="Посилання на демо/прототип гри (itch.io, GitHub Pages…) — вставиш, коли буде">
+    <div id="gameEmbed"></div>
+  </div>
+  <div class="inv-ideas-title">💡 Ідеї запрошень</div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <details>
+      <summary>＋ Додати ідею</summary>
+      <div class="add-form">
+        <input type="url" id="invUrl" placeholder="Посилання (Pinterest, приклад дизайну…)" autocapitalize="none" spellcheck="false">
+        <input type="text" id="invTitle" placeholder="або просто опиши ідею текстом">
+        <button class="submit-btn" id="addInvBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+  <div id="invList"></div>
+</div>
+
 <!-- SEATING -->
 <div class="panel" id="tab-seating">
   <div class="section-hint">Хто де сидить. Окремо для Софі та Хвильового. Спершу постав фото/гостей у «Гості» — тут зʼявляться їхні імена. Створи столи/зони і розсади перетягуючи гостей.</div>
@@ -890,7 +953,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -986,6 +1049,8 @@ const DEFAULT_SEATING={
   wave:{tip:'У Хвильовому є сцена і танцпол — лиши цю зону вільною, гостей розсади навколо. Це весела частина, можна вільніше.', zones:[{id:'z-w0',name:'🎤 Зона сцени / танцпол (вільна)',seats:[]},{id:'z-w1',name:'Стіл 1',seats:[]}]}
 };
 let seating     = loadJSON('wed-seating', DEFAULT_SEATING);
+let invites     = loadJSON('wed-invites', []);
+let inviteGame  = loadJSON('wed-invite-game', {concept:'',url:'',steps:[]});
 let partyHer    = loadJSON('wed-party-her', []);
 let partyHis    = loadJSON('wed-party-his', []);
 let bar         = loadJSON('wed-bar', DEFAULT_BAR);
@@ -1122,6 +1187,9 @@ function renderGuests(){
       <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
       <span class="attr-chip kd ${kids>0?'on':''}" data-attr="kids" data-id="${g.id}" role="button" tabindex="0" aria-label="Діти: ${kids}">👶 ${kids>0?kids+(kids===1?' дитина':' діти'):'діти'}</span>
       <span class="attr-chip bk ${g.backup?'on':''}" data-attr="backup" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.backup}" title="Кликати в останню чергу">⏳ Запасний</span>
+      <span class="attr-chip al ${g.alco?'on':''}" data-attr="alco" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.alco}" title="Пʼє алкоголь">🍷 Алко</span>
+      <span class="attr-chip mt ${g.meat?'on':''}" data-attr="meat" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.meat}" title="Їсть мʼясо">🥩 Мʼясо</span>
+      <span class="attr-chip wd ${g.weed?'on':''}" data-attr="weed" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.weed}" title="Курить травку">🌿 Травка</span>
     </div>`;
     const card=document.createElement('div');
     card.className=`guest-card ${g.status}${g.maybe?' maybe':''}${g.backup?' backup':''}`;
@@ -1175,8 +1243,12 @@ function renderGuests(){
     if(a==='wparty') g.wparty=!g.wparty;
     else if(a==='maybe') g.maybe=!g.maybe;
     else if(a==='backup') g.backup=!g.backup;
+    else if(a==='alco') g.alco=!g.alco;
+    else if(a==='meat') g.meat=!g.meat;
+    else if(a==='weed') g.weed=!g.weed;
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     saveJSON('wed-guests',guests); renderGuests();
+    if(a==='alco'||a==='meat'||a==='weed') renderBar();
   });
 }
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -1209,7 +1281,8 @@ const ARR={
   'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()},
   'wed-party-her':{get:()=>partyHer,set:v=>partyHer=v,render:()=>renderParties()},
   'wed-party-his':{get:()=>partyHis,set:v=>partyHis=v,render:()=>renderParties()},
-  'wed-team':{get:()=>team,set:v=>team=v,render:()=>renderBar()}
+  'wed-team':{get:()=>team,set:v=>team=v,render:()=>renderBar()},
+  'wed-invites':{get:()=>invites,set:v=>invites=v,render:()=>renderInvites()}
 };
 function delUndo(key,id,label){
   const a=ARR[key], list=a.get(), idx=list.findIndex(x=>x.id===id);
@@ -2040,13 +2113,14 @@ function renderSeating(){
   const assigned=new Set(); loc.zones.forEach(z=>z.seats.forEach(id=>assigned.add(id)));
   const unassigned=all.filter(g=>!assigned.has(g.id));
   const ua=document.getElementById('seatUnassigned');
+  ua.dataset.seatzone='';
   ua.innerHTML=`<div class="seat-ua-title">Не розсаджені (${unassigned.length})</div>`+
     (all.length? (unassigned.length?`<div class="seat-chips">${unassigned.map(g=>seatChip(g,null)).join('')}</div>`:`<div class="backlog-empty">Усіх розсаджено 🎉</div>`)
      : `<div class="backlog-empty">Ще нема гостей на цю локацію. Додай їх у вкладці «Гості».</div>`);
   const zc=document.getElementById('seatZones'); zc.innerHTML='';
   loc.zones.forEach(z=>{
     const cap=z.seats.reduce((s,id)=>{const g=all.find(x=>x.id===id);return s+(g?headCount(g):0);},0);
-    const card=document.createElement('div'); card.className='seat-zone';
+    const card=document.createElement('div'); card.className='seat-zone'; card.dataset.seatzone=z.id;
     card.innerHTML=`<div class="seat-zone-head">
         <input class="seat-zone-name" data-zname="${z.id}" value="${esc(z.name)}" aria-label="Назва зони">
         <span class="seat-zone-cap">${cap} ос.</span>
@@ -2070,9 +2144,46 @@ function renderSeating(){
     z.seats.push(sel.value); saveJSON('wed-seating',seating); renderSeating();
   });
   zc.querySelectorAll('[data-seatchip][data-zone]').forEach(ch=>{ if(!ch.dataset.zone) return; ch.onclick=()=>{
+    if(ch.dataset.dragged){ delete ch.dataset.dragged; return; }
     const z=loc.zones.find(x=>x.id===ch.dataset.zone); if(!z)return;
     z.seats=z.seats.filter(id=>id!==ch.dataset.seatchip); saveJSON('wed-seating',seating); renderSeating();
   };});
+  // перетягування гостей на місця (тач + миша)
+  [ua,zc].forEach(root=>root.querySelectorAll('[data-seatchip]').forEach(ch=>wireSeatChipDrag(ch,loc)));
+}
+function seatPlaceGuest(loc,guestId,zoneId){
+  loc.zones.forEach(x=>{ x.seats=x.seats.filter(id=>id!==guestId); });
+  if(zoneId){ const z=loc.zones.find(x=>x.id===zoneId); if(z) z.seats.push(guestId); }
+  saveJSON('wed-seating',seating); renderSeating();
+}
+function wireSeatChipDrag(ch,loc){
+  ch.onpointerdown=e=>{
+    if(e.button!=null && e.button!==0) return;
+    const gid=ch.dataset.seatchip; const fromZone=ch.dataset.zone||'';
+    const sx=e.clientX, sy=e.clientY; let drag=false, ghost=null, lastTarget=null;
+    const move=ev=>{
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!drag){ if(Math.hypot(dx,dy)<7) return; drag=true; document.body.classList.add('seat-dragging');
+        ghost=ch.cloneNode(true); ghost.className='seat-chip seat-ghost '+(ch.classList.contains('her')?'her':(ch.classList.contains('his')?'his':''));
+        ghost.querySelector('.seat-x')?.remove(); document.body.appendChild(ghost); ch.classList.add('seat-source'); }
+      ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px';
+      ghost.style.display='none'; const under=document.elementFromPoint(ev.clientX,ev.clientY); ghost.style.display='';
+      const tgt=under&&under.closest('[data-seatzone]');
+      if(tgt!==lastTarget){ lastTarget&&lastTarget.classList.remove('seat-over'); lastTarget=tgt; tgt&&tgt.classList.add('seat-over'); }
+    };
+    const up=ev=>{
+      document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up);
+      document.body.classList.remove('seat-dragging'); ch.classList.remove('seat-source');
+      ghost&&ghost.remove(); lastTarget&&lastTarget.classList.remove('seat-over');
+      if(!drag) return;
+      ch.dataset.dragged='1';
+      ghost=null; const under=document.elementFromPoint(ev.clientX,ev.clientY);
+      const tgt=under&&under.closest('[data-seatzone]'); if(!tgt) return;
+      const toZone=tgt.dataset.seatzone||''; if(toZone===fromZone) return;
+      seatPlaceGuest(loc,gid,toZone);
+    };
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+  };
 }
 document.querySelectorAll('#seatTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#seatTabs .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -2084,6 +2195,67 @@ document.getElementById('addZoneBtn').onclick=()=>{
   document.getElementById('zoneName').value='';
   saveJSON('wed-seating',seating); renderSeating();
 };
+
+/* ════ ЗАПРОШЕННЯ + 8-БІТНА ГРА ════ */
+function renderInvites(){
+  // ── гра ──
+  const gc=document.getElementById('gameConcept'); if(gc && gc.value!==(inviteGame.concept||'')) gc.value=inviteGame.concept||'';
+  const gu=document.getElementById('gameUrl'); if(gu && gu.value!==(inviteGame.url||'')) gu.value=inviteGame.url||'';
+  const steps=Array.isArray(inviteGame.steps)?inviteGame.steps:(inviteGame.steps=[]);
+  const sc=document.getElementById('gameSteps');
+  if(sc){
+    sc.innerHTML = steps.length? steps.map(s=>`<label class="game-step${s.done?' done':''}"><input type="checkbox" data-gstep="${s.id}" ${s.done?'checked':''}><span>${esc(s.text)}</span><button class="del-x" data-gstepdel="${s.id}" aria-label="Видалити крок">✕</button></label>`).join('') : '<div class="backlog-empty">Ще нема кроків — додай перший 👾</div>';
+    sc.querySelectorAll('[data-gstep]').forEach(cb=>cb.onchange=()=>{ const s=steps.find(x=>x.id===cb.dataset.gstep); if(s){ s.done=cb.checked; saveJSON('wed-invite-game',inviteGame); renderInvites(); } });
+    sc.querySelectorAll('[data-gstepdel]').forEach(b=>b.onclick=()=>{ inviteGame.steps=steps.filter(x=>x.id!==b.dataset.gstepdel); saveJSON('wed-invite-game',inviteGame); renderInvites(); });
+  }
+  const emb=document.getElementById('gameEmbed');
+  if(emb){
+    const u=(inviteGame.url||'').trim();
+    emb.innerHTML = u? `<iframe class="game-frame" src="${esc(u)}" loading="lazy" referrerpolicy="no-referrer"></iframe>` : '<div class="game-slot">🕹 Тут зʼявиться вікно гри, коли вставиш посилання на демку</div>';
+  }
+  // ── ідеї запрошень ──
+  const list=document.getElementById('invList'); if(!list) return;
+  list.innerHTML='';
+  if(!invites.length){ list.innerHTML='<div class="empty-state">Поки порожньо.<br>Додай посилання-приклад або опиши ідею 💌</div>'; return; }
+  invites.forEach(it=>{
+    const host=hostOf(it.url); const fav=it.icon||faviconOf(host);
+    const fallback=`<div class="idea-thumb-fallback"><div class="idea-fav-emoji">💌</div><div class="idea-fallback-host">${esc(host||'ідея')}</div></div>`;
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}</div>`;
+    const card=document.createElement('div'); card.className='idea-card idea-row';
+    card.innerHTML=`<button class="del-x" data-invdel="${it.id}" aria-label="Видалити">✕</button>
+      ${thumb}
+      <div class="idea-body">
+        ${it.loading?'<div class="idea-loading">Підтягую інфо…</div>':''}
+        <div class="idea-title">${esc(it.title||host||it.url||'Ідея')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
+        <input class="bi-note-inp" data-invnote="${it.id}" value="${esc(it.note||'')}" placeholder="💬 коментар">
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('[data-invdel]').forEach(b=>b.onclick=()=>delUndo('wed-invites',b.dataset.invdel,'Ідею видалено'));
+  list.querySelectorAll('[data-invnote]').forEach(inp=>inp.onchange=()=>{ const it=invites.find(x=>x.id===inp.dataset.invnote); if(it){ it.note=inp.value.trim(); saveJSON('wed-invites',invites); } });
+}
+(function wireInvites(){
+  const gc=document.getElementById('gameConcept'); if(gc) gc.onchange=()=>{ inviteGame.concept=gc.value; saveJSON('wed-invite-game',inviteGame); };
+  const gu=document.getElementById('gameUrl'); if(gu) gu.onchange=()=>{ inviteGame.url=gu.value.trim(); saveJSON('wed-invite-game',inviteGame); renderInvites(); };
+  const ga=document.getElementById('gameStepAdd'); if(ga) ga.onclick=()=>{ const inp=document.getElementById('gameStepInp'); const t=(inp.value||'').trim(); if(!t)return; if(!Array.isArray(inviteGame.steps))inviteGame.steps=[]; inviteGame.steps.push({id:'gs'+Date.now(),text:t,done:false}); inp.value=''; saveJSON('wed-invite-game',inviteGame); renderInvites(); };
+  const ab=document.getElementById('addInvBtn'); if(ab) ab.onclick=async()=>{
+    let url=val('invUrl'); const title=val('invTitle');
+    if(!url && !title){ showToast('Встав посилання або опиши ідею ✍️'); return; }
+    if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
+    const id='inv'+Date.now();
+    invites.unshift({id,url:url||'',title:title||'',desc:'',img:'',icon:'',note:'',loading:!!url,ts:Date.now()});
+    document.getElementById('invUrl').value=''; document.getElementById('invTitle').value='';
+    saveJSON('wed-invites',invites); renderInvites();
+    if(!url) return;
+    const prev=await fetchPreview(url);
+    const cur=invites.find(x=>x.id===id); if(!cur)return; cur.loading=false;
+    if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
+    saveJSON('wed-invites',invites); renderInvites();
+  };
+})();
 
 /* ════ ВЕЧІРКИ: ДІВИЧ-ВЕЧІР / МАЛЬЧІШНИК ════ */
 let activeParty='her';
@@ -2282,6 +2454,12 @@ function renderBar(){
   const waterL=Math.round((adults+kids)*n.waterL*10)/10;
   const foodKg=Math.round((adults*n.foodKg + kids*n.foodKidKg)*10)/10;
   const canape=n.canape?Math.ceil((adults+kids)*n.canape):0;
+  // уподобання гостей вечірки (позначаються у вкладці «Гості»)
+  const partyG=guests.filter(g=>g.status!=='declined' && (g.event==='party'||g.event==='both'));
+  const cWeed=partyG.filter(g=>g.weed).length;
+  const cAlco=partyG.filter(g=>g.alco).length;
+  const cMeat=partyG.filter(g=>g.meat).length;
+  const cVeg=Math.max(0, partyG.length - cMeat);
   const card=(emoji,title,big,sub)=>`<div class="bar-card"><div class="bar-emoji">${emoji}</div><div class="bar-cardbody"><div class="bar-big">${big}</div><div class="bar-cardtitle">${title}</div>${sub?`<div class="bar-sub">${sub}</div>`:''}</div></div>`;
   out.innerHTML=`
     <div class="bar-note">🥂 <b>Хвильовий</b> — тусня з друзями. Як саме рахувати вартість — ще невідомо, тож поки тут підказка <b>скільки купити напоїв і їжі</b> на цю кількість людей.</div>
@@ -2301,7 +2479,9 @@ function renderBar(){
       ${card('🧃','Соки / безалкогольне',`${softL} л`,'')}
       ${card('💧','Вода',`${waterL} л`,'')}
       ${card('🍽','Їжа',`≈ ${foodKg} кг`, canape?`+ ${canape} шт канапе`:'')}
+      ${card('🌿','Травка',`${cWeed} ос.`,'врахувати запас')}
     </div>
+    <div class="bar-note">🍽 <b>Уподобання гостей вечірки</b>: 🍷 пʼють алко — <b>${cAlco}</b> · 🥩 мʼясоїди — <b>${cMeat}</b> · 🌱 без мʼяса — <b>${cVeg}</b> · 🌿 курять травку — <b>${cWeed}</b>. <span class="bar-mini">(тицяй позначки у вкладці «Гості»)</span></div>
     <div class="bar-foot">Розрахунок на <b>${adults}</b> дорослих${kids?` і <b>${kids}</b> дітей`:''} · режим: <b>${n.label}</b></div>
     ${teamEditorHTML('wave')}`;
   out.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ cfg.mode=b.dataset.mode; saveJSON('wed-bar',bar); renderBar(); });
@@ -2424,7 +2604,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar(); renderSeating();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -2447,7 +2627,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,outfit,partyHer,partyHis,bar,team,seating,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,outfit,partyHer,partyHis,bar,team,seating,invites,inviteGame,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -2465,6 +2645,8 @@ function startSync(){
     if(d.photos && typeof d.photos==='object') photos=d.photos;
     if(d.outfit && typeof d.outfit==='object') outfit=d.outfit;
     if(d.seating && typeof d.seating==='object') seating=d.seating;
+    if(Array.isArray(d.invites)) invites=d.invites;
+    if(d.inviteGame && typeof d.inviteGame==='object') inviteGame=d.inviteGame;
     if(Array.isArray(d.partyHer)) partyHer=d.partyHer;
     if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
     if(d.bar && typeof d.bar==='object') bar=d.bar;
@@ -2483,6 +2665,8 @@ function startSync(){
     DB.set('wed-photos',JSON.stringify(photos));
     DB.set('wed-outfit',JSON.stringify(outfit));
     DB.set('wed-seating',JSON.stringify(seating));
+    DB.set('wed-invites',JSON.stringify(invites));
+    DB.set('wed-invite-game',JSON.stringify(inviteGame));
     DB.set('wed-party-her',JSON.stringify(partyHer));
     DB.set('wed-party-his',JSON.stringify(partyHis));
     DB.set('wed-bar',JSON.stringify(bar));
