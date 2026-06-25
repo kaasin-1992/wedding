@@ -414,6 +414,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .modal-btn:hover{filter:brightness(.94);}
 .modal-btn.ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--line);}
 .modal-btn.ghost:hover{background:var(--surface2);color:var(--text);}
+.modal-btn.gold{background:var(--gold);color:#fff;}
+.modal-btn.gold:disabled{opacity:.6;cursor:default;}
 /* вибір картинки для ідеї */
 .imgpick-box{max-width:420px;text-align:left;}
 .imgpick-title{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:4px;}
@@ -426,6 +428,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .imgpick-empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
 .imgpick-tools{display:flex;gap:8px;margin-top:14px;}
 .imgpick-tools .modal-btn{font-size:13px;padding:9px;}
+.imgpick-extract{width:100%;margin-top:10px;font-size:13.5px;}
+.imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
 .imgpick-cell.busy::after{content:'…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);color:#fff;font-size:20px;}
 </style>
 </head>
@@ -467,6 +471,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
       <button class="modal-btn ghost" id="imgPickShot">📸 Скрін сторінки</button>
       <button class="modal-btn ghost" id="imgPickUp">⬆️ Своє фото</button>
     </div>
+    <button class="modal-btn gold imgpick-extract" id="imgPickExtract">✨ Витягнути одяг + ціну зі скріна (ШІ)</button>
+    <div class="imgpick-extract-hint">Якщо тут скрін з магазину — ШІ виріже сам одяг у повний зріст і прочитає ціну.</div>
     <div class="modal-actions">
       <button class="modal-btn ghost" id="imgPickClose">Закрити</button>
     </div>
@@ -1548,6 +1554,13 @@ document.getElementById('imgPickUp').onclick=()=>{
   };
   inp.click();
 };
+document.getElementById('imgPickExtract').onclick=async()=>{
+  const it=ideas.find(x=>x.id===_pickId); if(!it) return;
+  if(!it.img){ showToast('Спершу зроби скрін або додай картинку 👆'); return; }
+  const btn=document.getElementById('imgPickExtract'); const old=btn.textContent;
+  btn.textContent='✨ ШІ працює…'; btn.disabled=true;
+  try{ await aiExtractGarment(it); } finally{ btn.textContent=old; btn.disabled=false; }
+};
 
 /* ── БАЗОВІ ФОТО ПАРИ ── */
 function downscaleSrc(src, maxSide, cb, q){
@@ -1708,6 +1721,40 @@ async function aiImagine(it){
       saveJSON('wed-ideas',ideas); renderIdeas();
     },0.78);
   }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
+}
+async function srcToPart(src){ if(/^data:/.test(src||'')) return dataUrlToPart(src); return await urlToPart(src); }
+async function aiText(parts){
+  const {ai,getGenerativeModel}=await aiCore();
+  const model=getGenerativeModel(ai,{model:'gemini-2.5-flash'});
+  const resp=await model.generateContent(parts);
+  try{ return resp.response.text()||''; }catch(e){ return ''; }
+}
+async function aiExtractGarment(it){
+  const src=it.img;
+  if(!src){ showToast('Спершу зроби скрін або додай картинку 👆'); return; }
+  aiBusy(it.id,true);
+  try{
+    const part=await srcToPart(src);
+    if(!part){ throw new Error('Не вдалось прочитати картинку'); }
+    // 1) вирізати одяг у повний зріст на чистому фоні
+    const img=await aiGenerate([`На зображенні — скрін з товаром (одяг чи аксесуар). Виокрем САМЕ предмет одягу і покажи його окремо у повний зріст на чистому світлому однотонному фоні, без тексту, цін, кнопок та інтерфейсу сайту. Студійне фото товару, рівне освітлення.`, part]);
+    // 2) прочитати ціну зі скріна
+    let price='';
+    try{
+      const txt=await aiText([`Це скрін товару з інтернет-магазину. Напиши ТІЛЬКИ ціну товару цифрами у гривнях, наприклад "4500". Якщо ціни не видно — напиши "немає".`, part]);
+      price=extractPrice(txt)|| (/(\d{3,6})/.test(txt)? (txt.match(/(\d{3,6})/)[1]+' грн'):'');
+    }catch(e){}
+    downscaleSrc(img,768,small=>{
+      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
+      cur.img=small||img;
+      if(Array.isArray(cur.imgChoices)) cur.imgChoices.unshift(cur.img); else cur.imgChoices=[cur.img];
+      if(price&&!cur.price) cur.price=price;
+      cur._ai=false;
+      saveJSON('wed-ideas',ideas); renderIdeas();
+      if(typeof renderImgPick==='function' && _pickId===cur.id) renderImgPick();
+      showToast(price?('Готово ✨ Ціна: '+price):'Одяг витягнуто ✨');
+    },0.8);
+  }catch(e){ console.warn('extractGarment',e); aiBusy(it.id,false); showToast('Не вдалось витягнути 😕 '+aiErr(e)); }
 }
 
 /* ════ SCRIPT / SCENARIO ════ */
