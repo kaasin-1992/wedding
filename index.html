@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script>try{if(localStorage.getItem('wed-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <style>
-/* ════════ MINIMAL BOHO WEDDING THEME ════════ */
+/* ════════ ДВІ ТЕМИ = ДВІ ПОЛОВИНИ ДНЯ: ☀️ СОФІЯ / 🌙 ХВИЛЬОВИЙ ════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
 /* ════ ДЕНЬ · «СОФІЯ» — фреска, лазур, золото ════ */
 :root{
@@ -204,6 +204,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bi-field input:focus{outline:none;border-color:var(--terra);}
 .bi-field.paid input{color:var(--done);}
 .bi-remain{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;}
+.bi-from{font-size:10px;font-weight:600;color:var(--rose);background:var(--rose-dim);border-radius:99px;padding:2px 7px;margin-left:6px;white-space:nowrap;}
 
 /* ── CONTACTS ── */
 .contact-card{padding:12px 14px;margin-bottom:8px;}
@@ -261,6 +262,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-ai-x{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .idea-ai-overlay{position:absolute;inset:0;z-index:4;background:rgba(20,22,30,.78);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:600;text-align:center;}
 .idea-ai-overlay small{opacity:.7;font-weight:400;}
+.idea-approve{display:block;width:100%;text-align:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
+.idea-approve:hover{filter:brightness(.96);}
+.idea-approve.on{background:var(--done-dim);border-color:var(--done);color:var(--done);}
+.idea-card.approved{border-color:var(--done);box-shadow:0 0 0 1px var(--done) inset;}
 .idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
 
 /* ── SCRIPT / SCENARIO ── */
@@ -1076,9 +1081,10 @@ function renderBudget(){
     h.textContent=`${cat} · ${fmtMoney(catTotal)}`; listEl.appendChild(h);
     items.forEach(b=>{
       const remain=(Number(b.planned)||0)-(Number(b.paid)||0);
+      const fromLook=ideas.some(x=>x.budgetId===b.id);
       const item=document.createElement('div'); item.className='budget-item';
       item.innerHTML=`
-        <div class="bi-top"><div class="bi-name">${esc(b.name)}</div>
+        <div class="bi-top"><div class="bi-name">${esc(b.name)}${fromLook?' <span class="bi-from">👗 образ</span>':''}</div>
           <button class="icon-btn danger" data-bdel="${b.id}">🗑</button></div>
         <div class="bi-amounts">
           <label class="bi-field"><span>Заплановано</span><input type="number" min="0" data-bid="${b.id}" data-fld="planned" value="${b.planned||''}" placeholder="0"></label>
@@ -1095,7 +1101,10 @@ function renderBudget(){
     });
   });
   listEl.querySelectorAll('[data-bdel]').forEach(btn=>btn.onclick=()=>{
-    delUndo('wed-budget',btn.dataset.bdel,'Витрату видалено');
+    const bid=btn.dataset.bdel;
+    const linked=ideas.find(x=>x.budgetId===bid);
+    if(linked){ linked.approved=false; delete linked.budgetId; saveJSON('wed-ideas',ideas); renderIdeas(); }
+    delUndo('wed-budget',bid,'Витрату видалено');
   });
 }
 document.getElementById('addBudgetBtn').onclick=()=>{
@@ -1201,7 +1210,7 @@ async function fetchPreview(url){
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   const items=ideas.filter(i=>i.cat===activeIdea);
-  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав перше посилання 🌸</div>'; return; }
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
   items.forEach(it=>{
     const host=hostOf(it.url);
     const fav=it.icon||faviconOf(host);
@@ -1221,7 +1230,8 @@ function renderIdeas(){
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
-    const card=document.createElement('div'); card.className='idea-card';
+    const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
+    const card=document.createElement('div'); card.className='idea-card'+(it.approved?' approved':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
       ${thumb}
@@ -1232,16 +1242,22 @@ function renderIdeas(){
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${aiBtns}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${aiBtns}${approveBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.idel);
+    if(it && it.budgetId){ const i=budget.findIndex(x=>x.id===it.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
     delUndo('wed-ideas',b.dataset.idel,'Видалено');
   });
   listEl.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
     const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
     it.price=inp.value.trim(); saveJSON('wed-ideas',ideas);
+    if(it.approved && it.budgetId){ const b=budget.find(x=>x.id===it.budgetId); if(b){ b.planned=parseMoney(it.price); saveJSON('wed-budget',budget); renderBudget(); } }
+  });
+  listEl.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.approve); if(it) approveIdea(it);
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -1261,8 +1277,7 @@ document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=
 document.getElementById('addIdeaBtn').onclick=async()=>{
   let url=val('iUrl');
   const note=val('iNote'), name=val('iName'), price=val('iPrice'), id='i'+Date.now();
-  const textOnlyOk=(activeIdea==='rings'||activeIdea==='idea');
-  if(!url && !(textOnlyOk && (name||note))){ showToast(textOnlyOk?'Встав посилання або напиши ідею ✍️':'Встав посилання'); return; }
+  if(!url && !(name||note)){ showToast('Встав посилання або напиши вручну (напр. аксесуар своїми руками) ✍️'); return; }
   if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
   const hasUrl=!!url;
   ideas.unshift({id,cat:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
@@ -1318,6 +1333,26 @@ function renderBasePhotos(){
     inp.value='';
   };
 });
+
+/* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
+function parseMoney(s){ const n=parseInt(String(s||'').replace(/[^\d]/g,''),10); return isNaN(n)?0:n; }
+const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика'};
+function approveIdea(it){
+  if(it.approved){
+    // скасувати: прибрати звʼязану статтю бюджету
+    if(it.budgetId){ const i=budget.findIndex(b=>b.id===it.budgetId); if(i>-1) budget.splice(i,1); }
+    it.approved=false; delete it.budgetId;
+    saveJSON('wed-budget',budget); saveJSON('wed-ideas',ideas);
+    renderIdeas(); renderBudget(); showToast('Прибрано з бюджету');
+  }else{
+    const bid='b'+Date.now();
+    it.approved=true; it.budgetId=bid;
+    budget.push({id:bid,name:(it.title||'Образ'),cat:IDEA_BUDGET_CAT[it.cat]||'Інше',planned:parseMoney(it.price),paid:0});
+    saveJSON('wed-budget',budget); saveJSON('wed-ideas',ideas);
+    renderIdeas(); renderBudget();
+    showToast(parseMoney(it.price)?'Погоджено · ціна в бюджеті 💸':'Погоджено · додай ціну в бюджеті');
+  }
+}
 
 /* ── ШІ-ГЕНЕРАЦІЯ ЗОБРАЖЕНЬ (Firebase AI Logic · Gemini) ── */
 const FB_VER='11.10.0';
