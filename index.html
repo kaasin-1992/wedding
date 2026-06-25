@@ -251,9 +251,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-host{font-size:11px;color:var(--terra);margin-top:4px;letter-spacing:.02em;}
 .idea-desc{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.45;}
 .idea-note{font-size:13px;color:var(--text);margin-top:9px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
-.idea-actions{margin-top:11px;}
+.idea-actions{margin-top:11px;display:flex;flex-direction:column;gap:8px;}
 .idea-open{display:block;text-align:center;background:var(--terra);color:#fff;text-decoration:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;letter-spacing:.02em;}
 .idea-open:hover{filter:brightness(.94);}
+.idea-ai-btn{display:block;width:100%;text-align:center;background:var(--gold);color:#fff;border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
+.idea-ai-btn:hover{filter:brightness(.94);}
+.idea-ai-btn:disabled{opacity:.55;cursor:default;}
+.idea-ai-badge{position:absolute;top:8px;left:8px;z-index:2;background:var(--gold);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.idea-ai-x{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.idea-ai-overlay{position:absolute;inset:0;z-index:4;background:rgba(20,22,30,.78);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:600;text-align:center;}
+.idea-ai-overlay small{opacity:.7;font-weight:400;}
 .idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
 
 /* ── SCRIPT / SCENARIO ── */
@@ -545,7 +552,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
       <label class="base-photo-btn">Фото<input type="file" accept="image/*" id="bpHis" hidden></label>
     </div>
   </div>
-  <div class="section-hint">Кидай сюди посилання — апка сама підтягне фото, назву й опис. Магазини одягу, каблучки, ідеї та конкурси з Instagram чи Pinterest. Спершу обери розділ.</div>
+  <div class="section-hint">Постав свої фото зверху → тоді на картках одягу зʼявиться 🪄 «Приміряти» (ШІ вдягне річ на тебе чи Дмитра). У «Каблучки» та «Ідеї весілля» можна додати ідею просто текстом і натиснути 🪄 «Уявити». Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
     <button class="filt-btn" data-i="his">🤵 Він</button>
@@ -1198,23 +1205,34 @@ function renderIdeas(){
   items.forEach(it=>{
     const host=hostOf(it.url);
     const fav=it.icon||faviconOf(host);
+    const aiImg=it.tryon||it.gen;            // ШІ-результат має пріоритет на показ
+    const showImg=aiImg||it.img;
     const fallback=`<div class="idea-thumb-fallback">
-        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:'<div class="idea-fav-emoji">🔗</div>'}
-        <div class="idea-fallback-host">${esc(host||'посилання')}</div>
+        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${it.cat==='rings'?'💍':'💡'}</div>`}
+        <div class="idea-fallback-host">${esc(host||'ідея')}</div>
       </div>`;
-    const thumb=`<div class="idea-thumb-wrap">${fallback}${it.img?`<img class="idea-thumb" src="${esc(it.img)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}</div>`;
+    const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
+    const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}${aiBadge}${overlay}</div>`;
+    // кнопки ШІ
+    let aiBtns='';
+    if(it.cat==='her'||it.cat==='his'){
+      aiBtns=`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
+    }else{
+      aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
+    }
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
       ${thumb}
       <div class="idea-body">
         ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
-        <div class="idea-title">${esc(it.title||host||it.url)}</div>
+        <div class="idea-title">${esc(it.title||host||it.url||'Ідея')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        <div class="idea-actions"><a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${aiBtns}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -1225,18 +1243,32 @@ function renderIdeas(){
     const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
     it.price=inp.value.trim(); saveJSON('wed-ideas',ideas);
   });
+  listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
+  });
+  listEl.querySelectorAll('[data-imagine]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.imagine); if(it) aiImagine(it);
+  });
+  listEl.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
+    delete it.tryon; delete it.gen; saveJSON('wed-ideas',ideas); renderIdeas();
+  });
 }
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
 });
 document.getElementById('addIdeaBtn').onclick=async()=>{
-  let url=val('iUrl'); if(!url)return;
-  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  let url=val('iUrl');
   const note=val('iNote'), name=val('iName'), price=val('iPrice'), id='i'+Date.now();
-  ideas.unshift({id,cat:activeIdea,url,title:name,desc:'',img:'',icon:'',note,price,loading:true,ts:Date.now()});
+  const textOnlyOk=(activeIdea==='rings'||activeIdea==='idea');
+  if(!url && !(textOnlyOk && (name||note))){ showToast(textOnlyOk?'Встав посилання або напиши ідею ✍️':'Встав посилання'); return; }
+  if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
+  const hasUrl=!!url;
+  ideas.unshift({id,cat:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
   ['iUrl','iName','iPrice','iNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   saveJSON('wed-ideas',ideas); renderIdeas();
+  if(!hasUrl) return;
   const prev=await fetchPreview(url);
   const cur=ideas.find(x=>x.id===id); if(!cur)return;
   cur.loading=false;
@@ -1245,21 +1277,22 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
 };
 
 /* ── БАЗОВІ ФОТО ПАРИ ── */
+function downscaleSrc(src, maxSide, cb, q){
+  const img=new Image();
+  img.onload=()=>{
+    let {width:w,height:h}=img;
+    if(w>h && w>maxSide){ h=Math.round(h*maxSide/w); w=maxSide; }
+    else if(h>=w && h>maxSide){ w=Math.round(w*maxSide/h); h=maxSide; }
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    try{ cb(c.toDataURL('image/jpeg', q||0.7)); }catch(e){ cb(null); }
+  };
+  img.onerror=()=>cb(null);
+  img.src=src;
+}
 function downscaleImage(file, maxSide, cb){
   const reader=new FileReader();
-  reader.onload=()=>{
-    const img=new Image();
-    img.onload=()=>{
-      let {width:w,height:h}=img;
-      if(w>h && w>maxSide){ h=Math.round(h*maxSide/w); w=maxSide; }
-      else if(h>=w && h>maxSide){ w=Math.round(w*maxSide/h); h=maxSide; }
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      cb(c.toDataURL('image/jpeg',0.7));
-    };
-    img.onerror=()=>cb(null);
-    img.src=reader.result;
-  };
+  reader.onload=()=>downscaleSrc(reader.result, maxSide, cb);
   reader.onerror=()=>cb(null);
   reader.readAsDataURL(file);
 }
@@ -1285,6 +1318,84 @@ function renderBasePhotos(){
     inp.value='';
   };
 });
+
+/* ── ШІ-ГЕНЕРАЦІЯ ЗОБРАЖЕНЬ (Firebase AI Logic · Gemini) ── */
+const FB_VER='11.10.0';
+const AI_MODEL='gemini-2.5-flash-image';
+let _aiModelPromise=null;
+function getImageModel(){
+  if(_aiModelPromise) return _aiModelPromise;
+  _aiModelPromise=(async()=>{
+    const {initializeApp}=await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`);
+    const {getAI,getGenerativeModel,GoogleAIBackend,ResponseModality}=await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-ai.js`);
+    const aiApp=initializeApp(firebaseConfig,'ai');
+    const ai=getAI(aiApp,{backend:new GoogleAIBackend()});
+    return getGenerativeModel(ai,{model:AI_MODEL,generationConfig:{responseModalities:[ResponseModality.TEXT,ResponseModality.IMAGE]}});
+  })().catch(e=>{ _aiModelPromise=null; throw e; });
+  return _aiModelPromise;
+}
+function dataUrlToPart(dataUrl){
+  const m=/^data:([^;]+);base64,(.*)$/s.exec(dataUrl||'');
+  return m ? {inlineData:{mimeType:m[1],data:m[2]}} : null;
+}
+async function urlToPart(url){
+  try{
+    const res=await fetch(url,{mode:'cors'}); const blob=await res.blob();
+    const du=await new Promise((ok,no)=>{const r=new FileReader();r.onloadend=()=>ok(r.result);r.onerror=no;r.readAsDataURL(blob);});
+    return dataUrlToPart(du);
+  }catch(e){ return null; }
+}
+function aiImageOf(resp){
+  try{ const p=resp.response.inlineDataParts(); if(p&&p[0]) return `data:${p[0].inlineData.mimeType};base64,${p[0].inlineData.data}`; }catch(e){}
+  return null;
+}
+function aiBusy(id,on){
+  const it=ideas.find(x=>x.id===id); if(!it) return;
+  it._ai=on; renderIdeas();
+}
+async function aiTryOn(it){
+  const who=it.cat==='his'?'his':'her';
+  const personUrl=photos[who];
+  if(!personUrl){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
+  aiBusy(it.id,true);
+  try{
+    const model=await getImageModel();
+    const personPart=dataUrlToPart(personUrl);
+    const garmentPart=it.img?await urlToPart(it.img):null;
+    const name=who==='her'?'жінці':'чоловіку';
+    let parts;
+    if(garmentPart){
+      parts=[`Перше зображення — фото людини. Друге — предмет одягу/аксесуар${it.title?' ("'+it.title+'")':''}. Реалістично вдягни цей предмет на ${name} з першого фото. Збережи її обличчя, зачіску, статуру і фон. Фотореалізм, природне освітлення.`, personPart, garmentPart];
+    }else{
+      parts=[`Це фото людини. Реалістично покажи, як на ${name} виглядав би образ: ${[it.title,it.desc,it.note].filter(Boolean).join('. ')}. Збережи обличчя і статуру. Фотореалізм.`, personPart];
+    }
+    const resp=await model.generateContent(parts);
+    const img=aiImageOf(resp);
+    if(!img) throw new Error('no image');
+    downscaleSrc(img,768,small=>{
+      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
+      cur.tryon=small||img; cur._ai=false;
+      saveJSON('wed-ideas',ideas); renderIdeas();
+    },0.78);
+  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); showToast('ШІ-примірка не вдалась 😕 Перевір Firebase AI / звʼязок'); }
+}
+async function aiImagine(it){
+  const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
+  if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка)'); return; }
+  aiBusy(it.id,true);
+  try{
+    const model=await getImageModel();
+    const pre=it.cat==='rings'?'Обручка / каблучка: ':'Ідея для весілля: ';
+    const resp=await model.generateContent([`${pre}${text}. Створи гарне фотореалістичне зображення цього. Світла естетика.`]);
+    const img=aiImageOf(resp);
+    if(!img) throw new Error('no image');
+    downscaleSrc(img,768,small=>{
+      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
+      cur.gen=small||img; cur._ai=false;
+      saveJSON('wed-ideas',ideas); renderIdeas();
+    },0.78);
+  }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 Перевір Firebase AI'); }
+}
 
 /* ════ SCRIPT / SCENARIO ════ */
 let activeScript='sofia';
