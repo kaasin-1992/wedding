@@ -268,6 +268,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-card.approved{border-color:var(--done);box-shadow:0 0 0 1px var(--done) inset;}
 .idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
 
+.idea-photo-btn{display:block;width:100%;text-align:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
+.idea-photo-btn:hover{filter:brightness(.96);border-color:var(--terra);}
+
+/* ── PARTIES (дівич / мальчішник) ── */
+.party-count{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.party-row{position:relative;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 40px 12px 15px;margin-bottom:8px;}
+.party-name{font-size:14.5px;font-weight:500;}
+.party-note{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+.party-row .del-x{opacity:.5;}
+.party-row:hover .del-x{opacity:1;}
+
+/* ── BAR / MENU CALCULATOR ── */
+.bar-mode{display:flex;gap:8px;margin-bottom:14px;}
+.bar-mode-btn{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;}
+.bar-mode-btn.on{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
+.bar-head{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.bar-inp{display:flex;flex-direction:column;gap:5px;flex:1;min-width:90px;}
+.bar-inp span{font-size:11.5px;color:var(--muted);}
+.bar-inp input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-family:var(--sans);font-size:15px;color:var(--text);width:100%;text-align:center;}
+.bar-inp input:focus{outline:none;border-color:var(--terra);}
+.bar-autonote{flex-basis:100%;font-size:11.5px;color:var(--muted);line-height:1.4;}
+.bar-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.bar-card{display:flex;gap:11px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;}
+.bar-emoji{font-size:24px;line-height:1;}
+.bar-cardbody{min-width:0;}
+.bar-big{font-family:var(--serif);font-size:19px;color:var(--terra);line-height:1.1;}
+.bar-cardtitle{font-size:12px;color:var(--text);margin-top:4px;line-height:1.3;}
+.bar-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.bar-foot{font-size:12.5px;color:var(--muted);margin-top:14px;text-align:center;line-height:1.5;}
+
 /* ── SCRIPT / SCENARIO ── */
 .script-row{position:relative;display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 15px;margin-bottom:8px;}
 .script-time{font-family:var(--serif);font-size:17px;color:var(--terra);min-width:52px;line-height:1.3;}
@@ -380,6 +410,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
+  <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
+  <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
   <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
@@ -581,6 +613,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   <div id="ideaList"></div>
 </div>
 
+<!-- BAR & MENU (калькулятор) -->
+<div class="panel" id="tab-bar">
+  <div class="section-hint">Рахує орієнтовну кількість напоїв і їжі під кількість гостей кожної локації. Кількість людей підтягується з вкладки «Гості» — можеш виправити вручну. Це орієнтир, не точний рецепт 🙂</div>
+  <div class="filters" id="barTabs">
+    <button class="filt-btn active" data-bl="sofia">💒 Софі</button>
+    <button class="filt-btn" data-bl="wave">🥂 Хвильовий</button>
+  </div>
+  <div id="barOut"></div>
+</div>
+
+<!-- PARTIES (дівич-вечір / мальчішник) -->
+<div class="panel" id="tab-parties">
+  <div class="section-hint">Хто йде на дівич-вечір і на мальчішник. Додай імʼя вручну — навіть тих, кого немає у списку гостей весілля.</div>
+  <div class="filters" id="partyTabs">
+    <button class="filt-btn active" data-p="her">👰 Дівич-вечір</button>
+    <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
+  </div>
+  <div id="partyList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details open>
+      <summary>＋ Додати людину</summary>
+      <div class="add-form">
+        <input type="text" id="pName" placeholder="Імʼя…">
+        <input type="text" id="pNote" placeholder="Нотатка (необовʼязково)">
+        <button class="submit-btn" id="addPartyBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
   <div class="section-hint">Хід дня по хвилинах. Окремо розпис у Софі та святкування у Хвильовому.</div>
@@ -642,7 +704,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, cloudReady=false, seeded=false, applyingSnapshot=false;
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-bar':'bar'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -710,6 +772,10 @@ const DEFAULT_CONTACTS = [
   {id:'c6',role:'Музика / Ведучий',name:'',contact:'',note:'',status:'search'},
   {id:'c7',role:'Візаж + зачіска',name:'',contact:'',note:'',status:'search'},
 ];
+const DEFAULT_BAR = {
+  sofia:{mode:'served', adults:'', kids:''},
+  wave:{mode:'buffet', adults:'', kids:''}
+};
 
 let tasks    = loadJSON('wed-tasks', DEFAULT_TASKS);
 let guests   = loadJSON('wed-guests', []);
@@ -722,6 +788,9 @@ let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let hotels      = loadJSON('wed-hotels', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
+let partyHer    = loadJSON('wed-party-her', []);
+let partyHis    = loadJSON('wed-party-his', []);
+let bar         = loadJSON('wed-bar', DEFAULT_BAR);
 
 /* ── HELPERS ── */
 const today = ()=> new Date(new Date().toDateString());
@@ -938,7 +1007,9 @@ const ARR={
   'wed-ideas':{get:()=>ideas,set:v=>ideas=v,render:()=>renderIdeas()},
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
   'wed-scriptS':{get:()=>scriptSofia,set:v=>scriptSofia=v,render:()=>renderScripts()},
-  'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()}
+  'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()},
+  'wed-party-her':{get:()=>partyHer,set:v=>partyHer=v,render:()=>renderParties()},
+  'wed-party-his':{get:()=>partyHis,set:v=>partyHis=v,render:()=>renderParties()}
 };
 function delUndo(key,id,label){
   const a=ARR[key], list=a.get(), idx=list.findIndex(x=>x.id===id);
@@ -1231,6 +1302,7 @@ function renderIdeas(){
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
+    const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
     const card=document.createElement('div'); card.className='idea-card'+(it.approved?' approved':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
@@ -1242,7 +1314,7 @@ function renderIdeas(){
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${aiBtns}${approveBtn}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${photoBtn}${aiBtns}${approveBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -1258,6 +1330,17 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.approve); if(it) approveIdea(it);
+  });
+  listEl.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.photo); if(!it) return;
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+      downscaleSrc(URL.createObjectURL(f),768,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        it.img=data; saveJSON('wed-ideas',ideas); renderIdeas();
+      },0.8);
+    };
+    inp.click();
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -1463,6 +1546,97 @@ document.getElementById('addScriptBtn').onclick=()=>{
   saveJSON(scriptKey(),scriptRef()); renderScripts();
 };
 
+/* ════ ВЕЧІРКИ: ДІВИЧ-ВЕЧІР / МАЛЬЧІШНИК ════ */
+let activeParty='her';
+const partyRef=()=> activeParty==='her'?partyHer:partyHis;
+const partyKey=()=> activeParty==='her'?'wed-party-her':'wed-party-his';
+function renderParties(){
+  const listEl=document.getElementById('partyList'); if(!listEl) return;
+  const arr=partyRef(); listEl.innerHTML='';
+  const cnt=document.createElement('div'); cnt.className='party-count';
+  cnt.textContent=arr.length?`Людей у списку: ${arr.length}`:'';
+  listEl.appendChild(cnt);
+  if(!arr.length){ listEl.innerHTML='<div class="empty-state">Список порожній.<br>Додай першу людину 🥳</div>'; return; }
+  arr.forEach(p=>{
+    const row=document.createElement('div'); row.className='party-row';
+    row.innerHTML=`<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
+      <div class="party-info"><div class="party-name">${esc(p.name)}</div>${p.note?`<div class="party-note">${esc(p.note)}</div>`:''}</div>`;
+    listEl.appendChild(row);
+  });
+  listEl.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>delUndo(partyKey(),b.dataset.pdel,'Прибрано'));
+}
+document.querySelectorAll('#partyTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#partyTabs .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeParty=btn.dataset.p; renderParties();
+});
+document.getElementById('addPartyBtn').onclick=()=>{
+  const name=val('pName'); if(!name){ showToast('Впиши імʼя'); return; }
+  partyRef().push({id:'p'+Date.now(),name,note:val('pNote')});
+  document.getElementById('pName').value=''; document.getElementById('pNote').value='';
+  saveJSON(partyKey(),partyRef()); renderParties();
+};
+
+/* ════ БАР ТА МЕНЮ (калькулятор від кількості людей) ════ */
+let activeBar='sofia';
+const BAR_NORMS={
+  served:{label:'Застілля · подача страв', champagne:0.25, wine:0.5, spiritsL:0.25, softL:0.5, waterL:0.5, foodKg:1.2, foodKidKg:0.6, canape:0},
+  buffet:{label:'Фуршет · фінгерфуд',      champagne:0.3,  wine:0.35,spiritsL:0.15, softL:0.7, waterL:0.7, foodKg:0.7, foodKidKg:0.4, canape:14}
+};
+function barAuto(loc){
+  const ev = loc==='sofia'?'ceremony':'party';
+  let adults=0, kids=0;
+  guests.filter(g=>g.status!=='declined' && (g.event===ev||g.event==='both')).forEach(g=>{
+    adults += 1 + (g.plus1 && g.plus1!=='none' ? 1 : 0);
+    kids += Number(g.kids)||0;
+  });
+  return {adults, kids};
+}
+function renderBar(){
+  const out=document.getElementById('barOut'); if(!out) return;
+  const loc=activeBar;
+  const cfg=(bar[loc]=bar[loc]||{mode:loc==='sofia'?'served':'buffet',adults:'',kids:''});
+  const auto=barAuto(loc);
+  const adults = cfg.adults!=='' && cfg.adults!=null ? Number(cfg.adults) : auto.adults;
+  const kids   = cfg.kids!=='' && cfg.kids!=null ? Number(cfg.kids) : auto.kids;
+  const n=BAR_NORMS[cfg.mode]||BAR_NORMS.served;
+  const champ=Math.ceil(adults*n.champagne);
+  const wine=Math.ceil(adults*n.wine);
+  const spiritsL=Math.round(adults*n.spiritsL*10)/10;
+  const spiritsB=Math.ceil(spiritsL/0.5);
+  const softL=Math.round((adults+kids)*n.softL*10)/10;
+  const waterL=Math.round((adults+kids)*n.waterL*10)/10;
+  const foodKg=Math.round((adults*n.foodKg + kids*n.foodKidKg)*10)/10;
+  const canape=n.canape?Math.ceil((adults+kids)*n.canape):0;
+  const card=(emoji,title,big,sub)=>`<div class="bar-card"><div class="bar-emoji">${emoji}</div><div class="bar-cardbody"><div class="bar-big">${big}</div><div class="bar-cardtitle">${title}</div>${sub?`<div class="bar-sub">${sub}</div>`:''}</div></div>`;
+  out.innerHTML=`
+    <div class="bar-mode">
+      <button class="bar-mode-btn ${cfg.mode==='served'?'on':''}" data-mode="served">🍽 Застілля</button>
+      <button class="bar-mode-btn ${cfg.mode==='buffet'?'on':''}" data-mode="buffet">🥂 Фуршет</button>
+    </div>
+    <div class="bar-head">
+      <label class="bar-inp"><span>Дорослих</span><input type="number" min="0" id="barAdults" value="${cfg.adults!=='' && cfg.adults!=null?cfg.adults:''}" placeholder="${auto.adults}"></label>
+      <label class="bar-inp"><span>Дітей</span><input type="number" min="0" id="barKids" value="${cfg.kids!=='' && cfg.kids!=null?cfg.kids:''}" placeholder="${auto.kids}"></label>
+      <div class="bar-autonote">авто з гостей: ${auto.adults} дор. + ${auto.kids} діт. · лиши поле порожнім = авто</div>
+    </div>
+    <div class="bar-grid">
+      ${card('🥂','Шампанське (на тости)',`${champ} пл.`,'0.75 л')}
+      ${card('🍷','Вино',`${wine} пл.`,'0.75 л')}
+      ${card('🥃','Міцне (горілка/віскі/коньяк)',`${spiritsB} пл.`,`≈ ${spiritsL} л · 0.5 л`)}
+      ${card('🧃','Соки / безалкогольне',`${softL} л`,'')}
+      ${card('💧','Вода',`${waterL} л`,'')}
+      ${card('🍽','Їжа',`≈ ${foodKg} кг`, canape?`+ ${canape} шт канапе`:'')}
+    </div>
+    <div class="bar-foot">Розрахунок на <b>${adults}</b> дорослих${kids?` і <b>${kids}</b> дітей`:''} · режим: <b>${n.label}</b></div>`;
+  out.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ cfg.mode=b.dataset.mode; saveJSON('wed-bar',bar); renderBar(); });
+  const ai=out.querySelector('#barAdults'), ki=out.querySelector('#barKids');
+  if(ai) ai.onchange=()=>{ cfg.adults=ai.value.trim(); saveJSON('wed-bar',bar); renderBar(); };
+  if(ki) ki.onchange=()=>{ cfg.kids=ki.value.trim(); saveJSON('wed-bar',bar); renderBar(); };
+}
+document.querySelectorAll('#barTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#barTabs .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeBar=btn.dataset.bl; renderBar();
+});
+
 /* ════ HOTEL (ночівля до/після) ════ */
 function renderHotels(){
   const listEl=document.getElementById('hotelList'); listEl.innerHTML='';
@@ -1564,7 +1738,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderParties(); renderBar();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -1587,7 +1761,7 @@ function startSync(){
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
-      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,_updated:Date.now()},{merge:true}).catch(()=>{}); }
+      if(!seeded){ seeded=true; DOC.set({tasks,guests,budget,contacts,notes,cap:budgetCap,ideas,scriptSofia,scriptWave,hotels,photos,partyHer,partyHis,bar,_updated:Date.now()},{merge:true}).catch(()=>{}); }
       return;
     }
     const d=snap.data();
@@ -1603,6 +1777,9 @@ function startSync(){
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(d.photos && typeof d.photos==='object') photos=d.photos;
+    if(Array.isArray(d.partyHer)) partyHer=d.partyHer;
+    if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
+    if(d.bar && typeof d.bar==='object') bar=d.bar;
     // оновлюємо локальний кеш
     DB.set('wed-tasks',JSON.stringify(tasks));
     DB.set('wed-guests',JSON.stringify(guests));
@@ -1615,6 +1792,9 @@ function startSync(){
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-photos',JSON.stringify(photos));
+    DB.set('wed-party-her',JSON.stringify(partyHer));
+    DB.set('wed-party-his',JSON.stringify(partyHis));
+    DB.set('wed-bar',JSON.stringify(bar));
     applyingSnapshot=false;
     renderAll();
   }, err=>{ console.warn('snapshot', err); });
