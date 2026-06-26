@@ -270,6 +270,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .idea-sort{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
 .idea-sort-lbl{font-size:12px;color:var(--muted);}
 .idea-sort select{font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);}
+/* дошка натхнення (Pinterest-стиль, masonry) */
+.inspo-cat-sel{font-size:13px;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);flex:0 0 auto;}
+.inspo-filters{flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.inspo-grid{column-count:2;column-gap:10px;}
+@media(min-width:560px){.inspo-grid{column-count:3;}}
+.inspo-card{break-inside:avoid;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;}
+.inspo-card .del-x{top:6px;right:6px;}
+.inspo-img{width:100%;display:block;background:var(--surface2);cursor:zoom-in;}
+.inspo-img.noimg{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);}
+.inspo-body{padding:8px 10px 10px;}
+.inspo-cat{display:inline-block;font-size:10.5px;font-weight:600;color:var(--terra);background:var(--terra-dim);border-radius:20px;padding:2px 8px;margin-bottom:5px;}
+.inspo-title{font-size:12px;color:var(--text);line-height:1.35;max-height:50px;overflow:hidden;}
+.inspo-host{font-size:10.5px;color:var(--muted);margin-top:3px;}
+.inspo-note{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.4;white-space:pre-wrap;}
+.inspo-open{display:inline-block;margin-top:6px;font-size:11px;color:var(--terra);text-decoration:none;}
+.inspo-empty{text-align:center;color:var(--muted);font-size:13px;padding:24px 0;}
 /* вечірки: загальний коментар, празькі позначки, групи */
 .party-general{margin:0 0 14px;}
 .party-general-lbl{display:block;font-size:13px;color:var(--text);margin-bottom:5px;}
@@ -753,6 +769,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
+  <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
   <button class="tab-btn" data-tab="music">🎵 Музика</button>
@@ -1217,6 +1234,36 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
 </div>
 
+<!-- INSPIRATION -->
+<div class="panel" id="tab-inspo">
+  <div class="section-hint">Дошка натхнення — як Pinterest, але все в одному місці й спільне з Дмитром. Скопіюй посилання на пін (Pinterest), пост (Instagram) чи будь-яку сторінку → встав сюди → картинка й назва підтягнуться. Признач тег, щоб легко фільтрувати.</div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <details open>
+      <summary>＋ Додати ідею (встав посилання)</summary>
+      <div class="add-form">
+        <input type="url" id="inUrl" placeholder="Посилання (Pinterest, Instagram, сайт…)" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <select id="inCat" class="inspo-cat-sel">
+            <option value="образ">👗 Образ</option>
+            <option value="зачіска / мейк">💇 Зачіска / мейк</option>
+            <option value="декор">🌸 Декор</option>
+            <option value="флористика">💐 Флористика</option>
+            <option value="торт">🎂 Торт</option>
+            <option value="локація">📍 Локація</option>
+            <option value="фотоідея">📸 Фотоідея</option>
+            <option value="запрошення">💌 Запрошення</option>
+            <option value="інше" selected>✨ Інше</option>
+          </select>
+          <input type="text" id="inNote" placeholder="Нотатка (необовʼязково)">
+        </div>
+        <button class="submit-btn" id="addInspoBtn">Додати в дошку</button>
+      </div>
+    </details>
+  </div>
+  <div class="filters inspo-filters" id="inspoFilters"></div>
+  <div class="inspo-grid" id="inspoGrid"></div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1237,7 +1284,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1428,6 +1475,8 @@ let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже дода
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
 let music       = loadJSON('wed-music', []);
+let inspo       = loadJSON('wed-inspo', []);
+let inspoCat    = 'all';
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
@@ -1726,6 +1775,7 @@ const ARR={
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
   'wed-decor':{get:()=>decor,set:v=>decor=v,render:()=>renderDecor()},
   'wed-music':{get:()=>music,set:v=>music=v,render:()=>renderMusic()},
+  'wed-inspo':{get:()=>inspo,set:v=>inspo=v,render:()=>renderInspo()},
   'wed-scriptS':{get:()=>scriptSofia,set:v=>scriptSofia=v,render:()=>renderScripts()},
   'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()},
   'wed-party-her':{get:()=>partyHer,set:v=>partyHer=v,render:()=>renderParties()},
@@ -3687,6 +3737,57 @@ document.getElementById('addMusicBtn').onclick=async()=>{
   }
 };
 
+/* ════ НАТХНЕННЯ (дошка ідей із Pinterest / інтернету) ════ */
+const INSPO_CATS=['образ','зачіска / мейк','декор','флористика','торт','локація','фотоідея','запрошення','інше'];
+const INSPO_ICON={'образ':'👗','зачіска / мейк':'💇','декор':'🌸','флористика':'💐','торт':'🎂','локація':'📍','фотоідея':'📸','запрошення':'💌','інше':'✨'};
+function renderInspo(){
+  const grid=document.getElementById('inspoGrid'); if(!grid) return;
+  // фільтри за тегами (лише ті, що реально є)
+  const fb=document.getElementById('inspoFilters');
+  if(fb){
+    const present=INSPO_CATS.filter(c=>inspo.some(i=>i.cat===c));
+    if(inspoCat!=='all' && !present.includes(inspoCat)) inspoCat='all';
+    fb.innerHTML=[['all','🗂 Усі'],...present.map(c=>[c,(INSPO_ICON[c]||'')+' '+c])]
+      .map(([v,l])=>`<button class="filt-btn ${inspoCat===v?'active':''}" data-inf="${esc(v)}">${esc(l)}</button>`).join('');
+    fb.querySelectorAll('[data-inf]').forEach(b=>b.onclick=()=>{ inspoCat=b.dataset.inf; renderInspo(); });
+  }
+  const list=inspo.filter(i=>inspoCat==='all'||i.cat===inspoCat);
+  if(!list.length){ grid.innerHTML=`<div class="inspo-empty">${inspo.length?'Немає ідей у цьому тегу.':'Поки порожньо.<br>Встав посилання на пін чи будь-яку картинку 📌'}</div>`; return; }
+  grid.innerHTML=list.map(i=>{
+    const host=hostOf(i.url);
+    const img=i.img?`<img class="inspo-img" src="${esc(i.img)}" loading="lazy" alt="" data-inbig="${i.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`
+                   :`<div class="inspo-img noimg">🖼</div>`;
+    return `<div class="inspo-card" data-pid="${i.id}">
+      <button class="del-x" data-indel="${i.id}" aria-label="Видалити">✕</button>
+      ${i.loading?'<div class="idea-loading" style="margin:8px;">Підтягую…</div>':img}
+      <div class="inspo-body">
+        ${i.cat?`<span class="inspo-cat">${INSPO_ICON[i.cat]||''} ${esc(i.cat)}</span>`:''}
+        ${i.title?`<div class="inspo-title">${esc(i.title)}</div>`:''}
+        ${host?`<div class="inspo-host">${esc(host)}</div>`:''}
+        ${i.note?`<div class="inspo-note">${esc(i.note)}</div>`:''}
+        ${i.url?`<a class="inspo-open" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('[data-inbig]').forEach(im=>{ const i=inspo.find(x=>x.id===im.dataset.inbig); if(i&&i.img) im.onclick=()=>showImgBig(i.img,i.title||''); });
+  grid.querySelectorAll('[data-indel]').forEach(b=>b.onclick=()=>delUndo('wed-inspo',b.dataset.indel,'Ідею видалено'));
+}
+document.getElementById('addInspoBtn').onclick=async()=>{
+  let url=val('inUrl');
+  if(!url){ showToast('Встав посилання на ідею 🙂'); return; }
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='in'+Date.now();
+  inspo.unshift({id,url,cat:document.getElementById('inCat').value||'інше',note:val('inNote'),title:'',img:'',loading:true,ts:Date.now()});
+  ['inUrl','inNote'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-inspo',inspo); renderInspo();
+  const prev=await fetchPreview(url);
+  const cur=inspo.find(x=>x.id===id); if(!cur)return;
+  cur.loading=false;
+  if(prev){ cur.title=prev.title||''; cur.img=prev.img||''; }
+  saveJSON('wed-inspo',inspo); renderInspo();
+  if(!prev || !prev.img) showToast('Картинку не вдалось підтягнути — ідея збережена з посиланням 🙂');
+};
+
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -3739,7 +3840,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -3812,6 +3913,7 @@ function startSync(){
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(Array.isArray(d.decor))       decor=d.decor;
     if(Array.isArray(d.music))       music=d.music;
+    if(Array.isArray(d.inspo))       inspo=d.inspo;
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
     if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
@@ -3844,6 +3946,7 @@ function startSync(){
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-decor',JSON.stringify(decor));
     DB.set('wed-music',JSON.stringify(music));
+    DB.set('wed-inspo',JSON.stringify(inspo));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
     DB.set('wed-metrics',JSON.stringify(bodyMetrics));
