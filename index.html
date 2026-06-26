@@ -1338,10 +1338,11 @@ function splitIdeas(arr){
     const m={};
     ['img','gen','tryon','cleanImg'].forEach(k=>{ if(isDataUrl(it[k])) m[k]=it[k]; });
     const docId='m_idea_'+it.id;
+    // Пишемо документ із картинками лише коли вони реально є.
+    // НІКОЛИ не видаляємо документ неявно: якщо тут порожньо, це майже завжди
+    // означає, що картинки ще не встигли підтягнутися (гонка завантаження), а не
+    // що користувач їх прибрав. Видалення тут раніше назавжди стирало завантажені фото.
     if(Object.keys(m).length) mediaSet(docId, m);
-    else if(_mediaWritten[docId]!==undefined && _mediaWritten[docId]!==null){    // картинку прибрали
-      _mediaWritten[docId]=null; if(WEDCOL && !IS_GUEST) WEDCOL.doc(docId).delete().catch(()=>{});
-    }
   });
   return light;
 }
@@ -1375,10 +1376,21 @@ function applyMedia(){
       else if(name==='mannequin') mannequin=m; else outfit=m;
     }
   });
-  // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа
+  // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа.
+  // Якщо медіа-документ ще не прилетів (гонка завантаження) — НЕ ставимо порожньо,
+  // а беремо останнє відоме фото з локального кешу, щоб не затерти його порожнечею.
+  let _cachedIdeas={};
+  try{ (JSON.parse(DB.get('wed-ideas')||'[]')||[]).forEach(it=>{ if(it&&it.id) _cachedIdeas[it.id]=it; }); }catch(e){}
   if(Array.isArray(ideas)) ideas.forEach(it=>{
     const m=mediaCache.idea[it.id]||{};
-    ['img','gen','tryon','cleanImg'].forEach(k=>{ if(it[k]==='@m') it[k]=m[k]||''; });
+    const fb=_cachedIdeas[it.id]||{};
+    ['img','gen','tryon','cleanImg'].forEach(k=>{
+      if(it[k]==='@m'){
+        if(isDataUrl(m[k])) it[k]=m[k];           // реальне фото з хмари
+        else if(isDataUrl(fb[k])) it[k]=fb[k];    // ще не завантажилось — лишаємо останнє відоме
+        else it[k]='';
+      }
+    });
   });
   // оновлюємо локальний кеш повними даними
   applyingSnapshot=true;
