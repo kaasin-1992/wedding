@@ -1,4 +1,4 @@
-const CACHE = 'wedding-v51';
+const CACHE = 'wedding-v52';
 const ASSETS = [
   './',
   './index.html',

@@ -64,6 +64,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hero-countdown::before{content:'❧';display:block;position:absolute;left:50%;transform:translateX(-50%);margin-top:-30px;color:var(--gold);font-size:16px;}
 .cnt-num{font-family:var(--serif);font-size:clamp(34px,8vw,46px);color:var(--terra);line-height:1;}
 .cnt-lbl{font-size:13px;color:var(--muted);}
+.hero-weather{margin-top:12px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;line-height:1.4;}
+.hero-weather .hw-temp{color:var(--terra);font-weight:600;}
+.hero-weather .hw-ico{font-size:15px;}
+.hero-weather .hw-note{font-size:11px;opacity:.85;flex-basis:100%;}
 
 /* TABS */
 .tabs-bar{display:flex;justify-content:flex-start;background:var(--bg);position:sticky;top:0;z-index:10;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
@@ -257,10 +261,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
 /* метрики тіла під базовим фото */
-.bp-metrics{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;justify-content:center;}
-.bp-metrics .bp-m{font-size:12px;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text);min-width:0;}
-.bp-metrics select.bp-m{max-width:118px;}
-.bp-metrics input.bp-m{width:74px;}
+.bp-metrics{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;justify-content:center;width:100%;}
+.bp-metrics .bp-m{font-size:12px;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text);min-width:0;box-sizing:border-box;}
+.bp-metrics select.bp-m{flex:1 1 100%;max-width:100%;}
+.bp-metrics input.bp-m{flex:1 1 64px;width:auto;min-width:0;}
 .base-photo-btn.cam{background:var(--rose);color:#fff;border-color:var(--rose);}
 /* сортування одягу */
 .idea-sort{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
@@ -326,15 +330,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-slot .cs-cap{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:10.5px;padding:3px 6px;text-align:center;}
 .couple-slot .cs-x{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .couple-stage-hint{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:9px;text-align:center;}
-.base-photos{display:flex;gap:14px;justify-content:center;margin-bottom:18px;}
-.base-photo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto;}
+.base-photos{display:flex;gap:8px;justify-content:center;margin-bottom:18px;}
+.base-photo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 0;min-width:0;}
 .base-photo-frame{width:92px;height:92px;border-radius:50%;background:var(--surface2);border:2px solid var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--muted);}
 .base-photo[data-who="her"] .base-photo-frame{border-color:var(--rose);}
 .base-photo[data-who="his"] .base-photo-frame{border-color:var(--sage);}
 .base-photo-cap{font-size:12px;font-weight:600;color:var(--text);}
 .base-photo-btn{font-size:11px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:3px 12px;cursor:pointer;font-weight:600;}
 .base-photo-btn:hover{filter:brightness(.94);}
-.bp-btns{display:flex;gap:5px;}
+.bp-btns{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;}
 .base-photo-btn.ghost{color:var(--muted);background:var(--surface2);border-color:var(--line);}
 .bp-full{min-height:14px;}
 .bp-full-info{font-size:10px;color:var(--terra);display:inline-flex;align-items:center;gap:4px;}
@@ -741,6 +745,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <span class="cnt-num" id="daysLeft">—</span>
     <span class="cnt-lbl" id="cntLbl">днів залишилось</span>
   </div>
+  <div class="hero-weather" id="heroWeather"></div>
 </div>
 
 <div class="tabs-bar">
@@ -1082,7 +1087,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <summary>＋ Додати пункт</summary>
       <div class="add-form">
         <div class="form-row">
-          <input type="time" id="sTime">
+          <input type="text" id="sTime" inputmode="numeric" maxlength="5" placeholder="чч:хх" style="flex:0 0 86px;text-align:center;">
           <input type="text" id="sText" placeholder="Що відбувається…">
         </div>
         <div class="form-row">
@@ -2960,7 +2965,7 @@ function renderScripts(){
       row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
         <div class="script-text" data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати текст'}">${esc(m.text)}</div>
         <input type="text" class="backlog-loc" data-sloc="${m.id}" list="locOptions" placeholder="📍 локація" value="${esc(m.loc||'')}">
-        <input type="time" class="backlog-time" data-stime="${m.id}" title="Поставити час → у таймлайн">`;
+        <input type="text" class="backlog-time" inputmode="numeric" maxlength="5" data-stime="${m.id}" value="${esc(m.time||'')}" placeholder="чч:хх" title="Постав час → у таймлайн">`;
       bl.appendChild(row);
     });
   }else{
@@ -2973,16 +2978,21 @@ function renderScripts(){
   listEl.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{
     const f=findScript(b.dataset.sdel); if(!f)return; delUndo(f.key,b.dataset.sdel,'Пункт видалено');
   });
-  listEl.querySelectorAll('[data-stime]').forEach(inp=>inp.onchange=()=>{
-    const f=findScript(inp.dataset.stime); if(!f)return;
-    f.it.time=inp.value||'';
-    // ставимо час із спільного беклогу → пункт іде в таймлайн АКТИВНОЇ локації
-    if(f.it.time && f.key!==scriptKey()){
-      f.arr.splice(f.arr.indexOf(f.it),1);
-      scriptRef().push(f.it);
-      saveJSON(f.key,f.arr);
-    }
-    saveJSON(scriptKey(),scriptRef()); renderScripts();
+  listEl.querySelectorAll('[data-stime]').forEach(inp=>{
+    inp.addEventListener('input',()=>{ inp.value=timeMask(inp.value); });
+    inp.addEventListener('change',()=>{
+      const f=findScript(inp.dataset.stime); if(!f)return;
+      const t=timeNorm(inp.value);
+      if(inp.value && !t){ showToast('Час у форматі ГГ:ХХ, напр. 18:30 🙂'); inp.value=f.it.time||''; return; }
+      f.it.time=t;
+      // ставимо час із спільного беклогу → пункт іде в таймлайн АКТИВНОЇ локації
+      if(f.it.time && f.key!==scriptKey()){
+        f.arr.splice(f.arr.indexOf(f.it),1);
+        scriptRef().push(f.it);
+        saveJSON(f.key,f.arr);
+      }
+      saveJSON(scriptKey(),scriptRef()); renderScripts();
+    });
   });
   listEl.querySelectorAll('[data-sloc]').forEach(inp=>inp.onchange=()=>{
     const f=findScript(inp.dataset.sloc); if(!f)return;
@@ -3006,9 +3016,16 @@ document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#scriptTabs .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeScript=btn.dataset.s; renderScripts();
 });
+/* маска часу ГГ:ХХ — без авто-«зараз», лише те, що вводять руками */
+function timeMask(v){ const d=String(v||'').replace(/\D/g,'').slice(0,4); return d.length>2?d.slice(0,2)+':'+d.slice(2):d; }
+function timeNorm(v){ const m=/^(\d{1,2}):?(\d{2})$/.exec(String(v||'').trim()); if(!m)return''; const h=+m[1],mn=+m[2]; if(h>23||mn>59)return''; return String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0'); }
+{ const st=document.getElementById('sTime'); if(st) st.addEventListener('input',()=>{ st.value=timeMask(st.value); }); }
 document.getElementById('addScriptBtn').onclick=()=>{
   const text=val('sText'); if(!text)return;
-  const item={id:'s'+Date.now(),time:document.getElementById('sTime').value||'',text,loc:val('sLoc')||''};
+  const tRaw=document.getElementById('sTime').value;
+  const time=timeNorm(tRaw);
+  if(tRaw && !time){ showToast('Час у форматі ГГ:ХХ, напр. 18:30 🙂'); return; }
+  const item={id:'s'+Date.now(),time,text,loc:val('sLoc')||''};
   if(activeScript==='sofia') scriptSofia.push(item); else scriptWave.push(item);
   document.getElementById('sText').value=''; document.getElementById('sTime').value=''; document.getElementById('sLoc').value='';
   saveJSON(scriptKey(),scriptRef()); renderScripts();
@@ -3730,6 +3747,31 @@ function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.get
 updateCountdown();
 renderAll();
 setInterval(updateCountdown,60000);
+/* ── ПОГОДА В КИЄВІ НА ДЕНЬ ВЕСІЛЛЯ ── */
+const WX_DATE='2026-09-06';
+function wxFmtT(t){ return (t>0?'+':'')+t+'°'; }
+function wxCode(c){
+  const m={0:['☀️','ясно'],1:['🌤','майже ясно'],2:['⛅','мінлива хмарність'],3:['☁️','хмарно'],
+    45:['🌫','туман'],48:['🌫','паморозь'],51:['🌦','мряка'],53:['🌦','мряка'],55:['🌦','густа мряка'],
+    61:['🌧','невеликий дощ'],63:['🌧','дощ'],65:['🌧','сильний дощ'],66:['🌧','крижаний дощ'],67:['🌧','крижаний дощ'],
+    71:['🌨','сніг'],73:['🌨','сніг'],75:['❄️','сильний сніг'],80:['🌦','злива'],81:['🌦','злива'],82:['⛈','сильна злива'],
+    95:['⛈','гроза'],96:['⛈','гроза з градом'],99:['⛈','гроза з градом']};
+  return m[c]||['🌡',''];
+}
+async function loadWeather(){
+  const el=document.getElementById('heroWeather'); if(!el) return;
+  const seasonal=`<span class="hw-ico">🌤</span><span>у Києві на початку вересня зазвичай <span class="hw-temp">≈ +21° вдень / +11° вночі</span></span><span class="hw-note">точний прогноз на 6 вересня зʼявиться ближче до дати ⛅</span>`;
+  if(daysUntilWedding()>16){ el.innerHTML=seasonal; return; }   // прогноз доступний лише ~16 днів наперед
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.52&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FKyiv&start_date=${WX_DATE}&end_date=${WX_DATE}`;
+    const r=await fetch(u); const j=await r.json(); const d=j&&j.daily;
+    if(!d||!d.time||!d.time.length) throw new Error('no data');
+    const [ico,lbl]=wxCode(d.weather_code[0]);
+    const mx=Math.round(d.temperature_2m_max[0]), mn=Math.round(d.temperature_2m_min[0]);
+    el.innerHTML=`<span class="hw-ico">${ico}</span><span>Київ, 6 вересня: <span class="hw-temp">${wxFmtT(mx)} / ${wxFmtT(mn)}</span>${lbl?' · '+lbl:''}</span><span class="hw-note">прогноз погоди 🌦</span>`;
+  }catch(e){ el.innerHTML=seasonal; }
+}
+loadWeather();
 
 /* ════ SYNC + LOGIN ════ */
 let syncTimer=null;
