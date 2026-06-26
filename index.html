@@ -292,6 +292,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cam-btns button{padding:12px 22px;border-radius:14px;border:none;font-size:16px;font-weight:600;cursor:pointer;}
 .cam-shot{background:#fff;color:#111;}
 .cam-cancel{background:#333;color:#fff;}
+/* ── портрет-студія (зачіски / вінки / мейк) ── */
+.portrait-studio{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 18px;overflow:hidden;}
+.portrait-studio>summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:7px;}
+.portrait-studio>summary::-webkit-details-marker{display:none;}
+.portrait-studio>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:.2s;}
+.portrait-studio[open]>summary::after{transform:rotate(180deg);}
+.ps-body{padding:0 15px 15px;}
+.ps-who{display:flex;gap:8px;margin-bottom:10px;}
+.ps-who-btn{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:.15s;}
+.ps-who-btn.active{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.ps-desc{width:100%;box-sizing:border-box;font-family:var(--sans);font-size:13px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text);resize:vertical;line-height:1.45;}
+.ps-ref-prev{position:relative;display:inline-block;margin:9px 0 4px;}
+.ps-ref-prev img{height:74px;border-radius:9px;border:1px solid var(--line);display:block;}
+.ps-ref-x{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:none;background:var(--danger);color:#fff;font-size:12px;cursor:pointer;line-height:1;}
+.ps-btns{display:flex;gap:8px;align-items:center;margin-top:10px;}
+.ps-ref-btn{flex:0 0 auto;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-size:13px;cursor:pointer;}
+.ps-gen{flex:1;padding:10px;border-radius:10px;border:none;background:var(--rose);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;}
+.ps-gen:disabled{opacity:.6;cursor:default;}
+.ps-hint{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.45;}
+.ps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:14px;}
+.ps-empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;}
+.ps-card{background:var(--surface2);border:1px solid var(--line);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;}
+.ps-img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;cursor:zoom-in;}
+.ps-card-desc{font-size:11px;color:var(--muted);padding:6px 8px 0;line-height:1.35;max-height:48px;overflow:hidden;}
+.ps-card-btns{display:flex;gap:6px;padding:7px 8px;}
+.ps-mini{flex:1;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:11px;cursor:pointer;white-space:nowrap;}
+.ps-mini.del{flex:0 0 auto;color:var(--danger);}
 .couple-slot img{width:100%;height:100%;object-fit:cover;display:block;}
 .couple-slot .cs-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:12px;text-align:center;padding:8px;}
 .couple-slot .cs-ph .cs-emoji{font-size:34px;line-height:1;}
@@ -722,6 +749,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
+  <button class="tab-btn" data-tab="decor">🌸 Декор</button>
+  <button class="tab-btn" data-tab="music">🎵 Музика</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
   <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
@@ -949,6 +978,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <button type="button" class="cam-shot" id="camShot">📸 Зняти</button>
     </div>
   </div>
+  <details class="portrait-studio" id="portraitStudio">
+    <summary>💇 Портрети — зачіски, вінки, мейк</summary>
+    <div class="ps-body">
+      <div class="ps-who" id="psWho">
+        <button type="button" class="ps-who-btn active" data-psw="her">👰 Катерина</button>
+        <button type="button" class="ps-who-btn" data-psw="his">🤵 Дмитро</button>
+      </div>
+      <textarea id="psDesc" class="ps-desc" rows="2" placeholder="Опиши зачіску / вінок / мейк — напр.: «низький пучок, тонкий вінок із польових квітів, природний мейк, ніжні рум’яна»"></textarea>
+      <div id="psRefWrap"></div>
+      <div class="ps-btns">
+        <label class="ps-ref-btn">🖼 Реф стилю<input type="file" accept="image/*" id="psRef" hidden></label>
+        <button type="button" class="ps-gen" id="psGen">🪄 Згенерувати портрет</button>
+      </div>
+      <div class="ps-hint">Лице береться з твого «Портрет»-фото вище і лишається незмінним — ШІ міняє лише зачіску, вінок, макіяж і прикраси на голові. Реф (необовʼязково) — лише приклад стилю, не обличчя.</div>
+      <div class="ps-grid" id="psGrid"></div>
+    </div>
+  </details>
   <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». Одяг можна додати й без посилання — напиши опис (напр. «шовкова сукня кольору шампань, міді») і тисни 🪄 «Уявити річ», ШІ намалює сам предмет, далі — 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» так само 🪄 «Уявити». Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
@@ -1126,6 +1172,46 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
 </div>
 
+<!-- DECOR -->
+<div class="panel" id="tab-decor">
+  <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
+  <div id="decorList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати декор</summary>
+      <div class="add-form">
+        <input type="text" id="dName" placeholder="Що це (напр. «арка з евкаліпта»)">
+        <input type="url" id="dUrl" placeholder="Посилання (Pinterest, магазин…) — необовʼязково" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <input type="text" id="dPrice" placeholder="Ціна (напр. 1200 грн)">
+          <input type="text" id="dPlace" placeholder="Локація (Софі / Хвильовий)">
+        </div>
+        <input type="text" id="dNote" placeholder="Нотатка (деталі, кількість…)">
+        <button class="submit-btn" id="addDecorBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- MUSIC -->
+<div class="panel" id="tab-music">
+  <div class="section-hint">Артисти, гурти, діджеї. Додавай посилання (портфоліо, соцмережі) та умови роботи — ціна, тривалість сету, апаратура, райдер. Тицьни на статус, щоб вести перемовини.</div>
+  <div id="musicList"></div>
+  <div class="add-section" style="margin-top:16px;">
+    <details>
+      <summary>＋ Додати артиста / діджея</summary>
+      <div class="add-form">
+        <input type="text" id="mName" placeholder="Імʼя / назва (напр. «DJ …» або гурт)">
+        <input type="url" id="mUrl" placeholder="Посилання (Instagram, SoundCloud, сайт…)" autocapitalize="none" spellcheck="false">
+        <input type="text" id="mRole" placeholder="Хто це (діджей / гурт / соло / ведучий-музикант)">
+        <textarea id="mTerms" rows="2" placeholder="Умови роботи: ціна, тривалість сету, апаратура/звук, райдер, передоплата…"></textarea>
+        <input type="text" id="mNote" placeholder="Нотатка (враження, стиль, де грали…)">
+        <button class="submit-btn" id="addMusicBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1146,7 +1232,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1335,6 +1421,8 @@ let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже додані українські традиції в беклог (раз)
 let hotels      = loadJSON('wed-hotels', []);
+let decor       = loadJSON('wed-decor', []);
+let music       = loadJSON('wed-music', []);
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
@@ -1631,6 +1719,8 @@ const ARR={
   'wed-notes':{get:()=>notes,set:v=>notes=v,render:()=>renderNotes()},
   'wed-ideas':{get:()=>ideas,set:v=>ideas=v,render:()=>renderIdeas()},
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
+  'wed-decor':{get:()=>decor,set:v=>decor=v,render:()=>renderDecor()},
+  'wed-music':{get:()=>music,set:v=>music=v,render:()=>renderMusic()},
   'wed-scriptS':{get:()=>scriptSofia,set:v=>scriptSofia=v,render:()=>renderScripts()},
   'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()},
   'wed-party-her':{get:()=>partyHer,set:v=>partyHer=v,render:()=>renderParties()},
@@ -1946,6 +2036,7 @@ document.getElementById('addNoteBtn').onclick=()=>{
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
 let ideaSort='';
+let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 // витягуємо ціну з тексту прев'ю: "1 250 грн", "₴1250", "3200 UAH", "від 4500 грн"
 function extractPrice(t){
@@ -2366,6 +2457,75 @@ function shootCamera(){
 document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>openCamera(b.dataset.cam));
 { const cc=document.getElementById('camCancel'); if(cc) cc.onclick=closeCamera;
   const cs=document.getElementById('camShot');  if(cs) cs.onclick=shootCamera; }
+/* ── ПОРТРЕТ-СТУДІЯ (зачіски / вінки / мейк, лице лишається своїм) ── */
+function renderPortraits(){
+  const grid=document.getElementById('psGrid'); if(!grid) return;
+  document.querySelectorAll('#psWho .ps-who-btn').forEach(b=>b.classList.toggle('active',b.dataset.psw===psWho));
+  const rw=document.getElementById('psRefWrap');
+  if(rw) rw.innerHTML=_psRef?`<div class="ps-ref-prev"><img src="${_psRef}"><button type="button" class="ps-ref-x" id="psRefX">✕</button></div>`:'';
+  const gen=document.getElementById('psGen');
+  if(gen){ gen.disabled=_psBusy; gen.textContent=_psBusy?'⏳ Генерую…':'🪄 Згенерувати портрет'; }
+  const list=ideas.filter(i=>i.cat==='portrait' && i.who===psWho);
+  if(!list.length){ grid.innerHTML='<div class="ps-empty">Тут зʼявляться згенеровані портрети 🌼</div>'; }
+  else grid.innerHTML=list.map(p=>`
+    <div class="ps-card" data-pid="${p.id}">
+      <img class="ps-img" src="${p.img}" data-psbig="${p.id}" alt="">
+      ${p.desc?`<div class="ps-card-desc">${esc(p.desc)}</div>`:''}
+      <div class="ps-card-btns">
+        <button type="button" class="ps-mini" data-psuse="${p.id}" title="Зробити основним фото-портретом">⭐ Основним</button>
+        <button type="button" class="ps-mini del" data-psdel="${p.id}" title="Видалити">🗑</button>
+      </div>
+    </div>`).join('');
+  const rx=document.getElementById('psRefX'); if(rx) rx.onclick=()=>{ _psRef=''; renderPortraits(); };
+  grid.querySelectorAll('[data-psbig]').forEach(im=>{ const p=ideas.find(x=>x.id===im.dataset.psbig); if(p) im.onclick=()=>showImgBig(p.img, p.desc||''); });
+  grid.querySelectorAll('[data-psdel]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Видалити цей портрет?')) return;
+    ideas=ideas.filter(x=>x.id!==b.dataset.psdel); saveJSON('wed-ideas',ideas); renderPortraits();
+  });
+  grid.querySelectorAll('[data-psuse]').forEach(b=>b.onclick=()=>{
+    const p=ideas.find(x=>x.id===b.dataset.psuse); if(!p) return;
+    photos[p.who]=p.img; saveJSON('wed-photos',photos);
+    mannequin[p.who]=''; saveJSON('wed-mannequin',mannequin);   // лице змінилось — манекен оновимо
+    renderBasePhotos(); renderCouple();
+    aiMakeMannequin(p.who);
+    showToast('⭐ Зроблено основним портретом');
+  });
+}
+async function aiPortrait(){
+  const who=psWho, face=photos[who];
+  if(!face){ showToast(`Спершу додай фото-портрет ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
+  const desc=(document.getElementById('psDesc').value||'').trim();
+  if(!desc && !_psRef){ showToast('Опиши зачіску / вінок / мейк або додай реф 🙂'); return; }
+  if(_psBusy) return; _psBusy=true; renderPortraits();
+  try{
+    const facePart=dataUrlToPart(await srcToDataUrl(face)||face);
+    if(!facePart) throw new Error('bad face');
+    const faceLock=' НАЙГОЛОВНІШЕ — ОБЛИЧЧЯ беззаперечно те саме, що на [ПОРТРЕТ]: точно збережи риси — розріз і колір очей, форму носа, губ, брів, овал, скули, шкіру і її тон. Не усереднюй з іншими, не домішуй чужих облич, не «прикрашай» і не міняй риси. Це портретний кадр: голова й плечі (по груди), фотореалізм, мʼяке рівне світло, нейтральний світлий фон, без тексту і водяних знаків.';
+    const descTxt=desc?` Бажаний образ: ${desc}.`:'';
+    let parts;
+    if(_psRef){
+      const refPart=dataUrlToPart(_psRef);
+      parts=[`[ПОРТРЕТ] — справжнє обличчя людини (ЄДИНЕ джерело обличчя). [РЕФЕРЕНС] — приклад БАЖАНОГО стилю зачіски / вінка / макіяжу: бери звідти ЛИШЕ стиль зачіски, вінок і мейк, але НЕ обличчя і НЕ зовнішність людини з рефа. Зроби портрет людини саме з [ПОРТРЕТ] із зачіскою / вінком / макіяжем у стилі [РЕФЕРЕНС].${descTxt}${faceLock}`, facePart, refPart];
+    }else{
+      parts=[`[ПОРТРЕТ] — справжнє обличчя людини. Зроби портрет ЦІЄЇ САМОЇ людини, змінивши ЛИШЕ зачіску, вінок / головний убір, макіяж і прикраси на голові за описом.${descTxt}${faceLock}`, facePart];
+    }
+    const img=await aiGenerate(parts);
+    downscaleSrc(img,768,small=>{
+      const id='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      ideas.unshift({id,cat:'portrait',who,desc,img:small||img,ts:Date.now()});
+      saveJSON('wed-ideas',ideas); _psBusy=false; renderPortraits();
+      showToast('💇 Портрет готовий');
+    },0.85);
+  }catch(e){ console.warn('portrait',e); _psBusy=false; renderPortraits(); showToast('Не вдалось згенерувати 😕 '+aiErr(e)); }
+}
+document.querySelectorAll('#psWho .ps-who-btn').forEach(b=>b.onclick=()=>{ psWho=b.dataset.psw; renderPortraits(); });
+{ const pr=document.getElementById('psRef'); if(pr) pr.onchange=()=>{
+    const f=pr.files&&pr.files[0]; if(!f){ return; }
+    loadPhotoFile(f,768,data=>{ if(!data){ showToast('Не вдалось завантажити реф'); return; } _psRef=data; renderPortraits(); },0.85);
+    pr.value='';
+  };
+  const pg=document.getElementById('psGen'); if(pg) pg.onclick=aiPortrait;
+}
 /* ── ОБРІЗКА ОБЛИЧЧЯ (для парних фото) ── */
 let _cropState=null;
 function openCrop(file, cb){
@@ -3415,6 +3575,101 @@ document.getElementById('addHotelBtn').onclick=async()=>{
   }
 };
 
+/* ════ ДЕКОР ════ */
+function renderDecor(){
+  const listEl=document.getElementById('decorList'); if(!listEl) return; listEl.innerHTML='';
+  if(!decor.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай ідею декору 🌸</div>'; return; }
+  decor.forEach(d=>{
+    const host=hostOf(d.url);
+    const price=parseMoney(d.price);
+    const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
+    const place=d.place?`<span class="badge">📍 ${esc(d.place)}</span>`:'';
+    const card=document.createElement('div'); card.className='idea-card';
+    card.innerHTML=`
+      <button class="del-x" data-ddel="${d.id}" aria-label="Видалити декор">✕</button>
+      ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      <div class="idea-body">
+        ${d.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        <div class="idea-title">${esc(d.title||d.url||'Декор')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
+        <div class="hotel-meta">${priceBadge}${place}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span></div>
+        ${d.note?`<div class="idea-note">${esc(d.note)}</div>`:''}
+        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ddel,'Декор видалено'));
+  listEl.querySelectorAll('[data-dtake]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dtake); if(!d)return;
+    d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
+  });
+}
+document.getElementById('addDecorBtn').onclick=async()=>{
+  const name=val('dName'); let url=val('dUrl');
+  if(!name&&!url)return;
+  if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='d'+Date.now();
+  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),note:val('dNote'),img:'',desc:'',taken:false,loading:!!url,ts:Date.now()});
+  ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-decor',decor); renderDecor();
+  if(url){
+    const prev=await fetchPreview(url);
+    const cur=decor.find(x=>x.id===id); if(!cur)return;
+    cur.loading=false;
+    if(prev){ if(!cur.title)cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+    saveJSON('wed-decor',decor); renderDecor();
+  }
+};
+
+/* ════ МУЗИКА (артисти / діджеї) ════ */
+const MUSIC_STATUS={search:'🔍 Шукаємо',contacted:'✉️ Написали',booked:'✅ Заброньовано'};
+const MUSIC_NEXT={search:'contacted',contacted:'booked',booked:'search'};
+function renderMusic(){
+  const listEl=document.getElementById('musicList'); if(!listEl) return; listEl.innerHTML='';
+  if(!music.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай артиста чи діджея 🎵</div>'; return; }
+  music.forEach(m=>{
+    const host=hostOf(m.url);
+    const role=m.role?`<span class="badge">🎚 ${esc(m.role)}</span>`:'';
+    const st=m.status||'search';
+    const card=document.createElement('div'); card.className='idea-card';
+    card.innerHTML=`
+      <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
+      ${m.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(m.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      <div class="idea-body">
+        ${m.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        <div class="idea-title">${esc(m.name||m.url||'Артист')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        <div class="hotel-meta">${role}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span></div>
+        ${m.terms?`<div class="idea-note">📋 ${esc(m.terms)}</div>`:''}
+        ${m.note?`<div class="idea-desc">${esc(m.note)}</div>`:''}
+        ${m.url?`<div class="idea-actions"><a class="idea-open" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>delUndo('wed-music',b.dataset.mdel,'Артиста видалено'));
+  listEl.querySelectorAll('[data-mst]').forEach(b=>b.onclick=()=>{
+    const m=music.find(x=>x.id===b.dataset.mst); if(!m)return;
+    m.status=MUSIC_NEXT[m.status||'search']; saveJSON('wed-music',music); renderMusic();
+  });
+}
+document.getElementById('addMusicBtn').onclick=async()=>{
+  const name=val('mName'); let url=val('mUrl');
+  if(!name&&!url)return;
+  if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='m'+Date.now();
+  music.unshift({id,name,url,role:val('mRole'),terms:val('mTerms'),note:val('mNote'),img:'',status:'search',loading:!!url,ts:Date.now()});
+  ['mName','mUrl','mRole','mTerms','mNote'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-music',music); renderMusic();
+  if(url){
+    const prev=await fetchPreview(url);
+    const cur=music.find(x=>x.id===id); if(!cur)return;
+    cur.loading=false;
+    if(prev){ if(!cur.name)cur.name=prev.title; cur.img=prev.img; }
+    saveJSON('wed-music',music); renderMusic();
+  }
+};
+
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -3467,7 +3722,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderBasePhotos(); renderCouple(); renderParties(); renderBar(); renderSeating(); renderInvites();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
@@ -3513,6 +3768,8 @@ function startSync(){
     if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
+    if(Array.isArray(d.decor))       decor=d.decor;
+    if(Array.isArray(d.music))       music=d.music;
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
     if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
@@ -3543,6 +3800,8 @@ function startSync(){
     DB.set('wed-scriptS',JSON.stringify(scriptSofia));
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
+    DB.set('wed-decor',JSON.stringify(decor));
+    DB.set('wed-music',JSON.stringify(music));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
     DB.set('wed-metrics',JSON.stringify(bodyMetrics));
