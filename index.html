@@ -1330,13 +1330,13 @@ function mediaSet(docId, payload){
 function splitIdeas(arr){
   const light = arr.map(it=>{
     const c={...it};
-    ['img','gen','tryon'].forEach(k=>{ if(isDataUrl(c[k])) c[k]='@m'; });   // base64 → маркер
+    ['img','gen','tryon','cleanImg'].forEach(k=>{ if(isDataUrl(c[k])) c[k]='@m'; });   // base64 → маркер
     if(Array.isArray(c.imgChoices)) c.imgChoices=c.imgChoices.filter(s=>!isDataUrl(s)).slice(0,8);
     return c;
   });
   arr.forEach(it=>{
     const m={};
-    ['img','gen','tryon'].forEach(k=>{ if(isDataUrl(it[k])) m[k]=it[k]; });
+    ['img','gen','tryon','cleanImg'].forEach(k=>{ if(isDataUrl(it[k])) m[k]=it[k]; });
     const docId='m_idea_'+it.id;
     if(Object.keys(m).length) mediaSet(docId, m);
     else if(_mediaWritten[docId]!==undefined && _mediaWritten[docId]!==null){    // картинку прибрали
@@ -1378,7 +1378,7 @@ function applyMedia(){
   // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа
   if(Array.isArray(ideas)) ideas.forEach(it=>{
     const m=mediaCache.idea[it.id]||{};
-    ['img','gen','tryon'].forEach(k=>{ if(it[k]==='@m') it[k]=m[k]||''; });
+    ['img','gen','tryon','cleanImg'].forEach(k=>{ if(it[k]==='@m') it[k]=m[k]||''; });
   });
   // оновлюємо локальний кеш повними даними
   applyingSnapshot=true;
@@ -1404,7 +1404,7 @@ function startMediaSync(){
       else if(id.indexOf('m_idea_')===0){
         const iid=id.slice(7);
         if(ch.type==='removed') delete mediaCache.idea[iid];
-        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon};
+        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon,cleanImg:data.cleanImg};
       }
     });
     applyMedia();
@@ -2788,6 +2788,29 @@ async function aiAnchorFace(resultDataUrl, who){
     return img||resultDataUrl;
   }catch(e){ console.warn('anchorFace',e); return resultDataUrl; }
 }
+// Виокремлює САМ предмет одягу з «брудного» скріна (модель/сайт/фон) на чистий білий фон.
+// Кешуємо в it.cleanImg, щоб робити це лише раз на річ. На невдачі — повертаємо оригінал.
+function garmentSig(s){ s=String(s||''); return s.length+':'+s.slice(0,24); }
+async function ensureCleanGarment(it){
+  const sig=garmentSig(it.img);
+  if(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===sig) return it.cleanImg;   // кеш дійсний лише для поточного фото
+  try{
+    let du=await srcToDataUrl(it.img);
+    if(!du) return it.img;
+    du=await new Promise(ok=>downscaleSrc(du,1024,r=>ok(r||du),0.85));
+    const g=(it.gtype||'').trim();
+    const gline=g&&g!=='образ цілком'?` Це саме ${g} — виокрем лише його.`:'';
+    showToast('Чищу фото одягу зі скріна… ✂️');
+    const clean=await aiGenerate([`На зображенні — фото/скрін товару (одяг або аксесуар), найімовірніше на моделі, з фоном, інтерфейсом сайту, текстом і цінниками.${gline} Виокрем РІВНО сам предмет одягу і покажи його ОДИН на чистому БІЛОМУ однотонному фоні: без людини, без обличчя, без рук, без манекена, без сторонніх предметів, без тексту й цінників, без рамок інтерфейсу. Точно збережи колір, тканину, візерунок, крій, довжину й усі деталі саме цього предмета. Чисте студійне предметне фото, рівне м'яке освітлення, без тіней від інших обʼєктів.`, dataUrlToPart(du)]);
+    if(clean){
+      const small=await new Promise(ok=>downscaleSrc(clean,768,r=>ok(r||clean),0.82));
+      const cur=ideas.find(x=>x.id===it.id)||it;
+      cur.cleanImg=small||clean; cur.cleanFor=sig; saveJSON('wed-ideas',ideas);
+      return cur.cleanImg;
+    }
+  }catch(e){ console.warn('ensureCleanGarment',e); }
+  return it.img;
+}
 async function aiTryOn(it){
   const who=it.cat==='his'?'his':'her';
   const facePhoto=photos[who];            // справжній портрет — головний якір обличчя
@@ -2799,8 +2822,11 @@ async function aiTryOn(it){
   aiBusy(it.id,true);
   coupleBusy[who]=true; renderCouple();
   try{
+    // спершу виокремлюємо САМ предмет одягу зі скріна (модель/сайт/фон) — інакше модель «дивиться»
+    // на оригінальне фото й тягне з нього зайве. Кешується в it.cleanImg.
+    const garmentSrc=await ensureCleanGarment(it);
     // одяг МАЄ бути реальним фото товару — якщо не вдалось завантажити, НЕ вигадуємо інший
-    const garmentPart=await srcToPart(it.img);
+    const garmentPart=await srcToPart(garmentSrc);
     if(!garmentPart){
       aiBusy(it.id,false); coupleBusy[who]=false; renderCouple();
       showToast('Не вдалося взяти фото цього одягу (сайт не віддає картинку). Відкрий 🖼 «Обрати картинку» → 📸 «Скрін сторінки» або 📁 завантаж фото товару — тоді приміряю саме його, без вигадок.');
@@ -2872,6 +2898,7 @@ async function aiImagineGarment(it){
       const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
       const res=small||img;
       cur.img=res; cur.imgChoices=[res, ...((cur.imgChoices||[]).filter(s=>!/^data:/.test(s)))].slice(0,8);
+      cur.cleanImg=res; cur.cleanFor=garmentSig(res);   // вже чистий предмет — не виокремлюємо вдруге
       cur._ai=false;
       saveJSON('wed-ideas',ideas); renderIdeas();
       showToast('🪄 Готово — тепер натисни «Приміряти»');
@@ -2950,6 +2977,7 @@ async function aiExtractGarment(it){
     const cur=ideas.find(x=>x.id===it.id); if(!cur){ aiBusy(it.id,false); return; }
     if(imgSrc){
       cur.img=imgSrc;
+      cur.cleanImg=imgSrc; cur.cleanFor=garmentSig(imgSrc);   // вже виокремлений предмет — кеш готовий
       if(Array.isArray(cur.imgChoices)) cur.imgChoices.unshift(imgSrc); else cur.imgChoices=[imgSrc];
     }
     if(price&&!cur.price) cur.price=price;
