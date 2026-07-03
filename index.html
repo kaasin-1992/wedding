@@ -2326,6 +2326,7 @@ function renderIdeas(){
     const host=hostOf(it.url);
     const fav=it.icon||faviconOf(host);
     const isTry=(it.cat==='her'||it.cat==='his');
+    const isMakeable=isTry||it.cat==='rings';   // "хто робить" стосується і одягу, і обручок (якщо хендмейд)
     // у СПИСКУ для одягу лишаємо фото ТОВАРУ; примірка з людиною показується лише зверху (couple stage).
     // для каблучок/ідей (без верхнього стейджу) показуємо згенероване зображення.
     const aiImg=isTry?null:it.gen;
@@ -2363,9 +2364,10 @@ function renderIdeas(){
     const favs=it.favs||{};
     const favRow=isTry?`<div class="idea-fav-row">${FAV_ROLES.map(r=>`<button class="idea-fav-btn${favs[r.k]?' on':''}" data-fav="${it.id}" data-favrole="${r.k}" title="${esc(r.lbl)} — вподобати">${favs[r.k]?'⭐':'☆'} <span class="ffi">${r.ic}</span></button>`).join('')}</div>`:'';
     const whoKey=it.who||'me';
-    const clothWhoRow=isTry?`<div class="cloth-who-row">
+    const fabricPlaceholder=it.cat==='rings'?'💍 Матеріал (напр. золото, срібло)':'🧵 Тканина (напр. атлас, льон)';
+    const clothWhoRow=isMakeable?`<div class="cloth-who-row">
         <span class="badge who-${whoKey}" data-clothwho="${it.id}" role="button" tabindex="0" title="Тицьни, щоб змінити">${CLOTH_WHO[whoKey]}</span>
-        ${whoKey==='maids'?`<input class="cloth-fabric-inp" data-fabric="${it.id}" value="${esc(it.fabric||'')}" placeholder="🧵 Тканина (напр. атлас, льон)">`:''}
+        ${whoKey==='maids'?`<input class="cloth-fabric-inp" data-fabric="${it.id}" value="${esc(it.fabric||'')}" placeholder="${fabricPlaceholder}">`:''}
       </div>`:'';
     const realTryonRow=(isTry&&it.realTryon)?`<div class="idea-realtryon"><img data-realview="${it.id}" src="${esc(it.realTryon)}" alt="" loading="lazy"><span class="idea-realtryon-lbl">📸 Твоє фото на мені</span><button class="idea-realtryon-x" data-realdel="${it.id}" aria-label="Видалити фото на мені">✕</button></div>`:'';
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
@@ -3109,7 +3111,7 @@ function closeCrop(result){
 const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика',makeup:'Краса (візаж, зачіска)',hair:'Краса (візаж, зачіска)'};
 const IDEA_FALLBACK_EMOJI={rings:'💍',makeup:'💄',hair:'💇'};
 const FAV_ROLES=[{k:'her',ic:'👰',lbl:'Катя'},{k:'his',ic:'🤵',lbl:'Дмитро'},{k:'maid',ic:'💃',lbl:'Дружка'}];
-const CLOTH_WHO={me:'🙋 Купуємо готове',maids:'👯 Шиє дружка',vendor:'🧑‍🔧 Кравець/ательє'};
+const CLOTH_WHO={me:'🙋 Купуємо готове',maids:'👯 Робить дружка',vendor:'🧑‍🔧 Кравець/майстер'};
 const CLOTH_WHO_ORDER=['me','maids','vendor'];
 function favCount(it){ return Object.values(it.favs||{}).filter(Boolean).length; }
 function approveIdea(it){
