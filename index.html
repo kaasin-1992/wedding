@@ -940,6 +940,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
+  <button class="tab-btn" data-tab="cake">🎂 Торт</button>
   <button class="tab-btn" data-tab="music">🎵 Музика</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
@@ -1611,9 +1612,37 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-df="diy">🔨 Своїми руками</button>
     <button class="filt-btn" data-df="item">🎯 Елементи</button>
     <button class="filt-btn" data-df="idea">💭 Ідеї</button>
-    <button class="filt-btn" data-df="cake">🎂 Торт</button>
   </div>
   <div id="decorList"></div>
+</div>
+
+<!-- CAKE (винесено з Декору окремою вкладкою) -->
+<div class="panel" id="tab-cake">
+  <div class="section-hint">Торт окремо: ідеї, фото, посилання на кондитерів. Додай фото/скрін чи опиши словами — і ШІ намалює, як це може виглядати.</div>
+  <div class="add-section" style="margin-bottom:16px;">
+    <details>
+      <summary>＋ Додати ідею торта</summary>
+      <div class="add-form">
+        <input type="text" id="ckName" placeholder="Що це (напр. «двоярусний, ягоди й євкаліпт»)">
+        <input type="url" id="ckUrl" placeholder="Посилання (Pinterest, кондитерська…) — необовʼязково" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <button type="button" class="idea-photo-btn" id="ckFileBtn">📁 Завантажити фото</button>
+          <button type="button" class="idea-ai-btn" id="ckImagineBtn">🪄 Уявити словами</button>
+        </div>
+        <div class="form-row">
+          <input type="text" id="ckPrice" placeholder="Ціна (напр. 3500 грн)">
+          <select id="ckWho">
+            <option value="me">🙋 Я сама</option>
+            <option value="maids">👯 Дружки</option>
+            <option value="vendor">🧑‍🔧 Кондитер</option>
+          </select>
+        </div>
+        <input type="text" id="ckNote" placeholder="Нотатка (смак, розмір, кондитер…) — для «Уявити словами» теж піде як опис">
+        <button class="submit-btn" id="addCakeBtn">Додати за посиланням / текстом</button>
+      </div>
+    </details>
+  </div>
+  <div id="cakeList"></div>
 </div>
 
 <!-- MUSIC -->
@@ -4542,14 +4571,13 @@ let decorFilter='all';
 function renderDecor(){
   const listEl=document.getElementById('decorList'); if(!listEl) return; listEl.innerHTML='';
   renderVenuePhotos();
-  let items=decor;
+  let items=decor.filter(d=>d.cat!=='cake');   // торт — окрема вкладка
   if(decorFilter==='buy') items=items.filter(d=>!d.bought && !d.diy);
   else if(decorFilter==='bought') items=items.filter(d=>d.bought);
   else if(decorFilter==='diy') items=items.filter(d=>d.diy);
   else if(decorFilter==='item') items=items.filter(d=>(d.dtype||'item')==='item');
   else if(decorFilter==='idea') items=items.filter(d=>d.dtype==='idea');
-  else if(decorFilter==='cake') items=items.filter(d=>d.cat==='cake');
-  if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; return; }
+  if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; }
   items.forEach(d=>{
     const host=hostOf(d.url);
     const price=parseMoney(d.price);
@@ -4559,7 +4587,6 @@ function renderDecor(){
     const whoKey=d.who||'me';
     const whoBadge=`<span class="badge who-${whoKey}" data-dwho="${d.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
     const diyBadge=`<span class="badge diy-badge${d.diy?' on':''}" data-ddiy="${d.id}">${d.diy?'🔨 Своїми руками':'🔨 Можна своїми руками?'}</span>`;
-    const cakeBadge=`<span class="badge diy-badge${d.cat==='cake'?' on':''}" data-dcake="${d.id}">${d.cat==='cake'?'🎂 Торт':'🎂 Це торт?'}</span>`;
     const vis=d.vis||{};
     const visBtns=`<div class="decor-vis-row">
         <button class="decor-vis-btn" data-dvis="${d.id}:sofia" ${venuePhotos.sofia?'':'disabled title="Спершу додай фото локації вище"'}>📍 Показати на Софі</button>
@@ -4579,7 +4606,7 @@ function renderDecor(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
-        <div class="hotel-meta">${dtypeBadge}${cakeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
+        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
         <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
         ${visBtns}${visThumbs}
@@ -4598,10 +4625,6 @@ function renderDecor(){
   listEl.querySelectorAll('[data-ddiy]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.ddiy); if(!d)return;
     d.diy=!d.diy; saveJSON('wed-decor',decor); renderDecor();
-  });
-  listEl.querySelectorAll('[data-dcake]').forEach(b=>b.onclick=()=>{
-    const d=decor.find(x=>x.id===b.dataset.dcake); if(!d)return;
-    d.cat=(d.cat==='cake')?'':'cake'; saveJSON('wed-decor',decor); renderDecor();
   });
   const cycleWho=(id)=>{
     const d=decor.find(x=>x.id===id); if(!d)return;
@@ -4651,6 +4674,7 @@ function renderDecor(){
     const d=decor.find(x=>x.id===id); if(!d) return;
     showImgBig((d.vis||{})[venue], (d.title||'Декор')+' · '+(venue==='sofia'?'Софі':'Хвильовий'));
   });
+  renderCake();   // торт живе в тому ж масиві decor — оновлюємо разом, щоб не забути окремого виклику
 }
 document.querySelectorAll('#decorFilters [data-df]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#decorFilters [data-df]').forEach(x=>x.classList.remove('active'));
@@ -4712,6 +4736,120 @@ document.getElementById('dImagineBtn').onclick=async()=>{
     else{ saveJSON('wed-decor',decor); renderDecor(); }
   }catch(e){
     console.warn('decorImagine',e);
+    const cur=decor.find(x=>x.id===id); if(cur){ cur.loading=false; cur._ai=false; }
+    saveJSON('wed-decor',decor); renderDecor();
+    showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
+  }
+};
+
+/* ════ ТОРТ (винесено з Декору, живе в тому ж масиві decor, cat==='cake') ════ */
+function renderCake(){
+  const listEl=document.getElementById('cakeList'); if(!listEl) return; listEl.innerHTML='';
+  const items=decor.filter(d=>d.cat==='cake');
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай ідею торта 🎂</div>'; return; }
+  items.forEach(d=>{
+    const host=hostOf(d.url);
+    const price=parseMoney(d.price);
+    const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
+    const whoKey=d.who||'me';
+    const whoBadge=`<span class="badge who-${whoKey}" data-ckwho="${d.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
+    const card=document.createElement('div'); card.className='idea-card';
+    card.innerHTML=`
+      <button class="del-x" data-ckdel="${d.id}" aria-label="Видалити ідею торта">✕</button>
+      ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      <div class="idea-body">
+        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
+        <div class="idea-title" data-cktitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Торт')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
+        <div class="hotel-meta">${priceBadge}${whoBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span></div>
+        <div class="idea-note" data-cknote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
+        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-ckdel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ckdel,'Ідею торта видалено'));
+  listEl.querySelectorAll('[data-cktake]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.cktake); if(!d)return;
+    d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
+  });
+  listEl.querySelectorAll('[data-ckwho]').forEach(el=>{
+    const cycle=()=>{
+      const d=decor.find(x=>x.id===el.dataset.ckwho); if(!d)return;
+      const order=['me','maids','vendor'];
+      d.who=order[(order.indexOf(d.who||'me')+1)%order.length];
+      saveJSON('wed-decor',decor); renderDecor();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
+  });
+  listEl.querySelectorAll('[data-cktitle]').forEach(el=>{
+    const save=()=>{ const d=decor.find(x=>x.id===el.dataset.cktitle); if(!d)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=d.title||d.url||'Торт'; return; }
+      if(v!==d.title){ d.title=v; saveJSON('wed-decor',decor); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
+  listEl.querySelectorAll('[data-cknote]').forEach(el=>{
+    const save=()=>{ const d=decor.find(x=>x.id===el.dataset.cknote); if(!d)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(v!==(d.note||'')){ d.note=v; saveJSON('wed-decor',decor); }
+    };
+    el.addEventListener('blur',save);
+  });
+}
+function cakeFormMeta(){ return {price:val('ckPrice'),who:document.getElementById('ckWho').value,note:val('ckNote'),dtype:'item',diy:false,place:''}; }
+function resetCakeForm(){
+  ['ckName','ckUrl','ckPrice','ckNote'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('ckWho').value='me';
+}
+document.getElementById('addCakeBtn').onclick=async()=>{
+  const name=val('ckName'); let url=val('ckUrl');
+  if(!name&&!url)return;
+  if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='ck'+Date.now();
+  decor.unshift({id,title:name,url,img:'',desc:'',taken:false,bought:false,cat:'cake',loading:!!url,...cakeFormMeta(),ts:Date.now()});
+  resetCakeForm();
+  saveJSON('wed-decor',decor); renderDecor();
+  if(url){
+    const prev=await fetchPreview(url);
+    const cur=decor.find(x=>x.id===id); if(!cur)return;
+    cur.loading=false;
+    if(prev){ if(!cur.title)cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+    saveJSON('wed-decor',decor); renderDecor();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-decor',decor); renderDecor(); });
+  }
+};
+document.getElementById('ckFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      const id='ck'+Date.now();
+      decor.unshift({id,title:val('ckName')||'Торт',url:'',img:data,desc:'',taken:false,bought:false,cat:'cake',loading:false,...cakeFormMeta(),ts:Date.now()});
+      resetCakeForm();
+      saveJSON('wed-decor',decor); renderDecor();
+      showToast('📸 Фото додано');
+    },0.85);
+  });
+};
+document.getElementById('ckImagineBtn').onclick=async()=>{
+  const name=val('ckName'), note=val('ckNote');
+  const text=[name,note].filter(Boolean).join('. ');
+  if(!text){ showToast('Спершу опиши словами, що уявити (назва або нотатка) 🙂'); return; }
+  const id='ck'+Date.now();
+  decor.unshift({id,title:name||text,url:'',img:'',desc:'',taken:false,bought:false,cat:'cake',loading:true,_ai:true,...cakeFormMeta(),ts:Date.now()});
+  resetCakeForm();
+  saveJSON('wed-decor',decor); renderDecor();
+  try{
+    const img=await aiGenerate([`Створи фотореалістичне фото весільного торта за описом: ${text}. Чисте, апетитне студійне фото, елегантне весілля, мʼяке природне освітлення, без тексту й водяних знаків.`]);
+    const cur=decor.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false; cur._ai=false;
+    if(img) downscaleSrc(img,768,small=>{ cur.img=small||img; saveJSON('wed-decor',decor); renderDecor(); },0.8);
+    else{ saveJSON('wed-decor',decor); renderDecor(); }
+  }catch(e){
+    console.warn('cakeImagine',e);
     const cur=decor.find(x=>x.id===id); if(cur){ cur.loading=false; cur._ai=false; }
     saveJSON('wed-decor',decor); renderDecor();
     showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
