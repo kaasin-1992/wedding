@@ -193,6 +193,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hotel-pinp{font:inherit;font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);width:118px;max-width:42vw;}
 .hotel-status{cursor:pointer;}
 .hotel-status.booked{background:var(--done-dim);color:var(--done);}
+/* ── ДЕКОР: фото локацій, відповідальний, DIY, візуалізація ── */
+.venue-photos-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden;}
+.venue-photos-wrap>summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:13.5px;color:var(--text);}
+.venue-photos-wrap>summary::-webkit-details-marker{display:none;}
+.venue-photos{display:flex;gap:10px;padding:0 15px 15px;}
+.venue-photo-card{flex:1;min-width:0;text-align:center;}
+.venue-photo-frame{width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface2);border:1.5px dashed var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);cursor:pointer;}
+.venue-photo-lbl{font-size:12px;font-weight:600;margin:6px 0 5px;}
+.venue-photo-btns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;}
+.venue-photo-btn{font-size:10.5px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:4px 9px;cursor:pointer;font-weight:600;}
+.dd-diy-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);flex:1;white-space:nowrap;}
+.decor-vis-row{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+.decor-vis-btn{flex:1;min-width:120px;padding:8px;border-radius:9px;border:1px dashed var(--terra);background:var(--terra-dim);color:var(--terra);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);}
+.decor-vis-btn:disabled{opacity:.5;cursor:default;}
+.decor-vis-thumbs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.decor-vis-thumb{position:relative;width:76px;height:76px;border-radius:9px;overflow:hidden;cursor:zoom-in;border:1px solid var(--line);}
+.decor-vis-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.decor-vis-thumb .dv-lbl{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:9px;text-align:center;padding:1px 2px;}
+.badge.who-me{background:var(--rose-dim);color:var(--rose);}
+.badge.who-maids{background:var(--sage-dim);color:var(--sage);}
+.badge.who-vendor{background:var(--gold);color:#fff;}
+.badge.diy-badge{background:var(--surface2);color:var(--muted);cursor:pointer;border:1px dashed var(--line);}
+.badge.diy-badge.on{background:var(--warn-dim);color:var(--warn);border-style:solid;border-color:var(--warn);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
 .status-dot{width:9px;height:9px;border-radius:50%;}
 .status-dot.pending{background:var(--muted);}
@@ -1338,6 +1361,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
   <button class="moodboard-btn" data-moodboard="decor">🎨 Мудборд декору</button>
+  <details class="venue-photos-wrap">
+    <summary>📍 Фото локацій (для візуалізації декору)</summary>
+    <div class="venue-photos" id="venuePhotosBox"></div>
+  </details>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати декор</summary>
@@ -1348,10 +1375,24 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
           <input type="text" id="dPrice" placeholder="Ціна (напр. 1200 грн)">
           <input type="text" id="dPlace" placeholder="Локація (Софі / Хвильовий)">
         </div>
+        <div class="form-row">
+          <select id="dWho">
+            <option value="me">🙋 Я сама</option>
+            <option value="maids">👯 Дружки</option>
+            <option value="vendor">🧑‍🔧 Підрядник</option>
+          </select>
+          <label class="dd-diy-check"><input type="checkbox" id="dDiy"> 🔨 Своїми руками</label>
+        </div>
         <input type="text" id="dNote" placeholder="Нотатка (деталі, кількість…)">
         <button class="submit-btn" id="addDecorBtn">Додати</button>
       </div>
     </details>
+  </div>
+  <div class="filters" id="decorFilters">
+    <button class="filt-btn active" data-df="all">Все</button>
+    <button class="filt-btn" data-df="buy">🛒 Купити</button>
+    <button class="filt-btn" data-df="bought">🛍 Куплено</button>
+    <button class="filt-btn" data-df="diy">🔨 Своїми руками</button>
   </div>
   <div id="decorList"></div>
 </div>
@@ -1457,8 +1498,8 @@ function loadJSON(key, fallback){
    він переростає ліміт, і ТОДІ ВЗАГАЛІ НІЧОГО не зберігається (мовчазна помилка).
    Тому важкі картинки кладемо в окремі документи тієї ж колекції `wedding`,
    а в state лишаємо тільки легкі дані (для ідей — маркер '@m' замість base64). */
-const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-outfit':'outfit'};
-const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', mannequin:'m_mannequin', outfit:'m_outfit'};
+const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-outfit':'outfit','wed-venues':'venuePhotos'};
+const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', mannequin:'m_mannequin', outfit:'m_outfit', venuePhotos:'m_venuePhotos'};
 const isDataUrl = s => /^data:/.test(s||'');
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
 function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
@@ -1513,11 +1554,12 @@ const mediaCache = {base:{}, idea:{}};
 const legacyMedia = {};   // старі картинки, що могли лишитись у самому state (для сумісності)
 // зібрати повні дані з легких (state) + важких (окремі документи) і перемалювати
 function applyMedia(){
-  ['photos','photosFull','mannequin','outfit'].forEach(name=>{
+  ['photos','photosFull','mannequin','outfit','venuePhotos'].forEach(name=>{
     const m = mediaCache.base[name] || legacyMedia[name];
     if(m && typeof m==='object'){
       if(name==='photos') photos=m; else if(name==='photosFull') photosFull=m;
-      else if(name==='mannequin') mannequin=m; else outfit=m;
+      else if(name==='mannequin') mannequin=m; else if(name==='outfit') outfit=m;
+      else venuePhotos=m;
     }
   });
   // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа.
@@ -1542,6 +1584,7 @@ function applyMedia(){
   DB.set('wed-photos-full',JSON.stringify(photosFull));
   DB.set('wed-mannequin',JSON.stringify(mannequin));
   DB.set('wed-outfit',JSON.stringify(outfit));
+  DB.set('wed-venues',JSON.stringify(venuePhotos));
   DB.set('wed-ideas',JSON.stringify(ideas));
   applyingSnapshot=false;
   if(typeof renderAll==='function') renderAll();
@@ -1557,10 +1600,11 @@ function startMediaSync(){
       else if(id==='m_photosFull') mediaCache.base.photosFull=data.d;
       else if(id==='m_mannequin') mediaCache.base.mannequin=data.d;
       else if(id==='m_outfit') mediaCache.base.outfit=data.d;
+      else if(id==='m_venuePhotos') mediaCache.base.venuePhotos=data.d;
       else if(id.indexOf('m_idea_')===0){
         const iid=id.slice(7);
         if(ch.type==='removed') delete mediaCache.idea[iid];
-        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon,cleanImg:data.cleanImg};
+        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon,cleanImg:data.cleanImg,realTryon:data.realTryon};
       }
     });
     applyMedia();
@@ -1637,6 +1681,7 @@ let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
+let venuePhotos = loadJSON('wed-venues', {sofia:'',wave:''}); // фото самих локацій (Софі / Хвильовий) для візуалізації декору {sofia,wave}
 let bodyMetrics = loadJSON('wed-metrics', {her:{build:'',height:'',size:''}, his:{build:'',height:'',size:''}}); // параметри тіла для промптів {her,his}
 // ручний колаж (альтернатива ШІ-примірці): {her:{gtype: ideaId}, his:{gtype: ideaId}} — по одній речі на тип
 let collage     = loadJSON('wed-collage', {her:{},his:{}});
@@ -4069,14 +4114,96 @@ document.getElementById('addHotelBtn').onclick=async()=>{
 };
 
 /* ════ ДЕКОР ════ */
+const VENUE_LABELS={sofia:'💒 Софі', wave:'🥂 Хвильовий'};
+function renderVenuePhotos(){
+  const box=document.getElementById('venuePhotosBox'); if(!box) return;
+  box.innerHTML=Object.keys(VENUE_LABELS).map(k=>{
+    const img=venuePhotos[k];
+    return `<div class="venue-photo-card">
+      <div class="venue-photo-frame" data-venueview="${k}" style="${img?`background-image:url('${esc(img)}')`:''}">${img?'':'📍'}</div>
+      <div class="venue-photo-lbl">${VENUE_LABELS[k]}</div>
+      <div class="venue-photo-btns">
+        <button class="venue-photo-btn" data-venuefile="${k}">📁 Файл</button>
+        <button class="venue-photo-btn" data-venuelink="${k}">🔗 Лінк</button>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-venueview]').forEach(el=>el.onclick=()=>{
+    const k=el.dataset.venueview; if(venuePhotos[k]) showImgBig(venuePhotos[k], VENUE_LABELS[k]);
+  });
+  box.querySelectorAll('[data-venuefile]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.venuefile;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        venuePhotos[k]=data; saveJSON('wed-venues',venuePhotos); renderVenuePhotos();
+        showToast('📍 Фото локації додано');
+      },0.85);
+    });
+  });
+  box.querySelectorAll('[data-venuelink]').forEach(b=>b.onclick=async()=>{
+    const k=b.dataset.venuelink;
+    let url=prompt('🔗 Посилання на фото локації «'+VENUE_LABELS[k].replace(/^\S+\s/,'')+'»:');
+    if(!url) return;
+    url=url.trim(); if(!url) return;
+    if(!/^https?:\/\//i.test(url)) url='https://'+url;
+    showToast('Тягну фото за посиланням…');
+    const prev=await fetchPreview(url);
+    if(!prev || !prev.img){ showToast('Не вдалось підтягнути фото за цим посиланням'); return; }
+    const du=await srcToDataUrl(prev.img);
+    if(!du){ showToast('Не вдалось завантажити фото (сайт блокує)'); return; }
+    downscaleSrc(du,1024,data=>{
+      venuePhotos[k]=data||du; saveJSON('wed-venues',venuePhotos); renderVenuePhotos();
+      showToast('📍 Фото локації додано');
+    },0.85);
+  });
+}
+async function aiVisualizeDecor(d, venue){
+  const venueSrc=venuePhotos[venue]; if(!venueSrc){ showToast('Спершу додай фото цієї локації вище 👆'); return; }
+  if(!d.img){ showToast('У цієї ідеї декору нема фото — додай посилання або фото товару спершу.'); return; }
+  const venueLbl=venue==='sofia'?'Софі':'Хвильовий';
+  showToast(`🖼 Домальовую «${d.title||'декор'}» на локації ${venueLbl}…`);
+  try{
+    const venuePart=await srcToPart(venueSrc);
+    const decorPart=await srcToPart(d.img);
+    if(!venuePart||!decorPart){ showToast('Не вдалось підготувати фото 😕'); return; }
+    const img=await aiGenerate([`Зображення 1 — [ЛОКАЦІЯ]: реальне фото весільної локації. Зображення 2 — [ДЕКОР]: фото декоративного елементу «${d.title||''}». Завдання: домалюй [ДЕКОР] у [ЛОКАЦІЮ] природно й доречно — якщо це велика річ (арка, гірлянда, пресвол) розмісти як фокальний елемент простору; якщо дрібниця (свічки, текстиль, посуд) — на столах/поверхнях. Архітектуру, стіни, вікна, меблі й освітлення локації НЕ змінюй і не вигадуй нову локацію — це має лишатись впізнавано ТА САМА локація, лише з доданим декором. Фотореалістично, узгоджені тіні й перспектива.`, venuePart, decorPart]);
+    if(!img){ showToast('ШІ не зміг згенерувати 😕'); return; }
+    downscaleSrc(img,896,small=>{
+      const res=small||img;
+      d.vis=d.vis||{}; d.vis[venue]=res;
+      saveJSON('wed-decor',decor); renderDecor();
+      showToast('🖼 Готово!');
+    },0.8);
+  }catch(e){ console.warn('visualizeDecor',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
+}
+const DECOR_WHO={me:'🙋 Я',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
+let decorFilter='all';
 function renderDecor(){
   const listEl=document.getElementById('decorList'); if(!listEl) return; listEl.innerHTML='';
-  if(!decor.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай ідею декору 🌸</div>'; return; }
-  decor.forEach(d=>{
+  renderVenuePhotos();
+  let items=decor;
+  if(decorFilter==='buy') items=items.filter(d=>!d.bought && !d.diy);
+  else if(decorFilter==='bought') items=items.filter(d=>d.bought);
+  else if(decorFilter==='diy') items=items.filter(d=>d.diy);
+  if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; return; }
+  items.forEach(d=>{
     const host=hostOf(d.url);
     const price=parseMoney(d.price);
     const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
     const place=d.place?`<span class="badge">📍 ${esc(d.place)}</span>`:'';
+    const whoKey=d.who||'me';
+    const whoBadge=`<span class="badge who-${whoKey}" data-dwho="${d.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
+    const diyBadge=`<span class="badge diy-badge${d.diy?' on':''}" data-ddiy="${d.id}">${d.diy?'🔨 Своїми руками':'🔨 Можна своїми руками?'}</span>`;
+    const vis=d.vis||{};
+    const visBtns=`<div class="decor-vis-row">
+        <button class="decor-vis-btn" data-dvis="${d.id}:sofia" ${venuePhotos.sofia?'':'disabled title="Спершу додай фото локації вище"'}>📍 Показати на Софі</button>
+        <button class="decor-vis-btn" data-dvis="${d.id}:wave" ${venuePhotos.wave?'':'disabled title="Спершу додай фото локації вище"'}>📍 Показати на Хвильовому</button>
+      </div>`;
+    const visThumbs=(vis.sofia||vis.wave)?`<div class="decor-vis-thumbs">
+        ${vis.sofia?`<div class="decor-vis-thumb" data-dvisview="${d.id}:sofia"><img src="${esc(vis.sofia)}" alt=""><span class="dv-lbl">Софі</span></div>`:''}
+        ${vis.wave?`<div class="decor-vis-thumb" data-dvisview="${d.id}:wave"><img src="${esc(vis.wave)}" alt=""><span class="dv-lbl">Хвильовий</span></div>`:''}
+      </div>`:'';
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-ddel="${d.id}" aria-label="Видалити декор">✕</button>
@@ -4086,9 +4213,10 @@ function renderDecor(){
         <div class="idea-title">${esc(d.title||d.url||'Декор')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
-        <div class="hotel-meta">${priceBadge}${place}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
+        <div class="hotel-meta">${priceBadge}${place}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
         ${d.note?`<div class="idea-note">${esc(d.note)}</div>`:''}
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+        ${visBtns}${visThumbs}
       </div>`;
     listEl.appendChild(card);
   });
@@ -4101,14 +4229,44 @@ function renderDecor(){
     const d=decor.find(x=>x.id===b.dataset.dbought); if(!d)return;
     d.bought=!d.bought; saveJSON('wed-decor',decor); renderDecor();
   });
+  listEl.querySelectorAll('[data-ddiy]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ddiy); if(!d)return;
+    d.diy=!d.diy; saveJSON('wed-decor',decor); renderDecor();
+  });
+  const cycleWho=(id)=>{
+    const d=decor.find(x=>x.id===id); if(!d)return;
+    const order=['me','maids','vendor'];
+    d.who=order[(order.indexOf(d.who||'me')+1)%order.length];
+    saveJSON('wed-decor',decor); renderDecor();
+  };
+  listEl.querySelectorAll('[data-dwho]').forEach(el=>{
+    el.onclick=()=>cycleWho(el.dataset.dwho);
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycleWho(el.dataset.dwho); } };
+  });
+  listEl.querySelectorAll('[data-dvis]').forEach(b=>b.onclick=()=>{
+    const [id,venue]=b.dataset.dvis.split(':');
+    const d=decor.find(x=>x.id===id); if(d) aiVisualizeDecor(d,venue);
+  });
+  listEl.querySelectorAll('[data-dvisview]').forEach(el=>el.onclick=()=>{
+    const [id,venue]=el.dataset.dvisview.split(':');
+    const d=decor.find(x=>x.id===id); if(!d) return;
+    showImgBig((d.vis||{})[venue], (d.title||'Декор')+' · '+(venue==='sofia'?'Софі':'Хвильовий'));
+  });
 }
+document.querySelectorAll('#decorFilters [data-df]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#decorFilters [data-df]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  decorFilter=b.dataset.df; renderDecor();
+});
 document.getElementById('addDecorBtn').onclick=async()=>{
   const name=val('dName'); let url=val('dUrl');
   if(!name&&!url)return;
   if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
   const id='d'+Date.now();
-  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
+  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
   ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('dWho').value='me';
+  document.getElementById('dDiy').checked=false;
   saveJSON('wed-decor',decor); renderDecor();
   if(url){
     const prev=await fetchPreview(url);
