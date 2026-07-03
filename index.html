@@ -230,6 +230,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .badge.who-vendor{background:var(--gold);color:#fff;}
 .badge.diy-badge{background:var(--surface2);color:var(--muted);cursor:pointer;border:1px dashed var(--line);}
 .badge.diy-badge.on{background:var(--warn-dim);color:var(--warn);border-style:solid;border-color:var(--warn);}
+.badge.dtype-item{background:var(--terra-dim);color:var(--terra);cursor:pointer;}
+.badge.dtype-idea{background:var(--surface2);color:var(--muted);cursor:pointer;}
+.idea-note[data-dnote]:empty:before{content:'＋ нотатка…';color:var(--muted);}
 .guest-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
 .status-dot{width:9px;height:9px;border-radius:50%;}
 .status-dot.pending{background:var(--muted);}
@@ -1437,8 +1440,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
             <option value="maids">👯 Дружки</option>
             <option value="vendor">🧑‍🔧 Підрядник</option>
           </select>
-          <label class="dd-diy-check"><input type="checkbox" id="dDiy"> 🔨 Своїми руками</label>
+          <select id="dType">
+            <option value="item">🎯 Конкретний елемент</option>
+            <option value="idea">💭 Загальна ідея</option>
+          </select>
         </div>
+        <label class="dd-diy-check"><input type="checkbox" id="dDiy"> 🔨 Своїми руками</label>
         <input type="text" id="dNote" placeholder="Нотатка (деталі, кількість…)">
         <button class="submit-btn" id="addDecorBtn">Додати</button>
       </div>
@@ -1449,6 +1456,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-df="buy">🛒 Купити</button>
     <button class="filt-btn" data-df="bought">🛍 Куплено</button>
     <button class="filt-btn" data-df="diy">🔨 Своїми руками</button>
+    <button class="filt-btn" data-df="item">🎯 Елементи</button>
+    <button class="filt-btn" data-df="idea">💭 Ідеї</button>
+    <button class="filt-btn" data-df="cake">🎂 Торт</button>
   </div>
   <div id="decorList"></div>
 </div>
@@ -4316,15 +4326,20 @@ function renderDecor(){
   if(decorFilter==='buy') items=items.filter(d=>!d.bought && !d.diy);
   else if(decorFilter==='bought') items=items.filter(d=>d.bought);
   else if(decorFilter==='diy') items=items.filter(d=>d.diy);
+  else if(decorFilter==='item') items=items.filter(d=>(d.dtype||'item')==='item');
+  else if(decorFilter==='idea') items=items.filter(d=>d.dtype==='idea');
+  else if(decorFilter==='cake') items=items.filter(d=>d.cat==='cake');
   if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; return; }
   items.forEach(d=>{
     const host=hostOf(d.url);
     const price=parseMoney(d.price);
     const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
-    const place=d.place?`<span class="badge">📍 ${esc(d.place)}</span>`:'';
+    const dtypeKey=d.dtype==='idea'?'idea':'item';
+    const dtypeBadge=`<span class="badge dtype-${dtypeKey}" data-ddtype="${d.id}" role="button" tabindex="0" title="Тицяй, щоб перемкнути">${dtypeKey==='idea'?'💭 Загальна ідея':'🎯 Конкретний елемент'}</span>`;
     const whoKey=d.who||'me';
     const whoBadge=`<span class="badge who-${whoKey}" data-dwho="${d.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
     const diyBadge=`<span class="badge diy-badge${d.diy?' on':''}" data-ddiy="${d.id}">${d.diy?'🔨 Своїми руками':'🔨 Можна своїми руками?'}</span>`;
+    const cakeBadge=`<span class="badge diy-badge${d.cat==='cake'?' on':''}" data-dcake="${d.id}">${d.cat==='cake'?'🎂 Торт':'🎂 Це торт?'}</span>`;
     const vis=d.vis||{};
     const visBtns=`<div class="decor-vis-row">
         <button class="decor-vis-btn" data-dvis="${d.id}:sofia" ${venuePhotos.sofia?'':'disabled title="Спершу додай фото локації вище"'}>📍 Показати на Софі</button>
@@ -4340,11 +4355,12 @@ function renderDecor(){
       ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
         ${d.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
-        <div class="idea-title">${esc(d.title||d.url||'Декор')}</div>
+        <div class="idea-title" data-dtitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Декор')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
-        <div class="hotel-meta">${priceBadge}${place}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
-        ${d.note?`<div class="idea-note">${esc(d.note)}</div>`:''}
+        <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
+        <div class="hotel-meta">${dtypeBadge}${cakeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
+        <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
         ${visBtns}${visThumbs}
       </div>`;
@@ -4363,6 +4379,10 @@ function renderDecor(){
     const d=decor.find(x=>x.id===b.dataset.ddiy); if(!d)return;
     d.diy=!d.diy; saveJSON('wed-decor',decor); renderDecor();
   });
+  listEl.querySelectorAll('[data-dcake]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dcake); if(!d)return;
+    d.cat=(d.cat==='cake')?'':'cake'; saveJSON('wed-decor',decor); renderDecor();
+  });
   const cycleWho=(id)=>{
     const d=decor.find(x=>x.id===id); if(!d)return;
     const order=['me','maids','vendor'];
@@ -4372,6 +4392,35 @@ function renderDecor(){
   listEl.querySelectorAll('[data-dwho]').forEach(el=>{
     el.onclick=()=>cycleWho(el.dataset.dwho);
     el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycleWho(el.dataset.dwho); } };
+  });
+  const toggleDtype=(id)=>{
+    const d=decor.find(x=>x.id===id); if(!d)return;
+    d.dtype=(d.dtype==='idea')?'item':'idea';
+    saveJSON('wed-decor',decor); renderDecor();
+  };
+  listEl.querySelectorAll('[data-ddtype]').forEach(el=>{
+    el.onclick=()=>toggleDtype(el.dataset.ddtype);
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleDtype(el.dataset.ddtype); } };
+  });
+  listEl.querySelectorAll('[data-dplace]').forEach(inp=>inp.onchange=()=>{
+    const d=decor.find(x=>x.id===inp.dataset.dplace); if(!d)return;
+    d.place=inp.value.trim(); saveJSON('wed-decor',decor);
+  });
+  listEl.querySelectorAll('[data-dtitle]').forEach(el=>{
+    const save=()=>{ const d=decor.find(x=>x.id===el.dataset.dtitle); if(!d)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=d.title||d.url||'Декор'; return; }
+      if(v!==d.title){ d.title=v; saveJSON('wed-decor',decor); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
+  listEl.querySelectorAll('[data-dnote]').forEach(el=>{
+    const save=()=>{ const d=decor.find(x=>x.id===el.dataset.dnote); if(!d)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(v!==(d.note||'')){ d.note=v; saveJSON('wed-decor',decor); }
+    };
+    el.addEventListener('blur',save);
   });
   listEl.querySelectorAll('[data-dvis]').forEach(b=>b.onclick=()=>{
     const [id,venue]=b.dataset.dvis.split(':');
@@ -4393,9 +4442,10 @@ document.getElementById('addDecorBtn').onclick=async()=>{
   if(!name&&!url)return;
   if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
   const id='d'+Date.now();
-  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
+  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
   ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('dWho').value='me';
+  document.getElementById('dType').value='item';
   document.getElementById('dDiy').checked=false;
   saveJSON('wed-decor',decor); renderDecor();
   if(url){
