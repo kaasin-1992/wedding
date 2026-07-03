@@ -456,7 +456,11 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-approve{display:block;width:100%;text-align:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
 .idea-approve:hover{filter:brightness(.96);}
 .idea-approve.on{background:var(--done-dim);border-color:var(--done);color:var(--done);}
+.idea-bought{display:block;width:100%;text-align:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
+.idea-bought:hover{filter:brightness(.96);}
+.idea-bought.on{background:var(--gold-dim,var(--surface2));border-color:var(--gold);color:var(--gold);}
 .idea-card.approved{border-color:var(--done);box-shadow:0 0 0 1px var(--done) inset;}
+.idea-card.bought{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
 .idea-card .del-x{opacity:.85;background:rgba(255,253,248,.82);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:2;backdrop-filter:blur(2px);}
 
 .idea-photo-btn{display:block;width:100%;text-align:center;background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;}
@@ -2135,9 +2139,10 @@ function renderIdeas(){
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
+    const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
     const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
-    const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'');
+    const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'')+(it.bought?' bought':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
       ${thumb}
@@ -2148,7 +2153,7 @@ function renderIdeas(){
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${aiBtns}${approveBtn}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -2164,6 +2169,10 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.approve); if(it) approveIdea(it);
+  });
+  listEl.querySelectorAll('[data-bought]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.bought); if(!it)return;
+    it.bought=!it.bought; saveJSON('wed-ideas',ideas); renderIdeas();
   });
   listEl.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.photo); if(!it) return;
@@ -2394,7 +2403,7 @@ function renderBasePhotos(){
     wrap.querySelectorAll('.bp-m').forEach(el=>{ if(document.activeElement!==el) el.value=m[el.dataset.m]||''; });
   });
 }
-let coupleMode={her:'ai',his:'ai'};   // 'ai' | 'collage' — не персистимо, завжди стартує з ШІ-режиму
+let coupleMode={her:'collage',his:'collage'};   // 'ai' | 'collage' — колаж за замовчуванням, ШІ-примірка другорядна (перемикається кнопкою)
 // ручний колаж: базове фото людини + шари вдягнених речей (наближене позиціювання за типом речі, без ручного перетягування)
 function renderCollageHTML(who){
   const base=mannequin[who]||photosFull[who]||photos[who];
@@ -3732,7 +3741,7 @@ function renderDecor(){
         <div class="idea-title">${esc(d.title||d.url||'Декор')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
-        <div class="hotel-meta">${priceBadge}${place}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span></div>
+        <div class="hotel-meta">${priceBadge}${place}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
         ${d.note?`<div class="idea-note">${esc(d.note)}</div>`:''}
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
@@ -3743,13 +3752,17 @@ function renderDecor(){
     const d=decor.find(x=>x.id===b.dataset.dtake); if(!d)return;
     d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
   });
+  listEl.querySelectorAll('[data-dbought]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dbought); if(!d)return;
+    d.bought=!d.bought; saveJSON('wed-decor',decor); renderDecor();
+  });
 }
 document.getElementById('addDecorBtn').onclick=async()=>{
   const name=val('dName'); let url=val('dUrl');
   if(!name&&!url)return;
   if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
   const id='d'+Date.now();
-  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),note:val('dNote'),img:'',desc:'',taken:false,loading:!!url,ts:Date.now()});
+  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
   ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
   saveJSON('wed-decor',decor); renderDecor();
   if(url){
