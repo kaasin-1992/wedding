@@ -4050,6 +4050,16 @@ function startSync(){
     if(d.partyNotes && typeof d.partyNotes==='object') partyNotes={her:d.partyNotes.her||'',his:d.partyNotes.his||''};
     if(d.bar && typeof d.bar==='object') bar=d.bar;
     if(Array.isArray(d.team)) team=d.team;
+    // БЕЗПЕКА: гостям (?guest) ніколи не тримаємо бюджет і "травку" в пам'яті чи localStorage —
+    // раніше це лише ховалось у рендері, а самі дані все одно летіли в браузер гостя й лежали в
+    // localStorage. Це не замінює правила безпеки Firestore (їх треба звузити в консолі Firebase
+    // окремо), але закриває найпростіший шлях витоку — консоль розробника / Application-таб.
+    if(IS_GUEST){
+      const stripped=stripGuestData({tasks,scriptSofia,scriptWave});
+      budget=stripped.budget; tasks=stripped.tasks;
+      scriptSofia=stripped.scriptSofia; scriptWave=stripped.scriptWave;
+      weedPassHash=stripped.weedPassHash;
+    }
     // оновлюємо локальний кеш
     DB.set('wed-tasks',JSON.stringify(tasks));
     DB.set('wed-guests',JSON.stringify(guests));
