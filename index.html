@@ -4995,7 +4995,6 @@ function renderMusic(){
   if(!music.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай артиста чи діджея 🎵</div>'; return; }
   music.forEach(m=>{
     const host=hostOf(m.url);
-    const role=m.role?`<span class="badge">🎚 ${esc(m.role)}</span>`:'';
     const st=m.status||'search';
     const embed=musicEmbedSrc(m.url);
     const card=document.createElement('div'); card.className='idea-card';
@@ -5004,11 +5003,15 @@ function renderMusic(){
       ${m.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(m.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
         ${m.loading?`<div class="idea-loading">${m._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
-        <div class="idea-title">${esc(m.name||m.url||'Артист')}</div>
+        <div class="idea-title" data-mtitle="${m.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(m.name||m.url||'Артист')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
-        <div class="hotel-meta">${role}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span></div>
-        ${m.terms?`<div class="idea-note">📋 ${esc(m.terms)}</div>`:''}
-        ${m.note?`<div class="idea-desc">${esc(m.note)}</div>`:''}
+        <div class="idea-price-row"><span class="pl">🎚</span><input class="idea-price-inp" data-mrole="${m.id}" value="${esc(m.role||'')}" placeholder="роль (діджей/гурт…)" aria-label="Роль"></div>
+        <div class="idea-price-row"><span class="pl">🔗</span><input class="idea-price-inp" data-murl="${m.id}" value="${esc(m.url||'')}" placeholder="посилання" aria-label="Посилання" autocapitalize="none" spellcheck="false"></div>
+        <div class="hotel-meta"><span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
+          <button class="idea-photo-btn" data-mphoto="${m.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${m.img?'Змінити фото':'Додати фото'}</button>
+        </div>
+        <div class="idea-note" data-mterms="${m.id}" contenteditable="true" spellcheck="false" data-ph="Умови роботи (ціна, сет, апаратура…)" title="Тицяй, щоб редагувати умови">${m.terms?esc(m.terms):''}</div>
+        <div class="idea-note" data-mnote="${m.id}" contenteditable="true" spellcheck="false" data-ph="Нотатка (враження, стиль…)" title="Тицяй, щоб редагувати нотатку">${m.note?esc(m.note):''}</div>
         ${embed?`<iframe class="music-embed-frame" src="${esc(embed.src)}" style="height:${embed.height}px" loading="lazy" allow="encrypted-media; autoplay" referrerpolicy="no-referrer"></iframe>`:''}
         ${m.url?`<div class="idea-actions"><a class="idea-open" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
@@ -5018,6 +5021,49 @@ function renderMusic(){
   listEl.querySelectorAll('[data-mst]').forEach(b=>b.onclick=()=>{
     const m=music.find(x=>x.id===b.dataset.mst); if(!m)return;
     m.status=MUSIC_NEXT[m.status||'search']; saveJSON('wed-music',music); renderMusic();
+  });
+  listEl.querySelectorAll('[data-mtitle]').forEach(el=>{
+    const save=()=>{ const m=music.find(x=>x.id===el.dataset.mtitle); if(!m)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=m.name||m.url||'Артист'; return; }
+      if(v!==m.name){ m.name=v; saveJSON('wed-music',music); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
+  listEl.querySelectorAll('[data-mrole]').forEach(inp=>inp.onchange=()=>{
+    const m=music.find(x=>x.id===inp.dataset.mrole); if(!m)return;
+    m.role=inp.value.trim(); saveJSON('wed-music',music);
+  });
+  listEl.querySelectorAll('[data-murl]').forEach(inp=>inp.onchange=()=>{
+    const m=music.find(x=>x.id===inp.dataset.murl); if(!m)return;
+    let v=inp.value.trim();
+    if(v&&!/^https?:\/\//i.test(v)) v='https://'+v;
+    m.url=v; saveJSON('wed-music',music); renderMusic();   // перерендер, бо host/embed/лінк «Відкрити» залежать від url
+  });
+  listEl.querySelectorAll('[data-mterms]').forEach(el=>{
+    const save=()=>{ const m=music.find(x=>x.id===el.dataset.mterms); if(!m)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(v!==(m.terms||'')){ m.terms=v; saveJSON('wed-music',music); }
+    };
+    el.addEventListener('blur',save);
+  });
+  listEl.querySelectorAll('[data-mnote]').forEach(el=>{
+    const save=()=>{ const m=music.find(x=>x.id===el.dataset.mnote); if(!m)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(v!==(m.note||'')){ m.note=v; saveJSON('wed-music',music); }
+    };
+    el.addEventListener('blur',save);
+  });
+  listEl.querySelectorAll('[data-mphoto]').forEach(b=>b.onclick=()=>{
+    const m=music.find(x=>x.id===b.dataset.mphoto); if(!m)return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        m.img=data; saveJSON('wed-music',music); renderMusic();
+        showToast('📸 Фото оновлено');
+      },0.85);
+    });
   });
 }
 function renderMustPlay(){
