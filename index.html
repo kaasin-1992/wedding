@@ -784,12 +784,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- TASKS -->
 <div class="panel active" id="tab-tasks">
-  <div class="progress-strip">
-    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
-    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
-  </div>
-  <div class="timeline" id="timeline"></div>
-  <div class="add-section" style="margin-top:24px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати завдання</summary>
       <div class="add-form">
@@ -799,27 +794,16 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="progress-strip">
+    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
+    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
+  </div>
+  <div class="timeline" id="timeline"></div>
 </div>
 
 <!-- GUESTS -->
 <div class="panel" id="tab-guests">
-  <div class="stats-grid" id="guestStats"></div>
-  <div class="filters">
-    <button class="filt-btn active" data-f="all">Всі</button>
-    <button class="filt-btn" data-f="her">Мої</button>
-    <button class="filt-btn" data-f="his">Його</button>
-    <button class="filt-btn" data-f="family">Родичі</button>
-    <button class="filt-btn" data-f="friends">Друзі</button>
-    <button class="filt-btn" data-f="ceremony">Розпис</button>
-    <button class="filt-btn" data-f="party">Вечірка</button>
-    <button class="filt-btn" data-f="plus1">+1</button>
-    <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
-    <button class="filt-btn" data-f="backup">⏳ Запасні</button>
-    <button class="filt-btn" data-f="wparty">💐 Дружки</button>
-    <button class="filt-btn" data-f="pending">Не підтвердили</button>
-  </div>
-  <div class="guest-list" id="guestList"></div>
-  <div class="add-section">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати гостя</summary>
       <div class="add-form">
@@ -867,22 +851,27 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="stats-grid" id="guestStats"></div>
+  <div class="filters">
+    <button class="filt-btn active" data-f="all">Всі</button>
+    <button class="filt-btn" data-f="her">Мої</button>
+    <button class="filt-btn" data-f="his">Його</button>
+    <button class="filt-btn" data-f="family">Родичі</button>
+    <button class="filt-btn" data-f="friends">Друзі</button>
+    <button class="filt-btn" data-f="ceremony">Розпис</button>
+    <button class="filt-btn" data-f="party">Вечірка</button>
+    <button class="filt-btn" data-f="plus1">+1</button>
+    <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
+    <button class="filt-btn" data-f="backup">⏳ Запасні</button>
+    <button class="filt-btn" data-f="wparty">💐 Дружки</button>
+    <button class="filt-btn" data-f="pending">Не підтвердили</button>
+  </div>
+  <div class="guest-list" id="guestList"></div>
 </div>
 
 <!-- BUDGET -->
 <div class="panel" id="tab-budget">
-  <div class="budget-cap">
-    <label for="capInput">Орієнтовний бюджет</label>
-    <input type="number" id="capInput" placeholder="0" min="0">
-  </div>
-  <div class="budget-summary">
-    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--terra)">0</div><div class="bsum-lbl">Заплановано</div></div>
-    <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
-    <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
-  </div>
-  <div id="capNote"></div>
-  <div id="budgetList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати статтю витрат</summary>
       <div class="add-form">
@@ -901,13 +890,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="budget-cap">
+    <label for="capInput">Орієнтовний бюджет</label>
+    <input type="number" id="capInput" placeholder="0" min="0">
+  </div>
+  <div class="budget-summary">
+    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--terra)">0</div><div class="bsum-lbl">Заплановано</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
+  </div>
+  <div id="capNote"></div>
+  <div id="budgetList"></div>
 </div>
 
 <!-- CONTACTS -->
 <div class="panel" id="tab-contacts">
   <div class="section-hint">Підрядники й контакти. Під кожною роллю можна додати кілька <b>варіантів</b> з контактами, а потім тицьнути «Обрати» — обраний показується зверху й лишається як основний. Тицьни на статус, щоб змінити: 🔍 Шукаємо → 💬 На звʼязку → ✅ Заброньовано.</div>
-  <div id="contactList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати роль / підрядника</summary>
       <div class="add-form">
@@ -921,13 +920,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="contactList"></div>
 </div>
 
 <!-- NOTES -->
 <div class="panel" id="tab-notes">
   <div class="section-hint">Ідеї, списки, що завгодно — все, що треба тримати під рукою.</div>
-  <div id="noteList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати нотатку</summary>
       <div class="add-form">
@@ -937,6 +936,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="noteList"></div>
 </div>
 
 <!-- IDEAS / LOOK -->
@@ -1067,19 +1067,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn active" data-p="her">👰 Дівич-вечір</button>
     <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
   </div>
-  <div class="party-general">
-    <label class="party-general-lbl" id="partyGenLbl" for="partyGenNote">💬 Загальний коментар про вечірку</label>
-    <textarea id="partyGenNote" class="party-general-note" rows="2" placeholder="Спільні думки — місце, бюджет, ідеї, дата…"></textarea>
-  </div>
-  <div class="add-section" style="margin-bottom:14px;">
-    <details>
-      <summary>👥 Обрати зі списку гостей</summary>
-      <div class="party-pick-hint" id="partyPickHint"></div>
-      <div id="partyPickList" class="party-pick-list"></div>
-    </details>
-  </div>
-  <div id="partyList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:8px;">
     <details open>
       <summary>＋ Додати людину вручну</summary>
       <div class="add-form">
@@ -1089,17 +1077,24 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <details>
+      <summary>👥 Обрати зі списку гостей</summary>
+      <div class="party-pick-hint" id="partyPickHint"></div>
+      <div id="partyPickList" class="party-pick-list"></div>
+    </details>
+  </div>
+  <div class="party-general">
+    <label class="party-general-lbl" id="partyGenLbl" for="partyGenNote">💬 Загальний коментар про вечірку</label>
+    <textarea id="partyGenNote" class="party-general-note" rows="2" placeholder="Спільні думки — місце, бюджет, ідеї, дата…"></textarea>
+  </div>
+  <div id="partyList"></div>
 </div>
 
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
   <div class="section-hint">Хід дня по хвилинах. Таймлайн окремий для Софі та Хвильового, а беклог (плани без часу) — <b>спільний</b>: накидай ідеї, признач локацію, а коли поставиш час — пункт піде в таймлайн тієї локації, яку зараз дивишся.</div>
-  <div class="filters" id="scriptTabs">
-    <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
-    <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
-  </div>
-  <div id="scriptList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати пункт</summary>
       <div class="add-form">
@@ -1116,6 +1111,11 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="filters" id="scriptTabs">
+    <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
+    <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
+  </div>
+  <div id="scriptList"></div>
 </div>
 
 <!-- INVITES -->
@@ -1152,6 +1152,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- SEATING -->
 <div class="panel" id="tab-seating">
   <div class="section-hint">Хто де сидить. Окремо для Софі та Хвильового. Спершу постав фото/гостей у «Гості» — тут зʼявляться їхні імена. Створи столи/зони і розсади перетягуючи гостей.</div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <div class="add-form" style="flex-direction:row;gap:8px;">
+      <input type="text" id="zoneName" placeholder="Назва столу / зони (напр. «Стіл молодят»)">
+      <button class="submit-btn" id="addZoneBtn" style="flex:0 0 auto;width:auto;padding:11px 16px;">＋ Стіл</button>
+    </div>
+  </div>
   <div class="filters" id="seatTabs">
     <button class="filt-btn active" data-st="sofia">💒 Софі</button>
     <button class="filt-btn" data-st="wave">🥂 Хвильовий</button>
@@ -1159,19 +1165,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="seat-tip" id="seatTip"></div>
   <div id="seatUnassigned"></div>
   <div id="seatZones"></div>
-  <div class="add-section" style="margin-top:14px;">
-    <div class="add-form" style="flex-direction:row;gap:8px;">
-      <input type="text" id="zoneName" placeholder="Назва столу / зони (напр. «Стіл молодят»)">
-      <button class="submit-btn" id="addZoneBtn" style="flex:0 0 auto;width:auto;padding:11px 16px;">＋ Стіл</button>
-    </div>
-  </div>
 </div>
 
 <!-- HOTEL -->
 <div class="panel" id="tab-hotel">
   <div class="section-hint">Ночівля до/після свята — нам, і якщо раптом хтось приїде з іншого міста. Встав посилання на готель — підтягнеться фото й опис. Тицьни на статус, щоб позначити бронь.</div>
-  <div id="hotelList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати варіант ночівлі</summary>
       <div class="add-form">
@@ -1192,13 +1191,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="hotelList"></div>
 </div>
 
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
-  <div id="decorList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати декор</summary>
       <div class="add-form">
@@ -1213,13 +1212,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="decorList"></div>
 </div>
 
 <!-- MUSIC -->
 <div class="panel" id="tab-music">
   <div class="section-hint">Артисти, гурти, діджеї. Додавай посилання (портфоліо, соцмережі) та умови роботи — ціна, тривалість сету, апаратура, райдер. Тицьни на статус, щоб вести перемовини.</div>
-  <div id="musicList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати артиста / діджея</summary>
       <div class="add-form">
@@ -1232,6 +1231,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="musicList"></div>
 </div>
 
 <!-- INSPIRATION -->
