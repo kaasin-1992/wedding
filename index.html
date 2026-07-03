@@ -418,11 +418,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cmt-add input,.cmt-add textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:var(--sans);font-size:16px;background:var(--surface);color:var(--text);resize:vertical;}
 .cmt-send{margin-top:2px;}
 /* ── гостьовий лінк / банер ── */
-.menu-toggle{position:absolute;top:12px;left:12px;background:var(--surface2);border:1px solid var(--line);border-radius:99px;font-size:13px;font-weight:600;color:var(--muted);padding:11px 14px;cursor:pointer;z-index:5;}
-.menu-toggle:active{transform:scale(.94);}
-.guest-link-btn{position:absolute;top:60px;left:12px;background:var(--surface2);border:1px solid var(--line);border-radius:99px;font-size:12px;font-weight:600;color:var(--muted);padding:6px 12px;cursor:pointer;}
+.guest-link-btn{position:absolute;top:12px;left:12px;background:var(--surface2);border:1px solid var(--line);border-radius:99px;font-size:12px;font-weight:600;color:var(--muted);padding:6px 12px;cursor:pointer;}
 .guest-link-btn:active{transform:scale(.94);}
-body.guest .menu-toggle{top:12px;}
 .guest-banner{display:none;background:var(--terra);color:#fff;text-align:center;font-size:12.5px;padding:7px 14px;line-height:1.4;}
 body.guest .guest-banner{display:block;}
 body.guest .guest-link-btn{display:none;}
@@ -707,10 +704,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .imgpick-tools{display:flex;gap:8px;margin-top:14px;}
 .imgpick-tools .modal-btn{font-size:13px;padding:9px;}
 .imgpick-extract{width:100%;margin-top:10px;font-size:13.5px;}
-/* хаб-меню з усіма розділами */
-.menu-box{max-width:420px;text-align:left;}
-.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:60vh;overflow:auto;margin-top:14px;}
-.menu-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-family:var(--sans);color:var(--text);text-align:center;transition:.15s;}
+/* хаб-меню з усіма розділами — тепер головний екран, а не модалка */
+.home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.menu-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px 6px;border-radius:14px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-family:var(--sans);color:var(--text);text-align:center;transition:.15s;box-shadow:var(--shadow-sm);}
 .menu-tile:active{transform:scale(.94);}
 .menu-tile.active{border-color:var(--terra);background:var(--terra-dim);color:var(--terra);}
 .menu-tile-icon{font-size:22px;line-height:1;}
@@ -791,16 +787,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
 </div>
 
-<div class="modal-overlay" id="menuModal" style="display:none">
-  <div class="modal-box menu-box">
-    <div class="imgpick-title">☰ Усі розділи</div>
-    <div class="menu-grid" id="menuGrid"></div>
-    <div class="modal-actions">
-      <button class="modal-btn ghost" id="menuClose">Закрити</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="moodboardModal" style="display:none">
   <div class="modal-box moodboard-box">
     <div class="moodboard-head">
@@ -851,7 +837,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="guest-banner" id="guestBanner">👋 Гостьовий перегляд — можна читати плани й лишати коментарі 💬</div>
 
 <div class="hero">
-  <button class="menu-toggle" id="menuBtn" title="Меню розділів" aria-label="Меню розділів">☰ Меню</button>
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
   <button class="guest-link-btn" id="guestLinkBtn" title="Скопіювати лінк для гостей" aria-label="Лінк для гостей">🔗 Лінк для гостей</button>
   <div class="hero-eyebrow">6 вересня 2026 · Київ</div>
@@ -866,7 +851,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <div class="tabs-bar-wrap">
 <div class="tabs-bar" id="tabsBar">
-  <button class="tab-btn active" data-tab="tasks">✅ Завдання</button>
+  <button class="tab-btn active" data-tab="home">🏠 Головна</button>
+  <button class="tab-btn" data-tab="tasks">✅ Завдання</button>
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
@@ -886,8 +872,14 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="tabs-bar-hint" id="tabsBarHint">›</div>
 </div>
 
+<!-- HOME -->
+<div class="panel active" id="tab-home">
+  <div class="section-hint">Обери розділ 👇</div>
+  <div class="home-grid" id="homeGrid"></div>
+</div>
+
 <!-- TASKS -->
-<div class="panel active" id="tab-tasks">
+<div class="panel" id="tab-tasks">
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати завдання</summary>
@@ -4223,25 +4215,30 @@ const TAB_ORDER=[...document.querySelectorAll('.tab-btn')].map(b=>b.dataset.tab)
     }, {rootMargin:`-${tabsH+1}px 0px 0px 0px`, threshold:0}).observe(sentinel);
   }
 }
+let _lastContentTab='tasks';   // останній НЕ-домашній розділ — для підсвітки "ти тут був" на головному екрані
 function activateTab(name){
   if(!name) return;
+  if(name!=='home') _lastContentTab=name;
   const btns=[...document.querySelectorAll('.tab-btn')];
   btns.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   const panel=document.getElementById('tab-'+name); if(panel) panel.classList.add('active');
   const btn=btns.find(b=>b.dataset.tab===name);
   if(btn) btn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+  if(typeof renderMenu==='function') renderMenu();   // підсвітка активного розділу на головному екрані
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
 function currentTab(){ const a=document.querySelector('.tab-btn.active'); return a?a.dataset.tab:TAB_ORDER[0]; }
 /* ── ХАБ-МЕНЮ (плитки всіх розділів, ДОДАТКОВО до стрічки вкладок) ── */
 // плитки будуються з тих самих .tab-btn — щоб не дублювати список розділів у двох місцях
 function renderMenu(){
-  const grid=document.getElementById('menuGrid'); if(!grid) return;
-  const cur=currentTab();
+  const grid=document.getElementById('homeGrid'); if(!grid) return;
+  const cur=_lastContentTab;
   grid.innerHTML='';
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     const tab=btn.dataset.tab;
+    if(tab==='home') return;                         // плитка "на себе" не потрібна
+    if(IS_GUEST && tab==='budget') return;            // бюджет прихований від гостей і тут теж
     const txt=btn.textContent.trim();
     const sp=txt.indexOf(' ');
     const icon=sp>0?txt.slice(0,sp):'📄';
@@ -4249,14 +4246,10 @@ function renderMenu(){
     const tile=document.createElement('button');
     tile.className='menu-tile'+(tab===cur?' active':'');
     tile.innerHTML=`<span class="menu-tile-icon">${icon}</span><span class="menu-tile-lbl">${esc(lbl)}</span>`;
-    tile.onclick=()=>{ activateTab(tab); closeMenu(); };
+    tile.onclick=()=>activateTab(tab);
     grid.appendChild(tile);
   });
 }
-function openMenu(){ renderMenu(); document.getElementById('menuModal').style.display='flex'; }
-function closeMenu(){ document.getElementById('menuModal').style.display='none'; }
-{ const mb=document.getElementById('menuBtn'); if(mb) mb.onclick=openMenu; }
-{ const mc=document.getElementById('menuClose'); if(mc) mc.onclick=closeMenu; }
 
 /* ── МУДБОРД: вільне перетягування карток (одяг / декор) ── */
 let _mbType='cloth';
@@ -4442,7 +4435,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
