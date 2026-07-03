@@ -346,6 +346,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-slot.busy::after{content:'🪄 ШІ вдягає…';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;font-size:13px;text-align:center;padding:10px;}
 .couple-slot .cs-cap{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:10.5px;padding:3px 6px;text-align:center;}
 .couple-slot .cs-x{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.couple-slot .cs-mode{position:absolute;top:5px;left:5px;z-index:2;display:flex;gap:3px;}
+.couple-slot .cs-mode-btn{width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.6;}
+.couple-slot .cs-mode-btn.active{opacity:1;background:var(--terra);}
+.couple-slot .collage-base{width:100%;height:100%;object-fit:cover;display:block;}
+.couple-slot .collage-layer{position:absolute;object-fit:contain;pointer-events:none;}
 .couple-stage-hint{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:9px;text-align:center;}
 .base-photos{display:flex;gap:8px;justify-content:center;margin-bottom:18px;}
 .base-photo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 0;min-width:0;}
@@ -443,6 +448,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-ai-btn:hover{filter:brightness(.94);}
 .idea-gtype{width:100%;margin-bottom:6px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12.5px;cursor:pointer;}
 .idea-ai-btn:disabled{opacity:.55;cursor:default;}
+.idea-ai-btn.on{background:var(--done-dim);color:var(--done);}
 .idea-ai-badge{position:absolute;top:8px;left:8px;z-index:2;background:var(--gold);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
 .idea-ai-x{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .idea-ai-overlay{position:absolute;inset:0;z-index:4;background:rgba(20,22,30,.78);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:600;text-align:center;}
@@ -1322,7 +1328,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1532,6 +1538,8 @@ let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додатк�
 let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
 let bodyMetrics = loadJSON('wed-metrics', {her:{build:'',height:'',size:''}, his:{build:'',height:'',size:''}}); // параметри тіла для промптів {her,his}
+// ручний колаж (альтернатива ШІ-примірці): {her:{gtype: ideaId}, his:{gtype: ideaId}} — по одній речі на тип
+let collage     = loadJSON('wed-collage', {her:{},his:{}});
 let manqBusy    = {her:false,his:false};
 // 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
 // Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
@@ -2114,9 +2122,15 @@ function renderIdeas(){
     let aiBtns='';
     if(it.cat==='her'||it.cat==='his'){
       const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
+      const wearWho=it.cat==='his'?'his':'her';
+      const equipped=it.gtype && collage[wearWho] && collage[wearWho][it.gtype]===it.id;
+      const wearBtn=it.gtype
+        ? `<button class="idea-ai-btn${equipped?' on':''}" data-wear="${it.id}">${equipped?'✕ Зняти':'👕 Вдягнути (колаж)'}</button>`
+        : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`;
       aiBtns=gsel
         +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
-        +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`;
+        +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
+        +wearBtn;
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
@@ -2166,7 +2180,12 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-gtype]').forEach(sel=>sel.onchange=()=>{
     const it=ideas.find(x=>x.id===sel.dataset.gtype); if(!it)return;
+    // якщо річ була "вдягнена" в колаж під старим типом — знімаємо, бо слот належить типу, а не речі
+    const who=it.cat==='his'?'his':'her';
+    const wasEquipped=it.gtype && collage[who] && collage[who][it.gtype]===it.id;
+    if(wasEquipped) delete collage[who][it.gtype];
     it.gtype=sel.value; saveJSON('wed-ideas',ideas);
+    if(wasEquipped){ saveJSON('wed-collage',collage); renderIdeas(); renderCouple(); }
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -2180,6 +2199,15 @@ function renderIdeas(){
   listEl.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
     delete it.tryon; delete it.gen; saveJSON('wed-ideas',ideas); renderIdeas();
+  });
+  // ручний колаж: вдягнути/зняти — займає слот за it.gtype в collage[who]
+  listEl.querySelectorAll('[data-wear]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.wear); if(!it||!it.gtype) return;
+    const who=it.cat==='his'?'his':'her';
+    if(!collage[who]) collage[who]={};
+    if(collage[who][it.gtype]===it.id) delete collage[who][it.gtype];
+    else collage[who][it.gtype]=it.id;
+    saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
   });
 }
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -2366,6 +2394,21 @@ function renderBasePhotos(){
     wrap.querySelectorAll('.bp-m').forEach(el=>{ if(document.activeElement!==el) el.value=m[el.dataset.m]||''; });
   });
 }
+let coupleMode={her:'ai',his:'ai'};   // 'ai' | 'collage' — не персистимо, завжди стартує з ШІ-режиму
+// ручний колаж: базове фото людини + шари вдягнених речей (наближене позиціювання за типом речі, без ручного перетягування)
+function renderCollageHTML(who){
+  const base=mannequin[who]||photosFull[who]||photos[who];
+  if(!base) return `<div class="cs-ph"><div class="cs-emoji">${who==='her'?'👰':'🤵'}</div><div>Спершу постав фото нижче</div></div>`;
+  const slots=collage[who]||{};
+  const layers=GTYPE_ZORDER.filter(g=>slots[g]).map(g=>{
+    const it=ideas.find(x=>x.id===slots[g]);
+    const src=it&&(it.cleanImg||it.img);
+    const a=GTYPE_ANCHOR[g];
+    if(!src||!a) return '';
+    return `<img class="collage-layer" src="${esc(src)}" alt="" style="top:${a.top}%;left:${a.left}%;width:${a.width}%;height:${a.height}%;">`;
+  }).join('');
+  return `<img class="collage-base" src="${esc(base)}" alt="">${layers}`;
+}
 function renderCouple(){
   const slots=[{who:'her',id:'csHer',emoji:'👰',name:'Катерина'},{who:'his',id:'csHis',emoji:'🤵',name:'Дмитро'}];
   slots.forEach(s=>{
@@ -2373,25 +2416,39 @@ function renderCouple(){
     el.classList.toggle('busy', !!coupleBusy[s.who]);
     el.classList.add('cs-clickable');
     el.title='Натисни, щоб редагувати образ';
-    const dressed=outfit[s.who], base=mannequin[s.who]||photos[s.who];
-    if(dressed){
-      el.innerHTML=`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap">${s.name}</div>`;
-    }else if(base){
-      el.innerHTML=`<img src="${esc(base)}" alt="" style="opacity:.45;filter:grayscale(.4)"><div class="cs-cap">${s.name} · ще не вдягнено</div>`;
+    const modeSwitch=`<div class="cs-mode">
+      <button class="cs-mode-btn${coupleMode[s.who]==='ai'?' active':''}" data-csmode="${s.who}:ai" title="ШІ-примірка">🪄</button>
+      <button class="cs-mode-btn${coupleMode[s.who]==='collage'?' active':''}" data-csmode="${s.who}:collage" title="Ручний колаж (як у Сімс)">🧩</button>
+    </div>`;
+    if(coupleMode[s.who]==='collage'){
+      el.innerHTML=modeSwitch+renderCollageHTML(s.who)+`<div class="cs-cap">${s.name} · колаж</div>`;
     }else{
-      el.innerHTML=`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
+      const dressed=outfit[s.who], base=mannequin[s.who]||photos[s.who];
+      if(dressed){
+        el.innerHTML=modeSwitch+`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap">${s.name}</div>`;
+      }else if(base){
+        el.innerHTML=modeSwitch+`<img src="${esc(base)}" alt="" style="opacity:.45;filter:grayscale(.4)"><div class="cs-cap">${s.name} · ще не вдягнено</div>`;
+      }else{
+        el.innerHTML=modeSwitch+`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
+      }
     }
     // клік на персонажа → одразу відкрити для нього редактор одягу (як у CAS)
-    el.onclick=(e)=>{ if(e.target.closest('[data-csx]')) return; openPersonEditor(s.who,'cloth'); };
+    el.onclick=(e)=>{ if(e.target.closest('[data-csx],[data-csmode]')) return; openPersonEditor(s.who,'cloth'); };
   });
   const hintEl=document.getElementById('csHint');
   if(hintEl){
-    hintEl.textContent = (outfit.her||outfit.his)
-      ? 'Образ дозбирається: кожна нова примірка змінює ЛИШЕ цю річ (туфлі міняють туфлі), а обличчя й решта одягу лишаються. ✕ на фото — почати образ заново.'
-      : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі. Далі додавай туфлі, прикраси — вони дозбираються поверх.';
+    hintEl.textContent = (coupleMode.her==='collage'||coupleMode.his==='collage')
+      ? 'Ручний колаж: на картці одягу тисни 👕 «Вдягнути» — річ ляже приблизно на своє місце за типом (без точної підгонки під фігуру, це швидкий начерк образу).'
+      : (outfit.her||outfit.his)
+        ? 'Образ дозбирається: кожна нова примірка змінює ЛИШЕ цю річ (туфлі міняють туфлі), а обличчя й решта одягу лишаються. ✕ на фото — почати образ заново.'
+        : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі. Далі додавай туфлі, прикраси — вони дозбираються поверх.';
   }
   document.querySelectorAll('[data-csx]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.csx; outfit[who]=''; saveJSON('wed-outfit',outfit); renderCouple();
+  });
+  document.querySelectorAll('[data-csmode]').forEach(b=>b.onclick=()=>{
+    const [who,mode]=b.dataset.csmode.split(':');
+    coupleMode[who]=mode; renderCouple();
   });
 }
 ['Her','His'].forEach(W=>{
@@ -2648,6 +2705,29 @@ const GTYPES=['','сукня','спідниця','топ / блуза','кост
 const GPLACE={'вінок (головний убор)':'на голові як вінок/головний убір','передник':'як фартух: зав’язаний на талії та накриває спідницю СПЕРЕДУ НИЖЧЕ ТАЛІЇ, на животі й по ногах. Це НЕ нагрудник — НІЧОГО не клади на груди','прикраса на шию':'на шиї','прикраса на серце':'на грудях, біля серця','сумочка на пояс':'на поясі','сумочка на плече':'на плечі або через плече','взуття':'на ногах'};
 const GLABEL={'передник':'передник (фартух на талії)'};
 function gLabel(g){ return GLABEL[g]||g; }
+// ручний колаж: приблизні координати {top,left,width,height} у % контейнера для кожного типу речі.
+// Це грубий начерк образу (фото товару накладається як є, без підгонки під конкретну фігуру), не точна примірка.
+const GTYPE_ANCHOR={
+  'сукня':          {top:20, left:18, width:64, height:58},
+  'спідниця':       {top:46, left:22, width:56, height:36},
+  'топ / блуза':    {top:20, left:24, width:52, height:28},
+  'костюм':         {top:18, left:16, width:68, height:62},
+  'піджак':         {top:18, left:14, width:72, height:32},
+  'сорочка':        {top:20, left:24, width:52, height:30},
+  'штани':          {top:44, left:20, width:60, height:42},
+  'верхній одяг':   {top:14, left:10, width:80, height:48},
+  'взуття':         {top:87, left:28, width:44, height:12},
+  'вінок (головний убор)': {top:1,  left:30, width:40, height:15},
+  'передник':       {top:40, left:26, width:48, height:36},
+  'прикраса на шию':{top:16, left:36, width:28, height:11},
+  'прикраса на серце':{top:23, left:33, width:34, height:15},
+  'сумочка на пояс':{top:44, left:56, width:26, height:18},
+  'сумочка на плече':{top:24, left:60, width:30, height:32},
+  'аксесуар':       {top:28, left:38, width:24, height:16},
+  'образ цілком':   {top:3,  left:8,  width:84, height:94},
+};
+// порядок малювання шарів колажу, знизу вгору
+const GTYPE_ZORDER=['образ цілком','штани','спідниця','сукня','костюм','сорочка','топ / блуза','піджак','верхній одяг','передник','взуття','сумочка на плече','сумочка на пояс','прикраса на серце','прикраса на шию','аксесуар','вінок (головний убор)'];
 function gtypeText(it){
   const g=(it.gtype||'').trim();
   if(!g) return '';
