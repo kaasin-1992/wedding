@@ -2131,10 +2131,11 @@ function renderIdeas(){
       const wearBtn=it.gtype
         ? `<button class="idea-ai-btn${equipped?' on':''}" data-wear="${it.id}">${equipped?'✕ Зняти':'👕 Вдягнути (колаж)'}</button>`
         : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`;
+      const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
       aiBtns=gsel
         +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
         +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
-        +wearBtn;
+        +wearBtn+swapBtn;
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
@@ -2217,6 +2218,14 @@ function renderIdeas(){
     if(collage[who][it.gtype]===it.id) delete collage[who][it.gtype];
     else collage[who][it.gtype]=it.id;
     saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
+  });
+  // перенести річ між "Вона"/"Він" — знімаємо зі старого колаж-слоту (він належить іншій людині)
+  listEl.querySelectorAll('[data-swapcat]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.swapcat); if(!it)return;
+    const oldWho=it.cat==='his'?'his':'her';
+    if(it.gtype && collage[oldWho] && collage[oldWho][it.gtype]===it.id) delete collage[oldWho][it.gtype];
+    it.cat=it.cat==='his'?'her':'his';
+    saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
   });
 }
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
