@@ -1601,7 +1601,7 @@ document.getElementById('addTaskBtn').onclick=()=>{
 };
 
 /* ════ GUESTS ════ */
-let activeFilter='all';
+let activeFilters=new Set(['all']);
 const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
 const ROLE_ORDER=['','photo','video','mc'];
 function renderGuests(){
@@ -1616,7 +1616,7 @@ function renderGuests(){
     <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(guests,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
-  const filtered=guests.filter(g=>applyFilter(g,activeFilter)).sort((a,b)=>guestRank(a)-guestRank(b));
+  const filtered=guests.filter(g=>matchesAllFilters(g,activeFilters)).sort((a,b)=>guestRank(a)-guestRank(b));
   if(!filtered.length){
     listEl.innerHTML=`<div class="empty-state">${guests.length===0?'Гостей ще немає — додай першого 🌸':'Нікого за цим фільтром'}</div>`;
     return;
@@ -1721,9 +1721,18 @@ function renderGuests(){
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
   });
 }
+// мультивибір: клік перемикає фільтр, "Всі" скидає до дефолту; якщо нічого не лишилось — теж дефолт
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
+  const f=btn.dataset.f;
+  if(f==='all'){
+    activeFilters=new Set(['all']);
+  } else {
+    activeFilters.delete('all');
+    if(activeFilters.has(f)) activeFilters.delete(f); else activeFilters.add(f);
+    if(!activeFilters.size) activeFilters.add('all');
+  }
+  document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.toggle('active', activeFilters.has(b.dataset.f)));
+  renderGuests();
 });
 /* ── ТОСТ ЗІ СКАСУВАННЯМ ── */
 let _toastTimer=null;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank } from '../lib/guest-utils.js';
+import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank, matchesAllFilters } from '../lib/guest-utils.js';
 
 describe('normName', () => {
   it('lowercases, strips punctuation and extra spaces', () => {
@@ -110,5 +110,42 @@ describe('guestRank', () => {
     expect(guestRank({ status: 'pending', maybe: true })).toBe(2);
     expect(guestRank({ status: 'pending', backup: true })).toBe(3);
     expect(guestRank({ status: 'declined' })).toBe(4);
+  });
+});
+
+describe('matchesAllFilters (мультифільтри: АБО в межах категорії, І між категоріями)', () => {
+  const her = { side: 'her', group: 'family', event: 'ceremony', plus1: 'none', maybe: false, backup: false, wparty: false, status: 'confirmed' };
+  const his = { side: 'his', group: 'friends', event: 'party', plus1: 'confirmed', maybe: true, backup: false, wparty: false, status: 'pending' };
+
+  it('empty selection or "all" matches everyone', () => {
+    expect(matchesAllFilters(her, new Set())).toBe(true);
+    expect(matchesAllFilters(his, new Set(['all']))).toBe(true);
+  });
+
+  it('single filter behaves like applyFilter', () => {
+    expect(matchesAllFilters(her, new Set(['her']))).toBe(true);
+    expect(matchesAllFilters(his, new Set(['her']))).toBe(false);
+  });
+
+  it('combines two filters from different categories with AND', () => {
+    expect(matchesAllFilters(her, new Set(['her', 'ceremony']))).toBe(true);
+    expect(matchesAllFilters(her, new Set(['her', 'party']))).toBe(false);
+  });
+
+  it('combines two filters from the same category with OR', () => {
+    const bothSides = new Set(['her', 'his']);
+    expect(matchesAllFilters(her, bothSides)).toBe(true);
+    expect(matchesAllFilters(his, bothSides)).toBe(true);
+  });
+
+  it('a same-category OR still narrows against another AND-ed category', () => {
+    const filters = new Set(['her', 'his', 'ceremony']); // (her OR his) AND ceremony
+    expect(matchesAllFilters(her, filters)).toBe(true);   // her, ceremony
+    expect(matchesAllFilters(his, filters)).toBe(false);  // his, but party not ceremony
+  });
+
+  it('standalone filters (plus1/maybe/backup/wparty/pending) AND with everything else', () => {
+    expect(matchesAllFilters(his, new Set(['his', 'maybe', 'plus1']))).toBe(true);
+    expect(matchesAllFilters(his, new Set(['his', 'maybe', 'backup']))).toBe(false);
   });
 });
