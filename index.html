@@ -300,6 +300,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
    стискаємо лише заголовок і підказку, які не несуть картинки */
 .couple-stage.cs-stuck{padding:8px 10px 10px;box-shadow:var(--shadow-md);border-radius:0 0 14px 14px;background:var(--glass-bg);backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);}
 .couple-stage.cs-stuck .couple-stage-title,.couple-stage.cs-stuck .couple-stage-hint{display:none;}
+/* приколота панель — компромісний розмір: достатньо великий, щоб бачити одяг, але не займає весь екран */
+.couple-stage.cs-stuck .couple-slot{aspect-ratio:auto;height:min(34vh,190px);}
 .couple-slot.cs-clickable{cursor:pointer;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
