@@ -135,7 +135,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .del-x:hover,.del-x:active{opacity:1!important;color:var(--danger);}
 
 /* ── GUESTS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px;}
 .sofia-limit-warn{font-size:13px;color:var(--danger);line-height:1.5;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:11px 14px;margin:-8px 0 16px;}
 .sofia-limit-warn:empty{display:none;margin:0;padding:0;border:none;}
 .stat-box{padding:13px 8px;text-align:center;}
@@ -214,9 +214,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .budget-cap label{font-size:13px;color:var(--muted);}
 .budget-cap input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:var(--sans);font-size:16px;color:var(--text);width:150px;text-align:right;}
 .budget-cap input:focus{outline:none;border-color:var(--terra);}
-.budget-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
-.bsum-box{padding:14px 10px;text-align:center;}
-.bsum-num{font-family:var(--serif);font-size:20px;line-height:1.1;}
+.budget-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px;}
+.bsum-box{padding:14px 6px;text-align:center;overflow:hidden;}
+.bsum-num{font-family:var(--serif);font-size:clamp(13px,4.4vw,20px);line-height:1.15;word-break:break-word;overflow-wrap:anywhere;}
 .bsum-lbl{font-size:10.5px;color:var(--muted);margin-top:5px;}
 .cap-note{font-size:12.5px;text-align:center;margin-bottom:18px;padding:9px;border-radius:var(--r);}
 .cap-note.under{color:var(--done);background:var(--done-dim);}
@@ -225,7 +225,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .budget-item{padding:12px 14px;margin-bottom:8px;}
 .bi-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
 .bi-name{font-size:14px;font-weight:500;}
-.bi-amounts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bi-amounts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
 .bi-field{display:flex;flex-direction:column;gap:4px;}
 .bi-field span{font-size:11px;color:var(--muted);}
 .bi-field input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-family:var(--sans);font-size:16px;color:var(--text);width:100%;text-align:right;}
@@ -1631,6 +1631,13 @@ let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-
 let bodyMetrics = loadJSON('wed-metrics', {her:{build:'',height:'',size:''}, his:{build:'',height:'',size:''}}); // параметри тіла для промптів {her,his}
 // ручний колаж (альтернатива ШІ-примірці): {her:{gtype: ideaId}, his:{gtype: ideaId}} — по одній речі на тип
 let collage     = loadJSON('wed-collage', {her:{},his:{}});
+// шукає слот речі в колажі за id, незалежно від поточного it.gtype — рятує від "залипання" речі,
+// якщо тип речі змінився/зник після того, як її вже вдягнули (інакше кнопку "Зняти" неможливо натиснути)
+function equippedSlotFor(who, itemId){
+  const c=collage[who]; if(!c) return null;
+  const g=Object.keys(c).find(k=>c[k]===itemId);
+  return g||null;
+}
 // мудборд: вільне розташування карток на дошці, {cloth:{itemId:{x,y}}, decor:{itemId:{x,y}}} — x/y у % канвасу
 let moodboard   = loadJSON('wed-moodboard', {cloth:{},decor:{}});
 let manqBusy    = {her:false,his:false};
@@ -2225,10 +2232,12 @@ function renderIdeas(){
     if(it.cat==='her'||it.cat==='his'){
       const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
       const wearWho=it.cat==='his'?'his':'her';
-      const equipped=it.gtype && collage[wearWho] && collage[wearWho][it.gtype]===it.id;
-      const wearBtn=it.gtype
-        ? `<button class="idea-ai-btn${equipped?' on':''}" data-wear="${it.id}">${equipped?'✕ Зняти':'👕 Вдягнути (колаж)'}</button>`
-        : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`;
+      const equippedSlot=equippedSlotFor(wearWho, it.id);
+      const wearBtn=equippedSlot
+        ? `<button class="idea-ai-btn on" data-unwear="${it.id}" data-unwearwho="${wearWho}" data-unwearslot="${esc(equippedSlot)}">✕ Зняти</button>`
+        : (it.gtype
+            ? `<button class="idea-ai-btn" data-wear="${it.id}">👕 Вдягнути (колаж)</button>`
+            : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
       const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
       const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">📸 ${it.realTryon?'Замінити фото на мені':'Фото на мені (приміряла)'}</button>`;
       aiBtns=gsel
@@ -2317,12 +2326,12 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-gtype]').forEach(sel=>sel.onchange=()=>{
     const it=ideas.find(x=>x.id===sel.dataset.gtype); if(!it)return;
-    // якщо річ була "вдягнена" в колаж під старим типом — знімаємо, бо слот належить типу, а не речі
+    // якщо річ була "вдягнена" в колаж (хоч під яким слотом) — знімаємо, бо слот належить типу, а не речі
     const who=it.cat==='his'?'his':'her';
-    const wasEquipped=it.gtype && collage[who] && collage[who][it.gtype]===it.id;
-    if(wasEquipped) delete collage[who][it.gtype];
+    const oldSlot=equippedSlotFor(who, it.id);
+    if(oldSlot) delete collage[who][oldSlot];
     it.gtype=sel.value; saveJSON('wed-ideas',ideas);
-    if(wasEquipped){ saveJSON('wed-collage',collage); renderIdeas(); renderCouple(); }
+    if(oldSlot){ saveJSON('wed-collage',collage); renderIdeas(); renderCouple(); }
   });
   listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
@@ -2342,20 +2351,28 @@ function renderIdeas(){
     const it=ideas.find(x=>x.id===b.dataset.wear); if(!it||!it.gtype) return;
     const who=it.cat==='his'?'his':'her';
     if(!collage[who]) collage[who]={};
-    const equipping=collage[who][it.gtype]!==it.id;
-    if(collage[who][it.gtype]===it.id) delete collage[who][it.gtype];
-    else collage[who][it.gtype]=it.id;
+    // на випадок, якщо річ уже "залипла" в іншому слоті (напр. після зміни типу) — прибираємо звідти
+    const oldSlot=equippedSlotFor(who, it.id);
+    if(oldSlot) delete collage[who][oldSlot];
+    collage[who][it.gtype]=it.id;
     saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
     // колаж виглядає як паперова лялька лише коли річ вирізана з чистого фото — довирізаємо разово при вдяганні
-    if(equipping && it.img && !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img))){
+    if(it.img && !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img))){
       ensureCleanGarment(it).then(()=>renderCouple());
     }
+  });
+  // зняти річ із колажу — шукаємо конкретний слот, переданий кнопкою (не залежить від поточного it.gtype)
+  listEl.querySelectorAll('[data-unwear]').forEach(b=>b.onclick=()=>{
+    const who=b.dataset.unwearwho, slot=b.dataset.unwearslot;
+    if(collage[who]) delete collage[who][slot];
+    saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
   });
   // перенести річ між "Вона"/"Він" — знімаємо зі старого колаж-слоту (він належить іншій людині)
   listEl.querySelectorAll('[data-swapcat]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.swapcat); if(!it)return;
     const oldWho=it.cat==='his'?'his':'her';
-    if(it.gtype && collage[oldWho] && collage[oldWho][it.gtype]===it.id) delete collage[oldWho][it.gtype];
+    const oldSlot=equippedSlotFor(oldWho, it.id);
+    if(oldSlot) delete collage[oldWho][oldSlot];
     it.cat=it.cat==='his'?'her':'his';
     saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
   });
