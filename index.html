@@ -260,10 +260,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .note-text{font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
 
 /* ── IDEAS / LINKS ── */
-.couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;}
-.couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;}
+.couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;position:sticky;top:var(--tabsh,48px);z-index:9;transition:padding .2s;}
+.couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;transition:.2s;}
 .couple-stage-row{display:flex;gap:10px;}
-.couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;}
+.couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;transition:height .2s;}
+/* приколота (закріплена) версія — компактна смужка, коли прогорнули список нижче */
+.couple-stage.cs-stuck{padding:8px 10px 6px;box-shadow:0 6px 16px rgba(0,0,0,.14);border-radius:0 0 14px 14px;}
+.couple-stage.cs-stuck .couple-stage-title,.couple-stage.cs-stuck .couple-stage-hint{display:none;}
+.couple-stage.cs-stuck .couple-slot{aspect-ratio:auto;height:96px;}
 .couple-slot.cs-clickable{cursor:pointer;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
@@ -1018,6 +1022,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- IDEAS / LOOK -->
 <div class="panel" id="tab-ideas">
   <button class="moodboard-btn" data-moodboard="cloth">🎨 Мудборд одягу</button>
+  <div id="csSentinel" style="height:1px"></div>
   <div class="couple-stage" id="coupleStage">
     <div class="couple-stage-title">🪄 Примірка пари</div>
     <div class="couple-stage-row">
@@ -4063,6 +4068,20 @@ const TAB_ORDER=[...document.querySelectorAll('.tab-btn')].map(b=>b.dataset.tab)
     bar.addEventListener('scroll', upd, {passive:true});
     window.addEventListener('resize', upd);
     upd();
+  }
+}
+/* картка примірки пари лишається приколотою під стрічкою вкладок, поки гортаєш список одягу нижче */
+{
+  const wrap=document.querySelector('.tabs-bar-wrap');
+  const syncTabsH=()=>{ if(wrap) document.documentElement.style.setProperty('--tabsh', wrap.offsetHeight+'px'); };
+  syncTabsH();
+  window.addEventListener('resize', syncTabsH);
+  const sentinel=document.getElementById('csSentinel'), stage=document.getElementById('coupleStage');
+  if(sentinel && stage && 'IntersectionObserver' in window){
+    const tabsH=wrap?wrap.offsetHeight:48;
+    new IntersectionObserver(([entry])=>{
+      stage.classList.toggle('cs-stuck', !entry.isIntersecting);
+    }, {rootMargin:`-${tabsH+1}px 0px 0px 0px`, threshold:0}).observe(sentinel);
   }
 }
 function activateTab(name){
