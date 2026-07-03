@@ -479,6 +479,8 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .party-pick-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:.15s;}
 .party-pick-chip:hover{border-color:var(--terra);}
 .party-pick-chip.on{background:var(--terra);color:#fff;border-color:var(--terra);}
+.party-pick-chip.other-side{border-style:dashed;}
+.party-pick-chip small{opacity:.65;font-size:10.5px;}
 .party-pick-empty{font-size:12.5px;color:var(--muted);padding:6px 0;}
 
 /* ── BAR / MENU CALCULATOR ── */
@@ -843,8 +845,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         <input type="text" id="gName" placeholder="Імʼя гостя…">
         <div class="form-row">
           <select id="gSide">
-            <option value="her">Мої (нареченої)</option>
-            <option value="his">Його (нареченого)</option>
+            <option value="her">Гості Каті</option>
+            <option value="his">Гості Діми</option>
           </select>
           <select id="gEvent">
             <option value="both">Розпис + вечірка</option>
@@ -887,8 +889,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="stats-grid" id="guestStats"></div>
   <div class="filters">
     <button class="filt-btn active" data-f="all">Всі</button>
-    <button class="filt-btn" data-f="her">Мої</button>
-    <button class="filt-btn" data-f="his">Його</button>
+    <button class="filt-btn" data-f="her">Гості Каті</button>
+    <button class="filt-btn" data-f="his">Гості Діми</button>
     <button class="filt-btn" data-f="family">Родичі</button>
     <button class="filt-btn" data-f="friends">Друзі</button>
     <button class="filt-btn" data-f="ceremony">Розпис</button>
@@ -3371,18 +3373,21 @@ function renderPartyPick(){
   const wrap=document.getElementById('partyPickList'); const hint=document.getElementById('partyPickHint');
   if(!wrap) return;
   const side=activeParty;                       // her→дівич, his→мальчішник
-  const pool=guests.filter(g=>g.side===side);
+  // всі гості, незалежно від сторони — на дівич-вечір можна кликати й друзів/дружок нареченого, і навпаки
+  const pool=guests;
   if(hint) hint.textContent = pool.length
-    ? `Гості з боку ${side==='her'?'Катерини':'Дмитра'}. Тапни, щоб додати/прибрати у список.`
-    : `Гостей з боку ${side==='her'?'Катерини':'Дмитра'} ще немає у вкладці «Гості».`;
+    ? `Усі гості (з обох боків). Тапни, щоб додати/прибрати у список.`
+    : `Гостей ще немає у вкладці «Гості».`;
   wrap.innerHTML='';
   if(!pool.length){ wrap.innerHTML='<div class="party-pick-empty">Спершу додай гостей у вкладці «Гості» 👥</div>'; return; }
   const arr=partyRef();
   pool.forEach(g=>{
     const inList=arr.some(p=>p.gid===g.id || p.name===g.name);
+    const otherSide=g.side!==side;
     const chip=document.createElement('button'); chip.type='button';
-    chip.className='party-pick-chip'+(inList?' on':'');
-    chip.innerHTML=`${inList?'✓ ':''}${esc(g.name)}`;
+    chip.className='party-pick-chip'+(inList?' on':'')+(otherSide?' other-side':'');
+    chip.title=otherSide?(g.side==='her'?'Гість(я) Каті':'Гість(я) Діми'):'';
+    chip.innerHTML=`${inList?'✓ ':''}${esc(g.name)}${otherSide?` <small>(${g.side==='her'?'Каті':'Діми'})</small>`:''}`;
     chip.onclick=()=>{
       const cur=partyRef();
       const idx=cur.findIndex(p=>p.gid===g.id || p.name===g.name);
