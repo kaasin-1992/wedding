@@ -1247,7 +1247,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <summary>＋ Додати референс стилю</summary>
       <div class="add-form">
         <input type="url" id="dcUrl" placeholder="Посилання на фото стилю (Pinterest, Instagram…)" autocapitalize="none" spellcheck="false">
-        <button class="submit-btn" id="addDcRefBtn">Додати</button>
+        <div class="form-row">
+          <button type="button" class="idea-photo-btn" id="dcFileBtn">📁 Завантажити фото</button>
+          <button class="submit-btn" id="addDcRefBtn">Додати за посиланням</button>
+        </div>
+        <input type="text" id="dcIdeaText" placeholder="Або опиши ідею словами (напр. «бохо з сухоцвітами»)">
+        <button type="button" class="idea-ai-btn" id="dcImagineBtn">🪄 Уявити цю ідею</button>
       </div>
     </details>
   </div>
@@ -4499,7 +4504,7 @@ function renderDressCode(){
         const img=r.img?`<img class="inspo-img" src="${esc(r.img)}" loading="lazy" alt="" data-dcrefbig="${r.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`:`<div class="inspo-img noimg">🖼</div>`;
         return `<div class="inspo-card">
           <button class="del-x" data-dcrefdel="${r.id}" aria-label="Видалити">✕</button>
-          ${r.loading?'<div class="idea-loading" style="margin:8px;">Підтягую…</div>':img}
+          ${r.loading?`<div class="idea-loading" style="margin:8px;">${r._ai?'🪄 ШІ малює…':'Підтягую…'}</div>`:img}
           <div class="inspo-body">${r.title?`<div class="inspo-title">${esc(r.title)}</div>`:''}</div>
         </div>`;
       }).join('');
@@ -4533,6 +4538,42 @@ document.getElementById('addDcRefBtn').onclick=async()=>{
   if(prev){ cur.title=prev.title||''; cur.img=prev.img||''; }
   saveJSON('wed-dresscode',dresscode); renderDressCode();
   if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-dresscode',dresscode); renderDressCode(); });
+};
+document.getElementById('dcFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      dresscode.refs.unshift({id:'dc'+Date.now(),url:'',title:'',img:data,loading:false,ts:Date.now()});
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+      showToast('📸 Референс додано');
+    },0.85);
+  });
+};
+document.getElementById('dcImagineBtn').onclick=async()=>{
+  const text=val('dcIdeaText');
+  if(!text){ showToast('Спершу опиши ідею словами 🙂'); return; }
+  const id='dc'+Date.now();
+  dresscode.refs.unshift({id,url:'',title:text,img:'',loading:true,_ai:true,ts:Date.now()});
+  document.getElementById('dcIdeaText').value='';
+  saveJSON('wed-dresscode',dresscode); renderDressCode();
+  try{
+    const img=await aiGenerate([`Створи фотореалістичне мудборд-зображення весільного стилю за описом: ${text}. Естетика — елегантне весілля, м'яке природне освітлення, без тексту й водяних знаків.`]);
+    const cur=dresscode.refs.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false; cur._ai=false;
+    if(img){
+      downscaleSrc(img,768,small=>{
+        cur.img=small||img; saveJSON('wed-dresscode',dresscode); renderDressCode();
+      },0.8);
+    }else{
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+      showToast('ШІ не зміг намалювати 😕');
+    }
+  }catch(e){
+    console.warn('dcImagine',e);
+    const cur=dresscode.refs.find(x=>x.id===id);
+    if(cur){ cur.loading=false; cur._ai=false; saveJSON('wed-dresscode',dresscode); renderDressCode(); }
+    showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
+  }
 };
 document.getElementById('dcGenBtn').onclick=async()=>{
   if(!dresscode.colors.length){ showToast('Спершу обери хоча б один колір 🎨'); return; }
