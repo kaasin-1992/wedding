@@ -422,9 +422,9 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
-/* картка-ряд: текст ліворуч, фото маленьке праворуч і у повний зріст */
-.idea-card.idea-row{display:flex;flex-direction:row-reverse;align-items:stretch;min-height:210px;}
-.idea-card.idea-row .idea-thumb-wrap{width:124px;flex:0 0 124px;height:auto;align-self:stretch;border-left:1px solid var(--line);}
+/* картка: велике фото зверху на всю ширину (як Pinterest), деталі під ним */
+.idea-card.idea-row{display:flex;flex-direction:column;align-items:stretch;}
+.idea-card.idea-row .idea-thumb-wrap{width:100%;flex:0 0 auto;height:280px;border-left:none;border-bottom:1px solid var(--line);}
 .idea-card.idea-row .idea-thumb{object-fit:contain;background:#fff;}
 .idea-card.idea-row .idea-body{flex:1;min-width:0;}
 .idea-card.idea-row .idea-ai-overlay{font-size:11.5px;padding:6px;}
