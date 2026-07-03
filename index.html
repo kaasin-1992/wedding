@@ -867,6 +867,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-f="wparty">💐 Дружки</button>
     <button class="filt-btn" data-f="pending">Не підтвердили</button>
   </div>
+  <div class="idea-sort">
+    <span class="idea-sort-lbl">Сортувати:</span>
+    <select id="guestSort" aria-label="Сортування гостей">
+      <option value="">за статусом (типово)</option>
+      <option value="name">за іменем (А-Я)</option>
+    </select>
+  </div>
   <div class="guest-list" id="guestList"></div>
 </div>
 
@@ -1608,21 +1615,25 @@ document.getElementById('addTaskBtn').onclick=()=>{
 
 /* ════ GUESTS ════ */
 let activeFilters=new Set(['all']);
+let guestSort='';
 const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
 const ROLE_ORDER=['','photo','video','mc'];
 function renderGuests(){
-  const confirmed=guests.filter(g=>g.status==='confirmed').length;
-  const pending=guests.filter(g=>g.status==='pending').length;
+  // цифри зверху рахуються ВІД АКТИВНОГО ФІЛЬТРА, а не від усього списку —
+  // щоб було видно, скільки саме людей у розписі/на вечірці серед відфільтрованих
+  const scoped=guests.filter(g=>matchesAllFilters(g,activeFilters));
+  const confirmed=scoped.filter(g=>g.status==='confirmed').length;
+  const pending=scoped.filter(g=>g.status==='pending').length;
   document.getElementById('guestStats').innerHTML=`
-    <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
+    <div class="stat-box"><div class="stat-num">${scoped.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople(guests)}</div><div class="stat-lbl">Людей разом</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt(guests,'ceremony')}</div><div class="stat-lbl">На розписі</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(guests,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople(scoped)}</div><div class="stat-lbl">Людей разом</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt(scoped,'ceremony')}</div><div class="stat-lbl">На розписі</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(scoped,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
-  const filtered=guests.filter(g=>matchesAllFilters(g,activeFilters)).sort((a,b)=>guestRank(a)-guestRank(b));
+  const filtered=sortGuestList(scoped, guestSort);
   if(!filtered.length){
     listEl.innerHTML=`<div class="empty-state">${guests.length===0?'Гостей ще немає — додай першого 🌸':'Нікого за цим фільтром'}</div>`;
     return;
@@ -1740,6 +1751,7 @@ document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.toggle('active', activeFilters.has(b.dataset.f)));
   renderGuests();
 });
+{ const gs=document.getElementById('guestSort'); if(gs) gs.onchange=()=>{ guestSort=gs.value; renderGuests(); }; }
 /* ── ТОСТ ЗІ СКАСУВАННЯМ ── */
 let _toastTimer=null;
 function showToast(msg, undoFn){

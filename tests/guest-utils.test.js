@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank, matchesAllFilters } from '../lib/guest-utils.js';
+import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank, sortGuestList, matchesAllFilters } from '../lib/guest-utils.js';
 
 describe('normName', () => {
   it('lowercases, strips punctuation and extra spaces', () => {
@@ -110,6 +110,26 @@ describe('guestRank', () => {
     expect(guestRank({ status: 'pending', maybe: true })).toBe(2);
     expect(guestRank({ status: 'pending', backup: true })).toBe(3);
     expect(guestRank({ status: 'declined' })).toBe(4);
+  });
+});
+
+describe('sortGuestList', () => {
+  const list = [
+    { name: 'Олена', status: 'confirmed' },
+    { name: 'Андрій', status: 'declined' },
+    { name: 'Юрій', status: 'pending', maybe: true },
+  ];
+  it('sorts alphabetically (uk locale) when sortKey is "name"', () => {
+    expect(sortGuestList(list, 'name').map(g => g.name)).toEqual(['Андрій', 'Олена', 'Юрій']);
+  });
+  it('falls back to guestRank order for any other sortKey', () => {
+    expect(sortGuestList(list, '').map(g => g.name)).toEqual(['Олена', 'Юрій', 'Андрій']);
+    expect(sortGuestList(list).map(g => g.name)).toEqual(['Олена', 'Юрій', 'Андрій']);
+  });
+  it('does not mutate the input array', () => {
+    const copy = list.slice();
+    sortGuestList(list, 'name');
+    expect(list).toEqual(copy);
   });
 });
 
