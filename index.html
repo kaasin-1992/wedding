@@ -720,9 +720,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .moodboard-head .modal-btn{flex:0 0 auto;width:auto;padding:9px 16px;}
 .moodboard-canvas{position:relative;flex:1;margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;}
 .moodboard-inner{position:relative;width:1400px;height:1100px;background:repeating-linear-gradient(45deg,var(--surface2) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,var(--surface2) 0 1px,transparent 1px 22px);background-color:var(--bg);}
-.moodboard-tile{position:absolute;width:120px;border-radius:10px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:grab;background:var(--surface);border:1px solid var(--line);touch-action:none;user-select:none;}
+.moodboard-tile{position:absolute;width:132px;border-radius:10px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:grab;background:var(--surface);border:1px solid var(--line);touch-action:none;user-select:none;}
 .moodboard-tile:active{cursor:grabbing;z-index:50;}
-.moodboard-tile img{width:100%;height:120px;object-fit:contain;display:block;background:var(--surface);pointer-events:none;}
+.moodboard-tile img{width:100%;height:172px;object-fit:contain;display:block;background:var(--surface);pointer-events:none;}
+.moodboard-tile.cloth img{background:#fff;}
 .moodboard-tile .mb-cap{font-size:10px;padding:3px 6px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
 .moodboard-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px;}
 .imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
@@ -2327,9 +2328,14 @@ function renderIdeas(){
     const it=ideas.find(x=>x.id===b.dataset.wear); if(!it||!it.gtype) return;
     const who=it.cat==='his'?'his':'her';
     if(!collage[who]) collage[who]={};
+    const equipping=collage[who][it.gtype]!==it.id;
     if(collage[who][it.gtype]===it.id) delete collage[who][it.gtype];
     else collage[who][it.gtype]=it.id;
     saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
+    // колаж виглядає як паперова лялька лише коли річ вирізана з чистого фото — довирізаємо разово при вдяганні
+    if(equipping && it.img && !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img))){
+      ensureCleanGarment(it).then(()=>renderCouple());
+    }
   });
   // перенести річ між "Вона"/"Він" — знімаємо зі старого колаж-слоту (він належить іншій людині)
   listEl.querySelectorAll('[data-swapcat]').forEach(b=>b.onclick=()=>{
@@ -2559,6 +2565,39 @@ function downscaleSrc(src, maxSide, cb, q){
     const c=document.createElement('canvas'); c.width=w; c.height=h;
     c.getContext('2d').drawImage(img,0,0,w,h);
     try{ cb(c.toDataURL('image/jpeg', q||0.7)); }catch(e){ cb(null); }
+  };
+  img.onerror=()=>cb(null);
+  img.src=src;
+}
+// обрізає порожні білі поля навколо предмета одягу до самого силуету (як у вирізаної паперової ляльки),
+// щоб у колажі річ займала весь відведений їй якір, а не малу частку через зайвий "запас" довкола на фото.
+function trimWhiteMargin(src, cb){
+  const img=new Image();
+  img.onload=()=>{
+    const w=img.naturalWidth, h=img.naturalHeight;
+    if(!w||!h){ cb(null); return; }
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const ctx=c.getContext('2d'); ctx.drawImage(img,0,0);
+    let data;
+    try{ data=ctx.getImageData(0,0,w,h).data; }catch(e){ cb(null); return; }
+    const isBg=(i)=>{ const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3]; return a<10 || (r>240&&g>240&&b>240); };
+    let minX=w,minY=h,maxX=-1,maxY=-1;
+    const step=2;   // пропускаємо пікселі — для швидкості на великих фото
+    for(let y=0;y<h;y+=step){
+      for(let x=0;x<w;x+=step){
+        const i=(y*w+x)*4;
+        if(!isBg(i)){ if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }
+      }
+    }
+    if(maxX<0 || maxX-minX<w*0.08 || maxY-minY<h*0.08){ cb(null); return; }   // нічого путнього не знайшли
+    const pad=Math.round(Math.max(w,h)*0.035);
+    minX=Math.max(0,minX-pad); minY=Math.max(0,minY-pad);
+    maxX=Math.min(w,maxX+pad); maxY=Math.min(h,maxY+pad);
+    const cw=maxX-minX, ch=maxY-minY;
+    if(cw>=w*0.97 && ch>=h*0.97){ cb(null); return; }   // майже без полів — не варто перекодовувати
+    const c2=document.createElement('canvas'); c2.width=cw; c2.height=ch;
+    c2.getContext('2d').drawImage(c,minX,minY,cw,ch,0,0,cw,ch);
+    try{ cb(c2.toDataURL('image/jpeg',0.85)); }catch(e){ cb(null); }
   };
   img.onerror=()=>cb(null);
   img.src=src;
@@ -3086,8 +3125,9 @@ async function ensureCleanGarment(it){
     const clean=await aiGenerate([`На зображенні — фото/скрін товару (одяг або аксесуар), найімовірніше на моделі, з фоном, інтерфейсом сайту, текстом і цінниками.${gline} Виокрем РІВНО сам предмет одягу і покажи його ОДИН на чистому БІЛОМУ однотонному фоні: без людини, без обличчя, без рук, без манекена, без сторонніх предметів, без тексту й цінників, без рамок інтерфейсу. Точно збережи колір, тканину, візерунок, крій, довжину й усі деталі саме цього предмета. Чисте студійне предметне фото, рівне м'яке освітлення, без тіней від інших обʼєктів.`, dataUrlToPart(du)]);
     if(clean){
       const small=await new Promise(ok=>downscaleSrc(clean,768,r=>ok(r||clean),0.82));
+      const trimmed=await new Promise(ok=>trimWhiteMargin(small,r=>ok(r||small)));
       const cur=ideas.find(x=>x.id===it.id)||it;
-      cur.cleanImg=small||clean; cur.cleanFor=sig; saveJSON('wed-ideas',ideas);
+      cur.cleanImg=trimmed; cur.cleanFor=sig; saveJSON('wed-ideas',ideas);
       return cur.cleanImg;
     }
   }catch(e){ console.warn('ensureCleanGarment',e); }
@@ -4201,7 +4241,7 @@ function renderMoodboard(){
       board[it.id]=pos;
     }
     const tile=document.createElement('div');
-    tile.className='moodboard-tile'; tile.dataset.mbid=it.id;
+    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':''); tile.dataset.mbid=it.id;
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
     tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}`;
     inner.appendChild(tile);
