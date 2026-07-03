@@ -136,6 +136,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 /* ── GUESTS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.sofia-limit-warn{font-size:13px;color:var(--danger);line-height:1.5;background:var(--danger-dim);border:1px solid var(--danger);border-radius:var(--r);padding:11px 14px;margin:-8px 0 16px;}
+.sofia-limit-warn:empty{display:none;margin:0;padding:0;border:none;}
 .stat-box{padding:13px 8px;text-align:center;}
 .stat-num{font-family:var(--serif);font-size:26px;color:var(--terra);line-height:1;}
 .stat-lbl{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.3;}
@@ -942,6 +944,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </details>
   </div>
   <div class="stats-grid" id="guestStats"></div>
+  <div class="sofia-limit-warn" id="sofiaLimitWarn"></div>
   <div class="filters">
     <button class="filt-btn active" data-f="all">Всі</button>
     <button class="filt-btn" data-f="her">Гості Каті</button>
@@ -1738,19 +1741,30 @@ let activeFilters=new Set(['all']);
 let guestSort='';
 const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
 const ROLE_ORDER=['','photo','video','mc'];
+const SOFIA_LIMIT=30;   // Софі камерна — більше людей фізично не поміститься
+let _sofiaLimitToasted=false;
 function renderGuests(){
   // цифри зверху рахуються ВІД АКТИВНОГО ФІЛЬТРА, а не від усього списку —
   // щоб було видно, скільки саме людей у розписі/на вечірці серед відфільтрованих
   const scoped=guests.filter(g=>matchesAllFilters(g,activeFilters));
   const confirmed=scoped.filter(g=>g.status==='confirmed').length;
   const pending=scoped.filter(g=>g.status==='pending').length;
+  const sofiaAtScope=peopleAt(scoped,'ceremony');
+  const sofiaTotal=peopleAt(guests,'ceremony');   // реальний загальний підрахунок, незалежно від фільтра — саме він визначає ліміт
+  const overLimit=sofiaTotal>=SOFIA_LIMIT;
   document.getElementById('guestStats').innerHTML=`
     <div class="stat-box"><div class="stat-num">${scoped.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople(scoped)}</div><div class="stat-lbl">Людей разом</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt(scoped,'ceremony')}</div><div class="stat-lbl">На розписі</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:${sofiaAtScope>=SOFIA_LIMIT?'var(--danger)':'var(--rose)'}">${sofiaAtScope}</div><div class="stat-lbl">На розписі${overLimit?' ⚠️':''}</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(scoped,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
+  const sofiaWarnEl=document.getElementById('sofiaLimitWarn');
+  if(sofiaWarnEl) sofiaWarnEl.innerHTML=overLimit
+    ? `⚠️ У Софі вже <b>${sofiaTotal}</b> людей із ліміту ${SOFIA_LIMIT}. Софі камерна — варто когось перенести лише на вечірку або зменшити список.`
+    : '';
+  if(overLimit && !_sofiaLimitToasted){ showToast(`⚠️ Софі: досягнуто ліміту ${SOFIA_LIMIT} людей (зараз ${sofiaTotal})`); _sofiaLimitToasted=true; }
+  else if(!overLimit){ _sofiaLimitToasted=false; }
 
   const listEl=document.getElementById('guestList');
   const filtered=sortGuestList(scoped, guestSort);
