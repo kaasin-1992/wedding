@@ -817,6 +817,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .moodboard-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px;}
 .moodboard-canvas.mb-dragover{outline:3px dashed var(--terra);outline-offset:-3px;background:var(--terra-dim);}
 .moodboard-tile .mb-tile-x{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;}
+.moodboard-tile.cleaning img{opacity:.82;filter:saturate(.75);}
+.mb-cleaning-badge{position:absolute;top:4px;left:4px;font-size:12px;background:var(--surface2);border:1px solid var(--line);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);animation:collageCleanPulse 1.1s ease-in-out infinite;z-index:5;}
 .imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
 .crop-box{max-width:420px;text-align:left;}
 .crop-stage{position:relative;margin:12px 0;border-radius:12px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;}
@@ -3169,6 +3171,9 @@ function applyCollageLayerStyle(tile,g,off){
   const w=a.width*off.scale, h=a.height*off.scale;
   const top=a.top+off.dy-(h-a.height)/2, left=a.left+off.dx-(w-a.width)/2;
   tile.style.top=top+'%'; tile.style.left=left+'%'; tile.style.width=w+'%'; tile.style.height=h+'%';
+  // бейдж "вирізаємо" — сусідній <span>, що інакше лишався б на старій позиції під час live-драгу
+  const badge=tile.nextElementSibling;
+  if(badge && badge.classList.contains('collage-cleaning-badge')){ badge.style.top=top+'%'; badge.style.left=left+'%'; }
 }
 // ручне підлаштування шару колажу — перетягування одним пальцем/мишею (позиція) і пінч двома
 // пальцями (розмір), той самий перевірений патерн, що й wireMoodboardDrag() у мудборді. На
@@ -3265,11 +3270,24 @@ function renderCouple(){
   });
   const hintEl=document.getElementById('csHint');
   if(hintEl){
-    hintEl.textContent = (coupleMode.her==='collage'||coupleMode.his==='collage')
-      ? 'Ручний колаж: на картці одягу тисни 👕 «Вдягнути» — річ ляже приблизно на своє місце за типом (без точної підгонки під фігуру, це швидкий начерк образу).'
+    const base = (coupleMode.her==='collage'||coupleMode.his==='collage')
+      ? 'Ручний колаж: на картці одягу тисни 👕 «Вдягнути» — річ ляже приблизно на своє місце за типом (без точної підгонки під фігуру, це швидкий начерк образу). Перетягуй шар пальцем/мишею й стискай двома пальцями, щоб підлаштувати позицію й розмір.'
       : (outfit.her||outfit.his)
         ? 'Образ дозбирається: кожна нова примірка змінює ЛИШЕ цю річ (туфлі міняють туфлі), а обличчя й решта одягу лишаються. ✕ на фото — почати образ заново.'
         : 'Постав фото нижче, на картці одягу обери тип речі (напр. «спідниця») і натисни 🪄 «Приміряти» — людина зʼявиться тут у цьому одязі. Далі додавай туфлі, прикраси — вони дозбираються поверх.';
+    // явний, важко пропустити текст (маленький бейдж ✂️ на самому шарі легко не помітити) —
+    // рахуємо шари колажу без валідного cleanImg по обох "хто" й показуємо це прямим текстом
+    const uncut=['her','his'].reduce((n,who)=>{
+      const slots=collage[who]||{};
+      return n+Object.keys(slots).filter(g=>{
+        const it=ideas.find(x=>x.id===slotId(slots[g]));
+        if(!it) return false;
+        return !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img));
+      }).length;
+    },0);
+    hintEl.textContent = uncut>0
+      ? `✂️ Довирізаю ${uncut} фото одягу у фоні — трохи зачекай і перевір ще раз. ${base}`
+      : base;
   }
   document.querySelectorAll('[data-csx]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.csx; outfit[who]=''; saveJSON('wed-outfit',outfit);
@@ -5442,12 +5460,29 @@ function renderMoodboard(){
       pos={x:4+col*30, y:4+row*24};
       board[it.id]=pos;
     }
+    // одяг у мудборді (не вільно завантажені фото) — та сама ретроактивна перевірка/довирізання,
+    // що вже є в колажі: без неї тайл назавжди лишається "брудним" скріном товару, бо тут раніше
+    // взагалі не було жодного тригера ensureCleanGarment. Спільний _cleaningAttempted Set із
+    // колажем — якщо річ уже поставлена в чергу там, тут вдруге не запускаємо.
+    let cleaning=false;
+    if(_mbType==='cloth' && !it.extra){
+      const srcIt=ideas.find(x=>x.id===it.id);
+      if(srcIt){
+        const hasCleanCutout=srcIt.cleanImg && /^data:/.test(srcIt.cleanImg) && srcIt.cleanFor===garmentSig(srcIt.img);
+        cleaning=!hasCleanCutout;
+        if(cleaning && srcIt.img && !_cleaningAttempted.has(srcIt.id)){
+          _cleaningAttempted.add(srcIt.id);
+          ensureCleanGarment(srcIt).then(res=>{ if(res && res!==srcIt.img) renderMoodboard(); });
+        }
+      }
+    }
     const tile=document.createElement('div');
-    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':''); tile.dataset.mbid=it.id;
+    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
     if(it.extra) tile.dataset.mbextra='1';
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
     if(pos.w) tile.style.width=pos.w+'px';
-    tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}${it.extra?`<button class="mb-tile-x" data-mbdel="${it.id}" title="Прибрати фото">✕</button>`:''}`;
+    const cleanBadge=cleaning?`<span class="mb-cleaning-badge" title="Вирізаємо фото як паперову ляльку…">✂️</span>`:'';
+    tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${cleanBadge}${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}${it.extra?`<button class="mb-tile-x" data-mbdel="${it.id}" title="Прибрати фото">✕</button>`:''}`;
     inner.appendChild(tile);
   });
   saveJSON('wed-moodboard',moodboard);
