@@ -326,6 +326,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .inspo-filters{flex-wrap:wrap;gap:6px;margin-bottom:12px;}
 .inspo-grid{column-count:2;column-gap:10px;}
 @media(min-width:560px){.inspo-grid{column-count:3;}}
+/* дрес-код: палітра кольорів + ШІ-візуалізація */
+.dc-colors{margin-bottom:16px;}
+.dc-swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.dc-swatch{width:44px;height:44px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1.5px var(--line);cursor:pointer;position:relative;}
+.dc-swatch::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;opacity:0;text-shadow:0 1px 3px rgba(0,0,0,.6);transition:.15s;}
+.dc-swatch:active::after{opacity:1;}
+.dc-add-swatch{width:44px;height:44px;border-radius:50%;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted);cursor:pointer;position:relative;overflow:hidden;}
+.dc-add-swatch input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.dc-gen-wrap{margin-bottom:16px;}
+.dc-gen-img{width:100%;border-radius:var(--r);cursor:zoom-in;display:block;box-shadow:var(--shadow-sm);}
 .inspo-card{break-inside:avoid;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;}
 .inspo-card .del-x{top:6px;right:6px;}
 .inspo-img{width:100%;display:block;background:var(--surface2);cursor:zoom-in;}
@@ -895,6 +905,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="beauty">💄 Краса</button>
+  <button class="tab-btn" data-tab="dresscode">🎨 Дрес-код</button>
   <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
@@ -1227,6 +1238,24 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div id="beautyList"></div>
 </div>
 
+<!-- ДРЕС-КОД (палітра кольорів + муд-референси + ШІ-візуалізація) -->
+<div class="panel" id="tab-dresscode">
+  <div class="section-hint">Дрес-код весілля: закидай сюди муд-референси стилю (посилання на фото), обери палітру кольорів — і ШІ намалює візуалізацію стилю саме в цих кольорах.</div>
+  <div class="dc-colors" id="dcColors"></div>
+  <div class="add-section" style="margin-bottom:16px;">
+    <details>
+      <summary>＋ Додати референс стилю</summary>
+      <div class="add-form">
+        <input type="url" id="dcUrl" placeholder="Посилання на фото стилю (Pinterest, Instagram…)" autocapitalize="none" spellcheck="false">
+        <button class="submit-btn" id="addDcRefBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+  <button class="idea-ai-btn" id="dcGenBtn" style="margin-bottom:14px;">🪄 Згенерувати стиль у цих кольорах</button>
+  <div id="dcGenResult"></div>
+  <div class="inspo-grid" id="dcRefsGrid"></div>
+</div>
+
 <!-- BAR & MENU (калькулятор) -->
 <div class="panel" id="tab-bar">
   <div class="section-hint">Рахує орієнтовну кількість напоїв і їжі під кількість гостей кожної локації. Кількість людей підтягується з вкладки «Гості» — можеш виправити вручну. Це орієнтир, не точний рецепт 🙂</div>
@@ -1483,7 +1512,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1690,6 +1719,7 @@ let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
 let music       = loadJSON('wed-music', []);
 let inspo       = loadJSON('wed-inspo', []);
+let dresscode   = loadJSON('wed-dresscode', {colors:[], refs:[], gen:''}); // дрес-код: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах
 let inspoCat    = 'all';
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
@@ -4428,6 +4458,85 @@ document.getElementById('addInspoBtn').onclick=async()=>{
   if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-inspo',inspo); renderInspo(); });
 };
 
+/* ── ДРЕС-КОД: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах ── */
+function renderDressCode(){
+  const colorsBox=document.getElementById('dcColors'); if(!colorsBox) return;
+  colorsBox.innerHTML=`<div class="dc-swatches">
+      ${dresscode.colors.map((c,idx)=>`<span class="dc-swatch" style="background:${esc(c)}" data-dcrm="${idx}" title="${esc(c)} — тицяй, щоб прибрати"></span>`).join('')}
+      ${dresscode.colors.length<6?`<label class="dc-add-swatch" title="Додати колір">+<input type="color" id="dcColorPick" value="#A8505F"></label>`:''}
+    </div>`;
+  colorsBox.querySelectorAll('[data-dcrm]').forEach(sw=>sw.onclick=()=>{
+    dresscode.colors.splice(Number(sw.dataset.dcrm),1);
+    saveJSON('wed-dresscode',dresscode); renderDressCode();
+  });
+  const picker=document.getElementById('dcColorPick');
+  if(picker) picker.onchange=()=>{
+    dresscode.colors.push(picker.value);
+    saveJSON('wed-dresscode',dresscode); renderDressCode();
+  };
+  const refsGrid=document.getElementById('dcRefsGrid');
+  if(refsGrid){
+    if(!dresscode.refs.length){
+      refsGrid.innerHTML='<div class="inspo-empty">Поки без референсів — встав посилання на стиль вище 📌</div>';
+    }else{
+      refsGrid.innerHTML=dresscode.refs.map(r=>{
+        const img=r.img?`<img class="inspo-img" src="${esc(r.img)}" loading="lazy" alt="" data-dcrefbig="${r.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`:`<div class="inspo-img noimg">🖼</div>`;
+        return `<div class="inspo-card">
+          <button class="del-x" data-dcrefdel="${r.id}" aria-label="Видалити">✕</button>
+          ${r.loading?'<div class="idea-loading" style="margin:8px;">Підтягую…</div>':img}
+          <div class="inspo-body">${r.title?`<div class="inspo-title">${esc(r.title)}</div>`:''}</div>
+        </div>`;
+      }).join('');
+      refsGrid.querySelectorAll('[data-dcrefbig]').forEach(im=>{
+        const r=dresscode.refs.find(x=>x.id===im.dataset.dcrefbig); if(r&&r.img) im.onclick=()=>showImgBig(r.img,r.title||'');
+      });
+      refsGrid.querySelectorAll('[data-dcrefdel]').forEach(b=>b.onclick=()=>{
+        dresscode.refs=dresscode.refs.filter(x=>x.id!==b.dataset.dcrefdel);
+        saveJSON('wed-dresscode',dresscode); renderDressCode();
+      });
+    }
+  }
+  const resultBox=document.getElementById('dcGenResult');
+  if(resultBox){
+    resultBox.innerHTML=dresscode.gen?`<div class="dc-gen-wrap"><img class="dc-gen-img" src="${esc(dresscode.gen)}" alt="" data-dcgenview></div>`:'';
+    const genImg=resultBox.querySelector('[data-dcgenview]');
+    if(genImg) genImg.onclick=()=>showImgBig(dresscode.gen,'Дрес-код стиль');
+  }
+}
+document.getElementById('addDcRefBtn').onclick=async()=>{
+  let url=val('dcUrl');
+  if(!url){ showToast('Встав посилання на референс 🙂'); return; }
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  const id='dc'+Date.now();
+  dresscode.refs.unshift({id,url,title:'',img:'',loading:true,ts:Date.now()});
+  document.getElementById('dcUrl').value='';
+  saveJSON('wed-dresscode',dresscode); renderDressCode();
+  const prev=await fetchPreview(url);
+  const cur=dresscode.refs.find(x=>x.id===id); if(!cur)return;
+  cur.loading=false;
+  if(prev){ cur.title=prev.title||''; cur.img=prev.img||''; }
+  saveJSON('wed-dresscode',dresscode); renderDressCode();
+  if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-dresscode',dresscode); renderDressCode(); });
+};
+document.getElementById('dcGenBtn').onclick=async()=>{
+  if(!dresscode.colors.length){ showToast('Спершу обери хоча б один колір 🎨'); return; }
+  const btn=document.getElementById('dcGenBtn'); btn.disabled=true;
+  showToast('🪄 Генерую стиль у цих кольорах…');
+  try{
+    const refParts=(await Promise.all(dresscode.refs.slice(0,4).filter(r=>r.img).map(r=>srcToPart(r.img)))).filter(Boolean);
+    const colorList=dresscode.colors.join(', ');
+    const promptText=`Створи одне цілісне фотореалістичне мудборд-зображення весільного дрес-коду САМЕ в цих кольорах: ${colorList}.${refParts.length?' Врахуй настрій і стиль референсів на доданих зображеннях (силуети, тканини, загальна естетика), але узгодь усе під задану колірну палітру.':' Стиль — елегантне весілля.'} Покажи кілька елементів разом: зразки тканин/колірні плями, приклад жіночого і чоловічого вбрання, дрібні деталі декору — все узгоджено в цій палітрі. Без тексту й водяних знаків, чисте естетичне зображення.`;
+    const img=await aiGenerate([promptText, ...refParts]);
+    if(!img){ showToast('ШІ не зміг згенерувати 😕'); return; }
+    downscaleSrc(img,896,small=>{
+      dresscode.gen=small||img;
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+      showToast('🎨 Готово!');
+    },0.82);
+  }catch(e){ console.warn('dresscodeGen',e); showToast('ШІ-генерація не вдалась 😕 '+aiErr(e)); }
+  finally{ btn.disabled=false; }
+};
+
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -4678,7 +4787,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
@@ -4773,6 +4882,7 @@ function startSync(){
     if(Array.isArray(d.team)) team=d.team;
     if(d.collage && typeof d.collage==='object') collage={her:{},his:{},...d.collage};
     if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{},...d.moodboard};
+    if(d.dresscode && typeof d.dresscode==='object') dresscode={colors:[],refs:[],gen:'',...d.dresscode};
     // БЕЗПЕКА: гостям (?guest) ніколи не тримаємо бюджет і "травку" в пам'яті чи localStorage —
     // раніше це лише ховалось у рендері, а самі дані все одно летіли в браузер гостя й лежали в
     // localStorage. Це не замінює правила безпеки Firestore (їх треба звузити в консолі Firebase
@@ -4809,6 +4919,7 @@ function startSync(){
     DB.set('wed-team',JSON.stringify(team));
     DB.set('wed-collage',JSON.stringify(collage));
     DB.set('wed-moodboard',JSON.stringify(moodboard));
+    DB.set('wed-dresscode',JSON.stringify(dresscode));
     applyingSnapshot=false;
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
