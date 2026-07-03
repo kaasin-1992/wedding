@@ -2025,13 +2025,24 @@ function openTaskDeadlineEdit(id, el){
   inp.value=task.deadline||'';
   el.replaceWith(inp);
   inp.focus();
-  let committed=false;
+  let done=false;
   const commit=()=>{
-    if(committed) return; committed=true;
+    if(done) return; done=true;
     task.deadline=inp.value||''; saveJSON('wed-tasks',tasks); renderTasks();
   };
+  // просто закриває інпут назад без збереження — НЕ чіпає task.deadline. Потрібно, бо на мобільних
+  // взаємодія з нативним пікером дати часто спричиняє blur ще ДО того, як користувач ввів усі три
+  // сегменти (день/місяць/рік) — раніше це трактувалось як "готово" і стирало дедлайн порожнім
+  // значенням, через що вікно вибору дати "закривалось" передчасно.
+  const cancel=()=>{
+    if(done) return; done=true;
+    renderTasks();
+  };
   inp.addEventListener('change',commit);
-  inp.addEventListener('blur',commit);
+  // на blur комітимо лише якщо дата вже ПОВНІСТЮ введена (inp.value непорожній) — інакше це майже
+  // напевно передчасна втрата фокусу під час взаємодії з пікером, а не намір користувача закрити поле
+  inp.addEventListener('blur',()=>{ if(inp.value) commit(); else cancel(); });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); cancel(); } });
 }
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
