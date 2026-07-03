@@ -692,6 +692,19 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .menu-tile.active{border-color:var(--terra);background:var(--terra-dim);color:var(--terra);}
 .menu-tile-icon{font-size:22px;line-height:1;}
 .menu-tile-lbl{font-size:11px;font-weight:500;line-height:1.25;}
+/* мудборд — дошка з вільно перетягуваними картинками */
+.moodboard-btn{display:block;width:100%;margin-bottom:14px;padding:11px;border-radius:12px;border:1px dashed var(--terra);background:var(--terra-dim);color:var(--terra);font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;}
+.moodboard-btn:active{transform:scale(.98);}
+.moodboard-box{max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;text-align:left;}
+.moodboard-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.moodboard-head .modal-btn{flex:0 0 auto;width:auto;padding:9px 16px;}
+.moodboard-canvas{position:relative;flex:1;margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;}
+.moodboard-inner{position:relative;width:1400px;height:1100px;background:repeating-linear-gradient(45deg,var(--surface2) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,var(--surface2) 0 1px,transparent 1px 22px);background-color:var(--bg);}
+.moodboard-tile{position:absolute;width:120px;border-radius:10px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:grab;background:var(--surface);border:1px solid var(--line);touch-action:none;user-select:none;}
+.moodboard-tile:active{cursor:grabbing;z-index:50;}
+.moodboard-tile img{width:100%;height:120px;object-fit:contain;display:block;background:var(--surface);pointer-events:none;}
+.moodboard-tile .mb-cap{font-size:10px;padding:3px 6px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
+.moodboard-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px;}
 .imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
 .crop-box{max-width:420px;text-align:left;}
 .crop-stage{position:relative;margin:12px 0;border-radius:12px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;}
@@ -755,6 +768,17 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <div class="modal-actions">
       <button class="modal-btn ghost" id="menuClose">Закрити</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="moodboardModal" style="display:none">
+  <div class="modal-box moodboard-box">
+    <div class="moodboard-head">
+      <div class="imgpick-title" id="moodboardTitle">🎨 Мудборд</div>
+      <button class="modal-btn ghost" id="moodboardClose">Закрити</button>
+    </div>
+    <div class="imgpick-sub">Перетягуй картинки, щоб розкласти дошку по-своєму.</div>
+    <div class="moodboard-canvas" id="moodboardCanvas"><div class="moodboard-inner" id="moodboardInner"></div></div>
   </div>
 </div>
 
@@ -993,6 +1017,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- IDEAS / LOOK -->
 <div class="panel" id="tab-ideas">
+  <button class="moodboard-btn" data-moodboard="cloth">🎨 Мудборд одягу</button>
   <div class="couple-stage" id="coupleStage">
     <div class="couple-stage-title">🪄 Примірка пари</div>
     <div class="couple-stage-row">
@@ -1277,6 +1302,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
+  <button class="moodboard-btn" data-moodboard="decor">🎨 Мудборд декору</button>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати декор</summary>
@@ -1367,7 +1393,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1579,6 +1605,8 @@ let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-
 let bodyMetrics = loadJSON('wed-metrics', {her:{build:'',height:'',size:''}, his:{build:'',height:'',size:''}}); // параметри тіла для промптів {her,his}
 // ручний колаж (альтернатива ШІ-примірці): {her:{gtype: ideaId}, his:{gtype: ideaId}} — по одній речі на тип
 let collage     = loadJSON('wed-collage', {her:{},his:{}});
+// мудборд: вільне розташування карток на дошці, {cloth:{itemId:{x,y}}, decor:{itemId:{x,y}}} — x/y у % канвасу
+let moodboard   = loadJSON('wed-moodboard', {cloth:{},decor:{}});
 let manqBusy    = {her:false,his:false};
 // 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
 // Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
@@ -4071,6 +4099,85 @@ function openMenu(){ renderMenu(); document.getElementById('menuModal').style.di
 function closeMenu(){ document.getElementById('menuModal').style.display='none'; }
 { const mb=document.getElementById('menuBtn'); if(mb) mb.onclick=openMenu; }
 { const mc=document.getElementById('menuClose'); if(mc) mc.onclick=closeMenu; }
+
+/* ── МУДБОРД: вільне перетягування карток (одяг / декор) ── */
+let _mbType='cloth';
+function moodboardItems(type){
+  if(type==='cloth') return ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||''}));
+  return decor.filter(d=>d.img).map(d=>({id:d.id, img:d.img, title:d.title||''}));
+}
+function renderMoodboard(){
+  const canvas=document.getElementById('moodboardCanvas'), inner=document.getElementById('moodboardInner');
+  if(!canvas||!inner) return;
+  const items=moodboardItems(_mbType);
+  if(!moodboard[_mbType]) moodboard[_mbType]={};
+  const board=moodboard[_mbType];
+  inner.innerHTML='';
+  const oldEmpty=canvas.querySelector('.moodboard-empty'); if(oldEmpty) oldEmpty.remove();
+  if(!items.length){
+    const empty=document.createElement('div');
+    empty.className='moodboard-empty';
+    empty.textContent='Поки немає картинок — додай ідеї з фото, і вони з\'являться тут.';
+    canvas.appendChild(empty);
+    return;
+  }
+  const cols=3;
+  items.forEach((it,idx)=>{
+    let pos=board[it.id];
+    if(!pos){ // перша поява на дошці — розкладаємо приблизною сіткою, далі можна перетягнути
+      const col=idx%cols, row=Math.floor(idx/cols);
+      pos={x:4+col*30, y:4+row*24};
+      board[it.id]=pos;
+    }
+    const tile=document.createElement('div');
+    tile.className='moodboard-tile'; tile.dataset.mbid=it.id;
+    tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
+    tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}`;
+    inner.appendChild(tile);
+  });
+  saveJSON('wed-moodboard',moodboard);
+  wireMoodboardDrag();
+}
+function wireMoodboardDrag(){
+  const inner=document.getElementById('moodboardInner');
+  inner.querySelectorAll('.moodboard-tile').forEach(tile=>{
+    let drag=null;
+    tile.addEventListener('pointerdown',e=>{
+      const tRect=tile.getBoundingClientRect();
+      drag={dx:e.clientX-tRect.left, dy:e.clientY-tRect.top};
+      tile.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    tile.addEventListener('pointermove',e=>{
+      if(!drag) return;
+      const iRect=inner.getBoundingClientRect();
+      let left=e.clientX-iRect.left-drag.dx;
+      let top=e.clientY-iRect.top-drag.dy;
+      left=Math.max(0,Math.min(left, iRect.width-tile.offsetWidth));
+      top=Math.max(0,Math.min(top, iRect.height-tile.offsetHeight));
+      tile.style.left=(100*left/iRect.width)+'%';
+      tile.style.top=(100*top/iRect.height)+'%';
+    });
+    const end=()=>{
+      if(!drag) return; drag=null;
+      const id=tile.dataset.mbid;
+      moodboard[_mbType][id]={x:parseFloat(tile.style.left)||0, y:parseFloat(tile.style.top)||0};
+      saveJSON('wed-moodboard',moodboard);
+    };
+    tile.addEventListener('pointerup',end);
+    tile.addEventListener('pointercancel',end);
+  });
+}
+function openMoodboard(type){
+  _mbType=type;
+  const title=document.getElementById('moodboardTitle');
+  if(title) title.textContent = type==='cloth' ? '🎨 Мудборд одягу' : '🎨 Мудборд декору';
+  document.getElementById('moodboardModal').style.display='flex';
+  renderMoodboard();
+}
+function closeMoodboard(){ document.getElementById('moodboardModal').style.display='none'; }
+document.querySelectorAll('[data-moodboard]').forEach(btn=>btn.onclick=()=>openMoodboard(btn.dataset.moodboard));
+{ const mc2=document.getElementById('moodboardClose'); if(mc2) mc2.onclick=closeMoodboard; }
 function shiftTab(dir){
   const i=TAB_ORDER.indexOf(currentTab()), ni=i+dir;
   if(ni<0||ni>=TAB_ORDER.length) return;
@@ -4079,7 +4186,7 @@ function shiftTab(dir){
 let _sx=0,_sy=0,_st=0,_swipe=false;
 document.addEventListener('touchstart',e=>{
   // .seat-chip/.crop-frame мають власне touch-action:none перетягування — не змішуємо зі свайпом вкладок
-  if(e.touches.length!==1 || e.target.closest('.tabs-bar, input, textarea, select, .seat-chip, .crop-frame')){ _swipe=false; return; }
+  if(e.touches.length!==1 || e.target.closest('.tabs-bar, input, textarea, select, .seat-chip, .crop-frame, .moodboard-tile')){ _swipe=false; return; }
   const t=e.touches[0]; _sx=t.clientX; _sy=t.clientY; _st=Date.now(); _swipe=true;
 },{passive:true});
 document.addEventListener('touchend',e=>{
@@ -4200,6 +4307,8 @@ function startSync(){
     if(d.partyNotes && typeof d.partyNotes==='object') partyNotes={her:d.partyNotes.her||'',his:d.partyNotes.his||''};
     if(d.bar && typeof d.bar==='object') bar=d.bar;
     if(Array.isArray(d.team)) team=d.team;
+    if(d.collage && typeof d.collage==='object') collage={her:{},his:{},...d.collage};
+    if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{},...d.moodboard};
     // БЕЗПЕКА: гостям (?guest) ніколи не тримаємо бюджет і "травку" в пам'яті чи localStorage —
     // раніше це лише ховалось у рендері, а самі дані все одно летіли в браузер гостя й лежали в
     // localStorage. Це не замінює правила безпеки Firestore (їх треба звузити в консолі Firebase
@@ -4234,6 +4343,8 @@ function startSync(){
     DB.set('wed-party-notes',JSON.stringify(partyNotes));
     DB.set('wed-bar',JSON.stringify(bar));
     DB.set('wed-team',JSON.stringify(team));
+    DB.set('wed-collage',JSON.stringify(collage));
+    DB.set('wed-moodboard',JSON.stringify(moodboard));
     applyingSnapshot=false;
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
