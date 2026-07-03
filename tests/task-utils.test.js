@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { hashStr, isWeed, getStatus, plDays, timeMask, timeNorm, daysUntilWedding } from '../lib/task-utils.js';
+import { hashStr, isWeed, getStatus, plDays, timeMask, timeNorm, daysUntilWedding, stripGuestData } from '../lib/task-utils.js';
 
 describe('hashStr (smoke test — validates the dual-export pattern)', () => {
   it('returns a stable hash string', () => {
@@ -84,5 +84,40 @@ describe('daysUntilWedding', () => {
   });
   it('computes days remaining based on the global WEDDING date', () => {
     expect(daysUntilWedding()).toBe(10);
+  });
+});
+
+describe('stripGuestData (безпека: що гість НЕ повинен отримати)', () => {
+  it('always empties budget regardless of content', () => {
+    const state = { tasks: [], scriptSofia: [], scriptWave: [] };
+    expect(stripGuestData({ ...state, budget: [{ id: 'b1', planned: 50000 }] }).budget).toEqual([]);
+  });
+  it('strips weed-tagged tasks but keeps the rest', () => {
+    const state = {
+      tasks: [{ id: 't1', text: 'забронювати зал' }, { id: 't2', text: 'купити травку на вечірку' }],
+      scriptSofia: [], scriptWave: [],
+    };
+    const out = stripGuestData(state);
+    expect(out.tasks.map(t => t.id)).toEqual(['t1']);
+  });
+  it('strips weed-tagged script items in both scripts', () => {
+    const state = {
+      tasks: [],
+      scriptSofia: [{ id: 's1', text: 'вихід молодят' }, { id: 's2', text: '🌿 перерва для диму' }],
+      scriptWave: [{ id: 's3', text: 'перший танець' }, { id: 's4', text: 'косяк на балконі' }],
+    };
+    const out = stripGuestData(state);
+    expect(out.scriptSofia.map(m => m.id)).toEqual(['s1']);
+    expect(out.scriptWave.map(m => m.id)).toEqual(['s3']);
+  });
+  it('always clears the weed password hash', () => {
+    expect(stripGuestData({ tasks: [], scriptSofia: [], scriptWave: [] }).weedPassHash).toBe('');
+  });
+  it('handles missing/undefined arrays gracefully', () => {
+    const out = stripGuestData({});
+    expect(out.budget).toEqual([]);
+    expect(out.tasks).toEqual([]);
+    expect(out.scriptSofia).toEqual([]);
+    expect(out.scriptWave).toEqual([]);
   });
 });
