@@ -197,6 +197,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .venue-photos-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden;}
 .venue-photos-wrap>summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:13.5px;color:var(--text);}
 .venue-photos-wrap>summary::-webkit-details-marker{display:none;}
+.roles-assign-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;}
+.roles-assign-wrap>summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:13.5px;color:var(--text);}
+.roles-assign-wrap>summary::-webkit-details-marker{display:none;}
+.role-assign-row{display:flex;align-items:center;gap:10px;padding:8px 15px;}
+.role-assign-lbl{flex:0 0 120px;font-size:13px;color:var(--muted);}
+.role-assign-sel{flex:1;font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);}
 .venue-photos{display:flex;gap:10px;padding:0 15px 15px;}
 .venue-photo-card{flex:1;min-width:0;text-align:center;}
 .venue-photo-frame{width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface2);border:1.5px dashed var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);cursor:pointer;}
@@ -979,6 +985,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
   <div class="stats-grid" id="guestStats"></div>
   <div class="sofia-limit-warn" id="sofiaLimitWarn"></div>
+  <details class="roles-assign-wrap">
+    <summary>🎬 Ролі на весіллі (ведуча, фотограф, відеограф)</summary>
+    <div id="rolesAssignBox"></div>
+  </details>
   <div class="filters">
     <button class="filt-btn active" data-f="all">Всі</button>
     <button class="filt-btn" data-f="her">Гості Каті</button>
@@ -1806,7 +1816,27 @@ const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф'
 const ROLE_ORDER=['','photo','video','mc'];
 const SOFIA_LIMIT=30;   // Софі камерна — більше людей фізично не поміститься
 let _sofiaLimitToasted=false;
+function renderRolesAssign(){
+  const box=document.getElementById('rolesAssignBox'); if(!box) return;
+  box.innerHTML=Object.keys(GUEST_ROLES).map(roleKey=>{
+    const options=guests.map(g=>`<option value="${g.id}" ${g.role===roleKey?'selected':''}>${esc(g.name)}</option>`).join('');
+    return `<div class="role-assign-row">
+      <span class="role-assign-lbl">${GUEST_ROLES[roleKey]}</span>
+      <select class="role-assign-sel" data-roleassign="${roleKey}">
+        <option value="">— не призначено —</option>
+        ${options}
+      </select>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-roleassign]').forEach(sel=>sel.onchange=()=>{
+    const roleKey=sel.dataset.roleassign, gid=sel.value;
+    guests.forEach(g=>{ if(g.role===roleKey) g.role=''; });   // звільняємо роль від попереднього власника
+    if(gid){ const g=guests.find(x=>x.id===gid); if(g) g.role=roleKey; }
+    saveJSON('wed-guests',guests); renderGuests();
+  });
+}
 function renderGuests(){
+  renderRolesAssign();
   // цифри зверху рахуються ВІД АКТИВНОГО ФІЛЬТРА, а не від усього списку —
   // щоб було видно, скільки саме людей у розписі/на вечірці серед відфільтрованих
   const scoped=guests.filter(g=>matchesAllFilters(g,activeFilters));
@@ -1847,7 +1877,6 @@ function renderGuests(){
     const wpLbl=g.side==='her'?'💐 Дружка':'🤵 Дружок';
     const roleBadge=g.role&&GUEST_ROLES[g.role]?`<span class="badge role">${GUEST_ROLES[g.role]}</span>`:'';
     const attrRow=`<div class="attr-row">
-      <span class="attr-chip rl ${g.role?'on':''}" data-attr="role" data-id="${g.id}" role="button" tabindex="0" title="Роль на весіллі — одна людина на роль (тицяй, щоб змінити)">${g.role&&GUEST_ROLES[g.role]?GUEST_ROLES[g.role]:'🎬 Роль'}</span>
       <span class="attr-chip wp ${g.wparty?'on':''}" data-attr="wparty" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.wparty}">${wpLbl}</span>
       <span class="attr-chip p1 ${g.plus1&&g.plus1!=='none'?'on':''}" data-attr="plus1" data-id="${g.id}" role="button" tabindex="0" title="Чи буде +1 (тицяй: нема → під питанням → точно буде)">${g.plus1==='confirmed'?'➕ +1 ✓':g.plus1&&g.plus1!=='none'?'➕ +1 ?':'➕ +1'}</span>
       <span class="attr-chip mb ${g.maybe?'on':''}" data-attr="maybe" data-id="${g.id}" role="button" tabindex="0" aria-pressed="${!!g.maybe}">🤔 Під питанням</span>
@@ -1914,11 +1943,6 @@ function renderGuests(){
     else if(a==='alco') g.alco=!g.alco;
     else if(a==='veg') g.veg=!g.veg;
     else if(a==='weed') g.weed=!g.weed;
-    else if(a==='role'){
-      const next=ROLE_ORDER[(ROLE_ORDER.indexOf(g.role||'')+1)%ROLE_ORDER.length];
-      if(next) guests.forEach(x=>{ if(x!==g && x.role===next) x.role=''; }); // одна людина на роль
-      g.role=next;
-    }
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     else if(a==='plus1'){ const order=['none','pending','confirmed']; let cur=order.indexOf(g.plus1); if(cur<0)cur=0; g.plus1=order[(cur+1)%order.length]; }
     saveJSON('wed-guests',guests); renderGuests();
