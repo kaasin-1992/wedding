@@ -258,6 +258,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;}
 .couple-stage-row{display:flex;gap:10px;}
 .couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;}
+.couple-slot.cs-clickable{cursor:pointer;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
 /* метрики тіла під базовим фото */
@@ -784,12 +785,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- TASKS -->
 <div class="panel active" id="tab-tasks">
-  <div class="progress-strip">
-    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
-    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
-  </div>
-  <div class="timeline" id="timeline"></div>
-  <div class="add-section" style="margin-top:24px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати завдання</summary>
       <div class="add-form">
@@ -799,27 +795,16 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="progress-strip">
+    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
+    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
+  </div>
+  <div class="timeline" id="timeline"></div>
 </div>
 
 <!-- GUESTS -->
 <div class="panel" id="tab-guests">
-  <div class="stats-grid" id="guestStats"></div>
-  <div class="filters">
-    <button class="filt-btn active" data-f="all">Всі</button>
-    <button class="filt-btn" data-f="her">Мої</button>
-    <button class="filt-btn" data-f="his">Його</button>
-    <button class="filt-btn" data-f="family">Родичі</button>
-    <button class="filt-btn" data-f="friends">Друзі</button>
-    <button class="filt-btn" data-f="ceremony">Розпис</button>
-    <button class="filt-btn" data-f="party">Вечірка</button>
-    <button class="filt-btn" data-f="plus1">+1</button>
-    <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
-    <button class="filt-btn" data-f="backup">⏳ Запасні</button>
-    <button class="filt-btn" data-f="wparty">💐 Дружки</button>
-    <button class="filt-btn" data-f="pending">Не підтвердили</button>
-  </div>
-  <div class="guest-list" id="guestList"></div>
-  <div class="add-section">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати гостя</summary>
       <div class="add-form">
@@ -867,22 +852,34 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="stats-grid" id="guestStats"></div>
+  <div class="filters">
+    <button class="filt-btn active" data-f="all">Всі</button>
+    <button class="filt-btn" data-f="her">Мої</button>
+    <button class="filt-btn" data-f="his">Його</button>
+    <button class="filt-btn" data-f="family">Родичі</button>
+    <button class="filt-btn" data-f="friends">Друзі</button>
+    <button class="filt-btn" data-f="ceremony">Розпис</button>
+    <button class="filt-btn" data-f="party">Вечірка</button>
+    <button class="filt-btn" data-f="plus1">+1</button>
+    <button class="filt-btn" data-f="maybe">🤔 Під питанням</button>
+    <button class="filt-btn" data-f="backup">⏳ Запасні</button>
+    <button class="filt-btn" data-f="wparty">💐 Дружки</button>
+    <button class="filt-btn" data-f="pending">Не підтвердили</button>
+  </div>
+  <div class="idea-sort">
+    <span class="idea-sort-lbl">Сортувати:</span>
+    <select id="guestSort" aria-label="Сортування гостей">
+      <option value="">за статусом (типово)</option>
+      <option value="name">за іменем (А-Я)</option>
+    </select>
+  </div>
+  <div class="guest-list" id="guestList"></div>
 </div>
 
 <!-- BUDGET -->
 <div class="panel" id="tab-budget">
-  <div class="budget-cap">
-    <label for="capInput">Орієнтовний бюджет</label>
-    <input type="number" id="capInput" placeholder="0" min="0">
-  </div>
-  <div class="budget-summary">
-    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--terra)">0</div><div class="bsum-lbl">Заплановано</div></div>
-    <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
-    <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
-  </div>
-  <div id="capNote"></div>
-  <div id="budgetList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати статтю витрат</summary>
       <div class="add-form">
@@ -901,13 +898,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="budget-cap">
+    <label for="capInput">Орієнтовний бюджет</label>
+    <input type="number" id="capInput" placeholder="0" min="0">
+  </div>
+  <div class="budget-summary">
+    <div class="bsum-box"><div class="bsum-num" id="sumPlanned" style="color:var(--terra)">0</div><div class="bsum-lbl">Заплановано</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumPaid" style="color:var(--done)">0</div><div class="bsum-lbl">Сплачено</div></div>
+    <div class="bsum-box"><div class="bsum-num" id="sumRemain" style="color:var(--warn)">0</div><div class="bsum-lbl">Залишок доплатити</div></div>
+  </div>
+  <div id="capNote"></div>
+  <div id="budgetList"></div>
 </div>
 
 <!-- CONTACTS -->
 <div class="panel" id="tab-contacts">
   <div class="section-hint">Підрядники й контакти. Під кожною роллю можна додати кілька <b>варіантів</b> з контактами, а потім тицьнути «Обрати» — обраний показується зверху й лишається як основний. Тицьни на статус, щоб змінити: 🔍 Шукаємо → 💬 На звʼязку → ✅ Заброньовано.</div>
-  <div id="contactList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати роль / підрядника</summary>
       <div class="add-form">
@@ -921,13 +928,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="contactList"></div>
 </div>
 
 <!-- NOTES -->
 <div class="panel" id="tab-notes">
   <div class="section-hint">Ідеї, списки, що завгодно — все, що треба тримати під рукою.</div>
-  <div id="noteList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати нотатку</summary>
       <div class="add-form">
@@ -937,6 +944,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="noteList"></div>
 </div>
 
 <!-- IDEAS / LOOK -->
@@ -1024,6 +1032,11 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-i="rings">💍 Каблучки</button>
     <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
   </div>
+  <div class="filters" id="ideaSubFilters">
+    <button class="filt-btn active" data-isub="cloth">👗 Одяг</button>
+    <button class="filt-btn" data-isub="makeup">💄 Мейк</button>
+    <button class="filt-btn" data-isub="hair">💇 Зачіска</button>
+  </div>
   <div class="idea-sort" id="ideaSortBar" style="display:none;">
     <span class="idea-sort-lbl">Сортувати:</span>
     <select id="ideaSort" aria-label="Сортування одягу">
@@ -1067,19 +1080,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn active" data-p="her">👰 Дівич-вечір</button>
     <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
   </div>
-  <div class="party-general">
-    <label class="party-general-lbl" id="partyGenLbl" for="partyGenNote">💬 Загальний коментар про вечірку</label>
-    <textarea id="partyGenNote" class="party-general-note" rows="2" placeholder="Спільні думки — місце, бюджет, ідеї, дата…"></textarea>
-  </div>
-  <div class="add-section" style="margin-bottom:14px;">
-    <details>
-      <summary>👥 Обрати зі списку гостей</summary>
-      <div class="party-pick-hint" id="partyPickHint"></div>
-      <div id="partyPickList" class="party-pick-list"></div>
-    </details>
-  </div>
-  <div id="partyList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:8px;">
     <details open>
       <summary>＋ Додати людину вручну</summary>
       <div class="add-form">
@@ -1089,17 +1090,24 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <details>
+      <summary>👥 Обрати зі списку гостей</summary>
+      <div class="party-pick-hint" id="partyPickHint"></div>
+      <div id="partyPickList" class="party-pick-list"></div>
+    </details>
+  </div>
+  <div class="party-general">
+    <label class="party-general-lbl" id="partyGenLbl" for="partyGenNote">💬 Загальний коментар про вечірку</label>
+    <textarea id="partyGenNote" class="party-general-note" rows="2" placeholder="Спільні думки — місце, бюджет, ідеї, дата…"></textarea>
+  </div>
+  <div id="partyList"></div>
 </div>
 
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
   <div class="section-hint">Хід дня по хвилинах. Таймлайн окремий для Софі та Хвильового, а беклог (плани без часу) — <b>спільний</b>: накидай ідеї, признач локацію, а коли поставиш час — пункт піде в таймлайн тієї локації, яку зараз дивишся.</div>
-  <div class="filters" id="scriptTabs">
-    <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
-    <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
-  </div>
-  <div id="scriptList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати пункт</summary>
       <div class="add-form">
@@ -1116,6 +1124,11 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div class="filters" id="scriptTabs">
+    <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
+    <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
+  </div>
+  <div id="scriptList"></div>
 </div>
 
 <!-- INVITES -->
@@ -1152,6 +1165,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- SEATING -->
 <div class="panel" id="tab-seating">
   <div class="section-hint">Хто де сидить. Окремо для Софі та Хвильового. Спершу постав фото/гостей у «Гості» — тут зʼявляться їхні імена. Створи столи/зони і розсади перетягуючи гостей.</div>
+  <div class="add-section" style="margin-bottom:14px;">
+    <div class="add-form" style="flex-direction:row;gap:8px;">
+      <input type="text" id="zoneName" placeholder="Назва столу / зони (напр. «Стіл молодят»)">
+      <button class="submit-btn" id="addZoneBtn" style="flex:0 0 auto;width:auto;padding:11px 16px;">＋ Стіл</button>
+    </div>
+  </div>
   <div class="filters" id="seatTabs">
     <button class="filt-btn active" data-st="sofia">💒 Софі</button>
     <button class="filt-btn" data-st="wave">🥂 Хвильовий</button>
@@ -1159,19 +1178,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="seat-tip" id="seatTip"></div>
   <div id="seatUnassigned"></div>
   <div id="seatZones"></div>
-  <div class="add-section" style="margin-top:14px;">
-    <div class="add-form" style="flex-direction:row;gap:8px;">
-      <input type="text" id="zoneName" placeholder="Назва столу / зони (напр. «Стіл молодят»)">
-      <button class="submit-btn" id="addZoneBtn" style="flex:0 0 auto;width:auto;padding:11px 16px;">＋ Стіл</button>
-    </div>
-  </div>
 </div>
 
 <!-- HOTEL -->
 <div class="panel" id="tab-hotel">
   <div class="section-hint">Ночівля до/після свята — нам, і якщо раптом хтось приїде з іншого міста. Встав посилання на готель — підтягнеться фото й опис. Тицьни на статус, щоб позначити бронь.</div>
-  <div id="hotelList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати варіант ночівлі</summary>
       <div class="add-form">
@@ -1192,13 +1204,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="hotelList"></div>
 </div>
 
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
-  <div id="decorList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати декор</summary>
       <div class="add-form">
@@ -1213,13 +1225,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="decorList"></div>
 </div>
 
 <!-- MUSIC -->
 <div class="panel" id="tab-music">
   <div class="section-hint">Артисти, гурти, діджеї. Додавай посилання (портфоліо, соцмережі) та умови роботи — ціна, тривалість сету, апаратура, райдер. Тицьни на статус, щоб вести перемовини.</div>
-  <div id="musicList"></div>
-  <div class="add-section" style="margin-top:16px;">
+  <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати артиста / діджея</summary>
       <div class="add-form">
@@ -1232,6 +1244,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <div id="musicList"></div>
 </div>
 
 <!-- INSPIRATION -->
@@ -1267,6 +1280,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="lib/guest-utils.js"></script>
+<script src="lib/task-utils.js"></script>
+<script src="lib/budget-utils.js"></script>
 <script>
 const WEDDING = new Date('2026-09-06');
 
@@ -1501,8 +1517,6 @@ let weedPassHash = loadJSON('wed-weed-pass', '');   // хеш пароля (си
 // розблоковано на ЦЬОМУ пристрої (зберігається локально, НЕ синхронізується):
 // ти і Дмитро вводите пароль раз на своєму телефоні — далі видно завжди; дружки на своїх пристроях пароля не мають.
 let weedUnlocked = (()=>{ try{ return localStorage.getItem('wed-weed-ok')==='1'; }catch(e){ return false; } })();
-function hashStr(s){ let h=5381; s=String(s); for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return 'h'+h.toString(36); }
-function isWeed(text){ return /(?<![а-яіїєґ])трав(а|и|у|і|о|к|ичк|ʼ|')|weed|🌿|канабіс|каннабіс|косяк|джойнт|шишк/i.test(String(text||'')); }
 function reRenderWeedAreas(){ try{ renderGuests(); renderBar(); renderBudget(); renderTasks(); renderScripts(); }catch(e){} }
 function unlockWeed(){
   if(weedUnlocked) return true;
@@ -1540,22 +1554,9 @@ let bar         = loadJSON('wed-bar', DEFAULT_BAR);
 let team        = loadJSON('wed-team', DEFAULT_TEAM);
 
 /* ── HELPERS ── */
-const today = ()=> new Date(new Date().toDateString());
-const daysUntil = s => s ? Math.ceil((new Date(s)-today())/86400000) : null;
-const daysUntilWedding = ()=> Math.ceil((WEDDING-today())/86400000);
 const fmtDate = s => { if(!s)return''; const p=s.split('-'); return`${p[2]}.${p[1]}`; };
 const fmtMoney = n => (Number(n)||0).toLocaleString('uk-UA') + ' ₴';
 const MONTHS = ['','Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
-
-function getStatus(t){
-  if(t.done) return'done';
-  if(t.asap&&!t.deadline) return'asap';
-  const d=daysUntil(t.deadline);
-  if(d===null) return'ok';
-  if(d<0||d<=7) return'hot';
-  if(d<=21) return'warn';
-  return'ok';
-}
 
 /* ════ TASKS ════ */
 function renderTasks(){
@@ -1613,48 +1614,26 @@ document.getElementById('addTaskBtn').onclick=()=>{
 };
 
 /* ════ GUESTS ════ */
-let activeFilter='all';
-const headCount=g=>1+(g.plus1==='confirmed'?1:0)+(Number(g.kids)||0);
-const totalPeople=()=>guests.filter(g=>g.status!=='declined').reduce((s,g)=>s+headCount(g),0);
-const peopleAt=ev=>guests.filter(g=>g.status!=='declined'&&(g.event===ev||g.event==='both')).reduce((s,g)=>s+headCount(g),0);
-function applyFilter(g,f){
-  if(f==='all')return true;
-  if(f==='her')return g.side==='her';
-  if(f==='his')return g.side==='his';
-  if(f==='family')return (g.group||'friends')==='family';
-  if(f==='friends')return (g.group||'friends')==='friends';
-  if(f==='ceremony')return g.event==='ceremony'||g.event==='both';
-  if(f==='party')return g.event==='party'||g.event==='both';
-  if(f==='plus1')return g.plus1!=='none';
-  if(f==='maybe')return !!g.maybe;
-  if(f==='backup')return !!g.backup;
-  if(f==='wparty')return !!g.wparty;
-  if(f==='pending')return g.status==='pending';
-  return true;
-}
-/* порядок у списку: підтверджені → запрошені → під питанням → запасні → відмовили */
-function guestRank(g){
-  if(g.status==='confirmed') return 0;
-  if(g.status==='declined')  return 4;
-  if(g.backup)               return 3;
-  if(g.maybe)                return 2;
-  return 1;
-}
+let activeFilters=new Set(['all']);
+let guestSort='';
 const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
 const ROLE_ORDER=['','photo','video','mc'];
 function renderGuests(){
-  const confirmed=guests.filter(g=>g.status==='confirmed').length;
-  const pending=guests.filter(g=>g.status==='pending').length;
+  // цифри зверху рахуються ВІД АКТИВНОГО ФІЛЬТРА, а не від усього списку —
+  // щоб було видно, скільки саме людей у розписі/на вечірці серед відфільтрованих
+  const scoped=guests.filter(g=>matchesAllFilters(g,activeFilters));
+  const confirmed=scoped.filter(g=>g.status==='confirmed').length;
+  const pending=scoped.filter(g=>g.status==='pending').length;
   document.getElementById('guestStats').innerHTML=`
-    <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
+    <div class="stat-box"><div class="stat-num">${scoped.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople()}</div><div class="stat-lbl">Людей разом</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt('ceremony')}</div><div class="stat-lbl">На розписі</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt('party')}</div><div class="stat-lbl">На вечірці</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople(scoped)}</div><div class="stat-lbl">Людей разом</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt(scoped,'ceremony')}</div><div class="stat-lbl">На розписі</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(scoped,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
-  const filtered=guests.filter(g=>applyFilter(g,activeFilter)).sort((a,b)=>guestRank(a)-guestRank(b));
+  const filtered=sortGuestList(scoped, guestSort);
   if(!filtered.length){
     listEl.innerHTML=`<div class="empty-state">${guests.length===0?'Гостей ще немає — додай першого 🌸':'Нікого за цим фільтром'}</div>`;
     return;
@@ -1759,10 +1738,20 @@ function renderGuests(){
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
   });
 }
+// мультивибір: клік перемикає фільтр, "Всі" скидає до дефолту; якщо нічого не лишилось — теж дефолт
 document.querySelectorAll('#tab-guests .filt-btn').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activeFilter=btn.dataset.f; renderGuests();
+  const f=btn.dataset.f;
+  if(f==='all'){
+    activeFilters=new Set(['all']);
+  } else {
+    activeFilters.delete('all');
+    if(activeFilters.has(f)) activeFilters.delete(f); else activeFilters.add(f);
+    if(!activeFilters.size) activeFilters.add('all');
+  }
+  document.querySelectorAll('#tab-guests .filt-btn').forEach(b=>b.classList.toggle('active', activeFilters.has(b.dataset.f)));
+  renderGuests();
 });
+{ const gs=document.getElementById('guestSort'); if(gs) gs.onchange=()=>{ guestSort=gs.value; renderGuests(); }; }
 /* ── ТОСТ ЗІ СКАСУВАННЯМ ── */
 let _toastTimer=null;
 function showToast(msg, undoFn){
@@ -1820,85 +1809,9 @@ function askConfirm(message, yesLabel='Додати', noLabel='Не додати
   });
 }
 
-/* ── ПЕРЕВІРКА НА ПОВТОРИ (схожі імена в будь-якій формі) ── */
-const NICK_GROUPS=[
-  ['олександр','саша','сашко','санько','алекс'],
-  ['олександра','сашка','леся'],
-  ['катерина','катя','катруся','катеринка'],
-  ['олена','оленка','аленка'],
-  ['ольга','оля'],
-  ['михайло','міша','мишко'],
-  ['дмитро','діма','дмитрик'],
-  ['володимир','вова','володя','вовка'],
-  ['наталія','наталя','наташа','ната'],
-  ['анна','аня','анничка'],
-  ['марія','маша','маруся'],
-  ['іван','ваня','іванко'],
-  ['юлія','юля','юлька'],
-  ['тетяна','таня','танюша'],
-  ['ірина','іра','іринка'],
-  ['сергій','сергійко','сєрьожа'],
-  ['андрій','андрійко'],
-  ['вікторія','віка'],
-  ['євген','женя','жека'],
-  ['артем','тьома','артемко'],
-  ['назар','назарко'],
-  ['богдан','бодя'],
-  ['софія','соня','софійка'],
-  ['дарина','даша','даря','даринка'],
-  ['христина','христя'],
-  ['роман','рома','ромчик'],
-  ['петро','петрик','петя'],
-  ['василь','вася','васько'],
-  ['микола','коля','миколка'],
-  ['григорій','гриша','грицько'],
-  ['павло','паша','павлик'],
-  ['денис','деня'],
-  ['максим','макс','максимко'],
-  ['людмила','люда','люся'],
-  ['валентина','валя'],
-  ['валерій','валера'],
-  ['станіслав','стас'],
-  ['ярослав','ярік','слава'],
-  ['владислав','влад'],
-  ['віталій','віталік'],
-  ['олег','олежко'],
-  ['ігор','ігорьок'],
-  ['юрій','юра','юрко'],
-];
-const NICK_MAP=(()=>{const m={};NICK_GROUPS.forEach((g,i)=>g.forEach(n=>{if(m[n]===undefined)m[n]=i;}));return m;})();
-function normName(s){ return String(s||'').toLowerCase().replace(/[ʼ'’`.,!?]/g,'').replace(/\s+/g,' ').trim(); }
-function canon(tok){ return NICK_MAP[tok]!==undefined ? 'g'+NICK_MAP[tok] : tok; }
-function lev(a,b){
-  const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
-  let prev=Array.from({length:n+1},(_,i)=>i);
-  for(let i=1;i<=m;i++){ const cur=[i];
-    for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); }
-    prev=cur;
-  }
-  return prev[n];
-}
-function similarTok(a,b){
-  if(!a||!b)return false;
-  if(a===b)return true;
-  const min=Math.min(a.length,b.length);
-  if(min>=3&&(a.startsWith(b)||b.startsWith(a)))return true;
-  const mx=Math.max(a.length,b.length);
-  return mx>0 && (1-lev(a,b)/mx)>=0.8;
-}
-function findDuplicateGuest(name){
-  const inFull=normName(name), inFirst=inFull.split(' ')[0], inCanon=canon(inFirst);
-  for(const g of guests){
-    const exFull=normName(g.name), exFirst=exFull.split(' ')[0];
-    if(exFull===inFull) return g.name;
-    if(canon(exFirst)===inCanon) return g.name;
-    if(similarTok(inFirst,exFirst)) return g.name;
-  }
-  return null;
-}
 document.getElementById('addGuestBtn').onclick=async()=>{
   const name=val('gName'); if(!name)return;
-  const dup=findDuplicateGuest(name);
+  const dup=findDuplicateGuest(name, guests);
   if(dup){
     const add=await askConfirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?`, 'Додати', 'Не додати');
     if(!add) return;
@@ -1915,17 +1828,15 @@ document.getElementById('capInput').addEventListener('input',e=>{
 function renderBudget(){
   // 🌿 статті про травку приховані, поки не введено пароль
   const vbudget = weedUnlocked ? budget : budget.filter(b=>!isWeed(b.name+' '+(b.note||'')));
-  const planned=vbudget.reduce((s,b)=>s+(Number(b.planned)||0),0);
-  const paid=vbudget.reduce((s,b)=>s+(Number(b.paid)||0),0);
+  const {planned, paid, remaining, capDiff} = computeBudgetTotals(vbudget, budgetCap);
   document.getElementById('sumPlanned').textContent=fmtMoney(planned);
   document.getElementById('sumPaid').textContent=fmtMoney(paid);
-  document.getElementById('sumRemain').textContent=fmtMoney(planned-paid);
+  document.getElementById('sumRemain').textContent=fmtMoney(remaining);
 
   const noteEl=document.getElementById('capNote');
   if(budgetCap>0){
-    const diff=budgetCap-planned;
-    noteEl.className='cap-note '+(diff>=0?'under':'over');
-    noteEl.textContent=diff>=0?`В межах бюджету — лишається ${fmtMoney(diff)}`:`Перевищення бюджету на ${fmtMoney(-diff)}`;
+    noteEl.className='cap-note '+(capDiff>=0?'under':'over');
+    noteEl.textContent=capDiff>=0?`В межах бюджету — лишається ${fmtMoney(capDiff)}`:`Перевищення бюджету на ${fmtMoney(-capDiff)}`;
   } else noteEl.className='', noteEl.textContent='';
 
   const groups={};
@@ -2102,18 +2013,10 @@ document.getElementById('addNoteBtn').onclick=()=>{
 
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
+let activeSub='cloth';   // для Вона/Він: 'cloth' | 'makeup' | 'hair' — обручки лишаються окремою верхньою вкладкою
 let ideaSort='';
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
-// витягуємо ціну з тексту прев'ю: "1 250 грн", "₴1250", "3200 UAH", "від 4500 грн"
-function extractPrice(t){
-  const s=String(t||'');
-  let m=s.match(/(?:₴|UAH)\s*([\d][\d\s.,]{1,9}\d|\d)/i);
-  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
-  m=s.match(/([\d][\d\s.,]{1,9}\d|\d)\s*(?:грн|₴|uah|грн\.|гривень)/i);
-  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
-  return '';
-}
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
 async function microlink(url, extra, timeout){
   const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), timeout||14000);
@@ -2151,9 +2054,14 @@ function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   // панель сортування — лише для одягу (Вона/Він)
   const sortBar=document.getElementById('ideaSortBar');
-  const isCloth=(activeIdea==='her'||activeIdea==='his');
+  const subBar=document.getElementById('ideaSubFilters');
+  const isPerson=(activeIdea==='her'||activeIdea==='his');
+  const isCloth=isPerson && activeSub==='cloth';
+  if(subBar) subBar.style.display=isPerson?'flex':'none';
   if(sortBar) sortBar.style.display=isCloth?'flex':'none';
-  let items=ideas.filter(i=>i.cat===activeIdea);
+  let items = isPerson
+    ? (activeSub==='cloth' ? ideas.filter(i=>i.cat===activeIdea) : ideas.filter(i=>i.cat===activeSub && i.who===activeIdea))
+    : ideas.filter(i=>i.cat===activeIdea);
   if(isCloth && ideaSort){
     const arr=items.slice();
     if(ideaSort==='gtype'){
@@ -2174,7 +2082,7 @@ function renderIdeas(){
     const aiImg=isTry?null:it.gen;
     const showImg=aiImg||it.img;
     const fallback=`<div class="idea-thumb-fallback">
-        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${it.cat==='rings'?'💍':'💡'}</div>`}
+        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
         <div class="idea-fallback-host">${esc(host||'ідея')}</div>
       </div>`;
     const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
@@ -2256,6 +2164,18 @@ document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
 });
+document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeSub=btn.dataset.isub; renderIdeas();
+});
+// відкрити редактор персонажа: обрати "Вона"/"Він" і категорію одразу (клік на фото в couple-стейджі)
+function openPersonEditor(who, sub){
+  activateTab('ideas');
+  activeIdea=who; activeSub=sub||'cloth';
+  document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.i===who));
+  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.isub===activeSub));
+  renderIdeas();
+}
 { const ss=document.getElementById('ideaSort'); if(ss) ss.onchange=()=>{ ideaSort=ss.value; renderIdeas(); }; }
 document.getElementById('addIdeaBtn').onclick=async()=>{
   let url=val('iUrl');
@@ -2263,7 +2183,12 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   if(!url && !(name||note)){ showToast('Встав посилання або напиши вручну (напр. аксесуар своїми руками) ✍️'); return; }
   if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
   const hasUrl=!!url;
-  ideas.unshift({id,cat:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
+  // "Мейк"/"Зачіска" — це під-категорії конкретної людини (cat:'makeup'/'hair', who:'her'/'his'),
+  // не окрема верхня вкладка, як каблучки чи одяг
+  const isPersonSub=(activeIdea==='her'||activeIdea==='his')&&(activeSub==='makeup'||activeSub==='hair');
+  const newIdea={id,cat:isPersonSub?activeSub:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()};
+  if(isPersonSub) newIdea.who=activeIdea;
+  ideas.unshift(newIdea);
   ['iUrl','iName','iPrice','iNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   saveJSON('wed-ideas',ideas); renderIdeas();
   if(!hasUrl) return;
@@ -2424,6 +2349,8 @@ function renderCouple(){
   slots.forEach(s=>{
     const el=document.getElementById(s.id); if(!el) return;
     el.classList.toggle('busy', !!coupleBusy[s.who]);
+    el.classList.add('cs-clickable');
+    el.title='Натисни, щоб редагувати образ';
     const dressed=outfit[s.who], base=mannequin[s.who]||photos[s.who];
     if(dressed){
       el.innerHTML=`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap">${s.name}</div>`;
@@ -2432,6 +2359,8 @@ function renderCouple(){
     }else{
       el.innerHTML=`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
     }
+    // клік на персонажа → одразу відкрити для нього редактор одягу (як у CAS)
+    el.onclick=(e)=>{ if(e.target.closest('[data-csx]')) return; openPersonEditor(s.who,'cloth'); };
   });
   const hintEl=document.getElementById('csHint');
   if(hintEl){
@@ -2648,8 +2577,8 @@ function closeCrop(result){
 }
 
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
-function parseMoney(s){ const n=parseInt(String(s||'').replace(/[^\d]/g,''),10); return isNaN(n)?0:n; }
-const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика'};
+const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика',makeup:'Краса (візаж, зачіска)',hair:'Краса (візаж, зачіска)'};
+const IDEA_FALLBACK_EMOJI={rings:'💍',makeup:'💄',hair:'💇'};
 function approveIdea(it){
   if(it.approved){
     // скасувати: прибрати звʼязану статтю бюджету
@@ -2889,7 +2818,8 @@ async function aiImagine(it){
   if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка)'); return; }
   aiBusy(it.id,true);
   try{
-    const pre=it.cat==='rings'?'Обручка / каблучка: ':'Ідея для весілля: ';
+    const whoText=it.who==='his'?'нареченого':'нареченої';
+    const pre=it.cat==='rings'?'Обручка / каблучка: ':it.cat==='makeup'?`Макіяж для ${whoText}: `:it.cat==='hair'?`Зачіска для ${whoText}: `:'Ідея для весілля: ';
     const img=await aiGenerate([`${pre}${text}. Створи гарне фотореалістичне зображення цього. Світла естетика.`]);
     downscaleSrc(img,768,small=>{
       const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
@@ -3104,9 +3034,6 @@ document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#scriptTabs .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeScript=btn.dataset.s; renderScripts();
 });
-/* маска часу ГГ:ХХ — без авто-«зараз», лише те, що вводять руками */
-function timeMask(v){ const d=String(v||'').replace(/\D/g,'').slice(0,4); return d.length>2?d.slice(0,2)+':'+d.slice(2):d; }
-function timeNorm(v){ const m=/^(\d{1,2}):?(\d{2})$/.exec(String(v||'').trim()); if(!m)return''; const h=+m[1],mn=+m[2]; if(h>23||mn>59)return''; return String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0'); }
 { const st=document.getElementById('sTime'); if(st) st.addEventListener('input',()=>{ st.value=timeMask(st.value); }); }
 document.getElementById('addScriptBtn').onclick=()=>{
   const text=val('sText'); if(!text)return;
@@ -3881,7 +3808,6 @@ function renderAll(){
   renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
-function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
 updateCountdown();
 renderAll();
