@@ -116,7 +116,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .task-card.done{opacity:.6;}
 .task-card.hot{background:var(--danger-dim);border-color:var(--danger);}
 .task-card.warn{background:var(--warn-dim);border-color:var(--warn);}
-.task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.task-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding-right:38px;}
 .task-text{font-size:14px;line-height:1.4;flex:1;}
 .task-card.done .task-text{text-decoration:line-through;color:var(--muted);}
 .chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;background:var(--surface2);color:var(--muted);}
@@ -130,9 +130,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .days-red{color:var(--danger);font-weight:600;}
 .days-yellow{color:var(--warn);font-weight:600;}
 .days-green{color:var(--done);font-weight:600;}
+.task-dl-edit{cursor:pointer;border-bottom:1px dashed var(--muted);padding-bottom:1px;}
+.task-dl-edit.add{color:var(--terra);font-weight:600;border-bottom-color:var(--terra);}
+.task-dl-inp{font:inherit;font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--terra);background:var(--surface2);color:var(--text);}
 .del-x{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;opacity:.5;transition:.15s;padding:10px 12px;line-height:1;border-radius:8px;}
 .task-card:hover .del-x{opacity:.7;}
 .del-x:hover,.del-x:active{opacity:1!important;color:var(--danger);}
+/* хрестик видалення завдання раніше зливався з карткою й сидів впритул до статус-чіпа —
+   легко було зачепити випадково замість позначки "виконано". Тепер це чітко відокремлена кругла
+   кнопка з власним тлом, як уже зроблено для карток ідей. */
+.task-card .del-x{top:8px;right:8px;background:var(--surface2);border-radius:50%;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;opacity:.7;z-index:2;}
+.task-card .del-x:hover,.task-card .del-x:active{background:var(--danger-dim);}
 
 /* ── GUESTS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px;}
@@ -1821,17 +1829,23 @@ function renderTasks(){
       card.className=`task-card ${st==='done'?'done':st==='hot'||st==='asap'?'hot':st==='warn'?'warn':''}`;
       card.onclick=()=>toggleTask(task.id);
       const chipTxt=st==='done'?'Готово ✓':st==='asap'?'ASAP':st==='hot'&&days<0?'Прострочено':st==='hot'?'🔥 Горить':st==='warn'?'⚡ Скоро':'У часі';
-      let metaHtml='';
+      let dlSpan;
       if(task.deadline){
         const dc=!task.done&&days!==null?(days<=7?'days-red':days<=21?'days-yellow':'days-green'):'';
         const dl=!task.done&&days!==null?` · <span class="${dc}">${days<0?Math.abs(days)+' дн. тому':days===0?'Сьогодні!':days+' дн.'}</span>`:'';
-        metaHtml=`<div class="task-meta">до ${fmtDate(task.deadline)}${dl}</div>`;
+        dlSpan=`<span class="task-dl-edit" data-dledit="${task.id}" role="button" tabindex="0" title="Тицьни, щоб змінити дедлайн">до ${fmtDate(task.deadline)}</span>${dl}`;
+      }else{
+        dlSpan=`<span class="task-dl-edit add" data-dledit="${task.id}" role="button" tabindex="0">+ додати дедлайн</span>`;
       }
+      const metaHtml=`<div class="task-meta">${dlSpan}</div>`;
       card.innerHTML=`<button class="del-x" data-del="${task.id}" aria-label="Видалити завдання">✕</button>
         <div class="task-top"><div class="task-text">${esc(task.text)}</div>
         <span class="chip ${st==='asap'?'asap':st}">${chipTxt}</span></div>${metaHtml}`;
       card.querySelector('[data-del]').addEventListener('click',e=>{
         e.stopPropagation(); delUndo('wed-tasks',task.id,'Завдання видалено');
+      });
+      card.querySelector('[data-dledit]').addEventListener('click',e=>{
+        e.stopPropagation(); openTaskDeadlineEdit(task.id, e.currentTarget);
       });
       row.appendChild(dot); row.appendChild(card); grp.appendChild(row);
     });
@@ -1839,6 +1853,22 @@ function renderTasks(){
   });
 }
 function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; saveJSON('wed-tasks',tasks); renderTasks();} }
+// клік на дедлайн у списку завдань → інлайн date-picker замість того щоб видаляти й додавати завдання заново
+function openTaskDeadlineEdit(id, el){
+  const task=tasks.find(t=>t.id===id); if(!task) return;
+  const inp=document.createElement('input');
+  inp.type='date'; inp.className='task-dl-inp';
+  inp.value=task.deadline||'';
+  el.replaceWith(inp);
+  inp.focus();
+  let committed=false;
+  const commit=()=>{
+    if(committed) return; committed=true;
+    task.deadline=inp.value||''; saveJSON('wed-tasks',tasks); renderTasks();
+  };
+  inp.addEventListener('change',commit);
+  inp.addEventListener('blur',commit);
+}
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
   tasks.push({id:'u'+Date.now(),text,deadline:document.getElementById('newTaskDate').value||null,done:false});
