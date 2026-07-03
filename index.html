@@ -2844,13 +2844,27 @@ function renderBasePhotos(){
 }
 let coupleMode={her:'collage',his:'collage'};   // 'ai' | 'collage' — колаж за замовчуванням, ШІ-примірка другорядна (перемикається кнопкою)
 // ручний колаж: базове фото людини + шари вдягнених речей (наближене позиціювання за типом речі, без ручного перетягування)
+// речі, вдягнені ще ДО того, як зʼявилось авто-довирізання при кліку "Вдягнути" (або вдягнені без
+// нього з інших причин), назавжди лишались би "неохайним" фото товару в колажі — жодна майбутня дія
+// користувача такого не виправляє сама собою. Тому: при кожному рендері колажу перевіряємо шари без
+// чистого cleanImg і довирізаємо їх у фоні. _cleaningAttempted лише ДОДАЄМО (ніколи не чистимо) —
+// це і захист від паралельних дублів, і від нескінченного ретраю, якщо ШІ-виклик не вдався (інакше
+// невдала спроба знімається зі списку "в процесі", наступний рендер бачить ту саму відсутність
+// cleanImg і одразу пробує знову — і так по колу назавжди).
+let _cleaningAttempted=new Set();
 function renderCollageHTML(who){
   const base=mannequin[who]||photosFull[who]||photos[who];
   if(!base) return `<div class="cs-ph"><div class="cs-emoji">${who==='her'?'👰':'🤵'}</div><div>Спершу постав фото нижче</div></div>`;
   const slots=collage[who]||{};
   const layers=GTYPE_ZORDER.filter(g=>slots[g]).map(g=>{
     const it=ideas.find(x=>x.id===slots[g]);
-    const src=it&&(it.cleanImg||it.img);
+    if(!it) return '';
+    const hasCleanCutout=it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img);
+    if(!hasCleanCutout && it.img && !_cleaningAttempted.has(it.id)){
+      _cleaningAttempted.add(it.id);
+      ensureCleanGarment(it).then(res=>{ if(res && res!==it.img) renderCouple(); });   // рендеримо знову лише при реальному успіху
+    }
+    const src=it.cleanImg||it.img;
     const a=GTYPE_ANCHOR[g];
     if(!src||!a) return '';
     return `<img class="collage-layer" src="${esc(src)}" alt="" style="top:${a.top}%;left:${a.left}%;width:${a.width}%;height:${a.height}%;">`;
