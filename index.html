@@ -804,6 +804,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
+  <button class="tab-btn" data-tab="beauty">💄 Краса</button>
   <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
@@ -1066,11 +1067,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-i="rings">💍 Каблучки</button>
     <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
   </div>
-  <div class="filters" id="ideaSubFilters">
-    <button class="filt-btn active" data-isub="cloth">👗 Одяг</button>
-    <button class="filt-btn" data-isub="makeup">💄 Мейк</button>
-    <button class="filt-btn" data-isub="hair">💇 Зачіска</button>
-  </div>
   <div class="idea-sort" id="ideaSortBar" style="display:none;">
     <span class="idea-sort-lbl">Сортувати:</span>
     <select id="ideaSort" aria-label="Сортування одягу">
@@ -1095,6 +1091,34 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </details>
   </div>
   <div id="ideaList"></div>
+</div>
+
+<!-- КРАСА (мейк / зачіска) -->
+<div class="panel" id="tab-beauty">
+  <div class="section-hint">Ідеї макіяжу й зачіски — окремо для Каті та Діми. Встав посилання (Pinterest, приклад) — підтягнеться фото й опис, або просто опиши текстом.</div>
+  <div class="add-section" style="margin-bottom:16px;">
+    <details>
+      <summary>＋ Додати ідею</summary>
+      <div class="add-form">
+        <input type="url" id="beUrl" placeholder="Посилання (необовʼязково)" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <input type="text" id="beName" placeholder="Назва (підтягнеться сама)">
+          <input type="text" id="bePrice" placeholder="Ціна (напр. 1500 грн)">
+        </div>
+        <input type="text" id="beNote" placeholder="Підпис / нотатка (необовʼязково)">
+        <button class="submit-btn" id="addBeautyBtn">Додати</button>
+      </div>
+    </details>
+  </div>
+  <div class="filters" id="beautyPersonFilters">
+    <button class="filt-btn active" data-bp="her">👰 Каті</button>
+    <button class="filt-btn" data-bp="his">🤵 Діми</button>
+  </div>
+  <div class="filters" id="beautyTypeFilters">
+    <button class="filt-btn active" data-bt="makeup">💄 Мейк</button>
+    <button class="filt-btn" data-bt="hair">💇 Зачіска</button>
+  </div>
+  <div id="beautyList"></div>
 </div>
 
 <!-- BAR & MENU (калькулятор) -->
@@ -2049,7 +2073,6 @@ document.getElementById('addNoteBtn').onclick=()=>{
 
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
-let activeSub='cloth';   // для Вона/Він: 'cloth' | 'makeup' | 'hair' — обручки лишаються окремою верхньою вкладкою
 let ideaSort='';
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
@@ -2090,14 +2113,9 @@ function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   // панель сортування — лише для одягу (Вона/Він)
   const sortBar=document.getElementById('ideaSortBar');
-  const subBar=document.getElementById('ideaSubFilters');
-  const isPerson=(activeIdea==='her'||activeIdea==='his');
-  const isCloth=isPerson && activeSub==='cloth';
-  if(subBar) subBar.style.display=isPerson?'flex':'none';
+  const isCloth=(activeIdea==='her'||activeIdea==='his');
   if(sortBar) sortBar.style.display=isCloth?'flex':'none';
-  let items = isPerson
-    ? (activeSub==='cloth' ? ideas.filter(i=>i.cat===activeIdea) : ideas.filter(i=>i.cat===activeSub && i.who===activeIdea))
-    : ideas.filter(i=>i.cat===activeIdea);
+  let items=ideas.filter(i=>i.cat===activeIdea);
   if(isCloth && ideaSort){
     const arr=items.slice();
     if(ideaSort==='gtype'){
@@ -2230,20 +2248,115 @@ function renderIdeas(){
     saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
   });
 }
+
+/* ════ КРАСА (мейк / зачіска) — окрема вкладка, дані спільні з ideas (cat:'makeup'/'hair', who) ════ */
+let activeBeauty='her';
+let activeBeautyType='makeup';
+function renderBeauty(){
+  const listEl=document.getElementById('beautyList'); if(!listEl) return; listEl.innerHTML='';
+  const items=ideas.filter(i=>i.cat===activeBeautyType && i.who===activeBeauty);
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
+  items.forEach(it=>{
+    const host=hostOf(it.url);
+    const fav=it.icon||faviconOf(host);
+    const showImg=it.gen||it.img;
+    const fallback=`<div class="idea-thumb-fallback">
+        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
+        <div class="idea-fallback-host">${esc(host||'ідея')}</div>
+      </div>`;
+    const aiBadge=it.gen?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
+    const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}${aiBadge}${overlay}</div>`;
+    const imagineBtn=`<button class="idea-ai-btn" data-beimagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
+    const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-beapprove="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
+    const photoBtn=`<button class="idea-photo-btn" data-bephoto="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
+    const pickBtn=it.url?`<button class="idea-photo-btn" data-bepick="${it.id}">🖼 Обрати картинку</button>`:'';
+    const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'');
+    card.innerHTML=`
+      <button class="del-x" data-bedel="${it.id}" aria-label="Видалити">✕</button>
+      ${thumb}
+      <div class="idea-body">
+        ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        <div class="idea-title">${esc(it.title||host||it.url||'Ідея')}</div>
+        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
+        ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
+        <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-bepid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
+        ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${imagineBtn}${approveBtn}</div>
+      </div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-bedel]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.bedel);
+    if(it && it.budgetId){ const i=budget.findIndex(x=>x.id===it.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    delUndo('wed-ideas',b.dataset.bedel,'Видалено');
+  });
+  listEl.querySelectorAll('[data-bepid]').forEach(inp=>inp.onchange=()=>{
+    const it=ideas.find(x=>x.id===inp.dataset.bepid); if(!it)return;
+    it.price=inp.value.trim(); saveJSON('wed-ideas',ideas);
+    if(it.approved && it.budgetId){ const b=budget.find(x=>x.id===it.budgetId); if(b){ b.planned=parseMoney(it.price); saveJSON('wed-budget',budget); renderBudget(); } }
+  });
+  listEl.querySelectorAll('[data-beapprove]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.beapprove); if(it) approveIdea(it);
+  });
+  listEl.querySelectorAll('[data-bephoto]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.bephoto); if(!it) return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,768,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        it.img=data; saveJSON('wed-ideas',ideas); renderBeauty();
+        showToast('📷 Фото додано');
+      },0.8);
+    });
+  });
+  listEl.querySelectorAll('[data-bepick]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.bepick); if(it) openImgPicker(it);
+  });
+  listEl.querySelectorAll('[data-beimagine]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.beimagine); if(it) aiImagine(it);
+  });
+  listEl.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
+    delete it.gen; saveJSON('wed-ideas',ideas); renderBeauty();
+  });
+}
+document.querySelectorAll('#beautyPersonFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#beautyPersonFilters .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeBeauty=btn.dataset.bp; renderBeauty();
+});
+document.querySelectorAll('#beautyTypeFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#beautyTypeFilters .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeBeautyType=btn.dataset.bt; renderBeauty();
+});
+document.getElementById('addBeautyBtn').onclick=async()=>{
+  let url=val('beUrl');
+  const note=val('beNote'), name=val('beName'), price=val('bePrice'), id='i'+Date.now();
+  if(!url && !(name||note)){ showToast('Встав посилання або напиши вручну ✍️'); return; }
+  if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
+  const hasUrl=!!url;
+  ideas.unshift({id,cat:activeBeautyType,who:activeBeauty,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
+  ['beUrl','beName','bePrice','beNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
+  saveJSON('wed-ideas',ideas); renderBeauty();
+  if(!hasUrl) return;
+  const prev=await fetchPreview(url);
+  const cur=ideas.find(x=>x.id===id); if(!cur)return;
+  cur.loading=false;
+  if(prev){
+    if(!cur.title) cur.title=prev.title;
+    cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; cur.imgChoices=prev.candidates;
+    if(!cur.price){ const p=extractPrice(prev.title+' '+prev.desc); if(p) cur.price=p; }
+  }
+  saveJSON('wed-ideas',ideas); renderBeauty();
+};
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
 });
-document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activeSub=btn.dataset.isub; renderIdeas();
-});
-// відкрити редактор персонажа: обрати "Вона"/"Він" і категорію одразу (клік на фото в couple-стейджі)
-function openPersonEditor(who, sub){
+// відкрити редактор персонажа: обрати "Вона"/"Він" одразу (клік на фото в couple-стейджі)
+function openPersonEditor(who){
   activateTab('ideas');
-  activeIdea=who; activeSub=sub||'cloth';
+  activeIdea=who;
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.i===who));
-  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.isub===activeSub));
   renderIdeas();
 }
 { const ss=document.getElementById('ideaSort'); if(ss) ss.onchange=()=>{ ideaSort=ss.value; renderIdeas(); }; }
@@ -2253,12 +2366,7 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   if(!url && !(name||note)){ showToast('Встав посилання або напиши вручну (напр. аксесуар своїми руками) ✍️'); return; }
   if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
   const hasUrl=!!url;
-  // "Мейк"/"Зачіска" — це під-категорії конкретної людини (cat:'makeup'/'hair', who:'her'/'his'),
-  // не окрема верхня вкладка, як каблучки чи одяг
-  const isPersonSub=(activeIdea==='her'||activeIdea==='his')&&(activeSub==='makeup'||activeSub==='hair');
-  const newIdea={id,cat:isPersonSub?activeSub:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()};
-  if(isPersonSub) newIdea.who=activeIdea;
-  ideas.unshift(newIdea);
+  ideas.unshift({id,cat:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
   ['iUrl','iName','iPrice','iNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   saveJSON('wed-ideas',ideas); renderIdeas();
   if(!hasUrl) return;
@@ -2453,7 +2561,7 @@ function renderCouple(){
       }
     }
     // клік на персонажа → одразу відкрити для нього редактор одягу (як у CAS)
-    el.onclick=(e)=>{ if(e.target.closest('[data-csx],[data-csmode]')) return; openPersonEditor(s.who,'cloth'); };
+    el.onclick=(e)=>{ if(e.target.closest('[data-csx],[data-csmode]')) return; openPersonEditor(s.who); };
   });
   const hintEl=document.getElementById('csHint');
   if(hintEl){
@@ -3962,7 +4070,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
