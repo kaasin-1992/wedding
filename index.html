@@ -258,6 +258,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;}
 .couple-stage-row{display:flex;gap:10px;}
 .couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;}
+.couple-slot.cs-clickable{cursor:pointer;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
 /* метрики тіла під базовим фото */
@@ -1023,6 +1024,11 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-i="his">🤵 Він</button>
     <button class="filt-btn" data-i="rings">💍 Каблучки</button>
     <button class="filt-btn" data-i="idea">✨ Ідеї весілля</button>
+  </div>
+  <div class="filters" id="ideaSubFilters">
+    <button class="filt-btn active" data-isub="cloth">👗 Одяг</button>
+    <button class="filt-btn" data-isub="makeup">💄 Мейк</button>
+    <button class="filt-btn" data-isub="hair">💇 Зачіска</button>
   </div>
   <div class="idea-sort" id="ideaSortBar" style="display:none;">
     <span class="idea-sort-lbl">Сортувати:</span>
@@ -1995,6 +2001,7 @@ document.getElementById('addNoteBtn').onclick=()=>{
 
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
+let activeSub='cloth';   // для Вона/Він: 'cloth' | 'makeup' | 'hair' — обручки лишаються окремою верхньою вкладкою
 let ideaSort='';
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
@@ -2035,9 +2042,14 @@ function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   // панель сортування — лише для одягу (Вона/Він)
   const sortBar=document.getElementById('ideaSortBar');
-  const isCloth=(activeIdea==='her'||activeIdea==='his');
+  const subBar=document.getElementById('ideaSubFilters');
+  const isPerson=(activeIdea==='her'||activeIdea==='his');
+  const isCloth=isPerson && activeSub==='cloth';
+  if(subBar) subBar.style.display=isPerson?'flex':'none';
   if(sortBar) sortBar.style.display=isCloth?'flex':'none';
-  let items=ideas.filter(i=>i.cat===activeIdea);
+  let items = isPerson
+    ? (activeSub==='cloth' ? ideas.filter(i=>i.cat===activeIdea) : ideas.filter(i=>i.cat===activeSub && i.who===activeIdea))
+    : ideas.filter(i=>i.cat===activeIdea);
   if(isCloth && ideaSort){
     const arr=items.slice();
     if(ideaSort==='gtype'){
@@ -2058,7 +2070,7 @@ function renderIdeas(){
     const aiImg=isTry?null:it.gen;
     const showImg=aiImg||it.img;
     const fallback=`<div class="idea-thumb-fallback">
-        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${it.cat==='rings'?'💍':'💡'}</div>`}
+        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
         <div class="idea-fallback-host">${esc(host||'ідея')}</div>
       </div>`;
     const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
@@ -2140,6 +2152,18 @@ document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
 });
+document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeSub=btn.dataset.isub; renderIdeas();
+});
+// відкрити редактор персонажа: обрати "Вона"/"Він" і категорію одразу (клік на фото в couple-стейджі)
+function openPersonEditor(who, sub){
+  activateTab('ideas');
+  activeIdea=who; activeSub=sub||'cloth';
+  document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.i===who));
+  document.querySelectorAll('#ideaSubFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.isub===activeSub));
+  renderIdeas();
+}
 { const ss=document.getElementById('ideaSort'); if(ss) ss.onchange=()=>{ ideaSort=ss.value; renderIdeas(); }; }
 document.getElementById('addIdeaBtn').onclick=async()=>{
   let url=val('iUrl');
@@ -2147,7 +2171,12 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
   if(!url && !(name||note)){ showToast('Встав посилання або напиши вручну (напр. аксесуар своїми руками) ✍️'); return; }
   if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
   const hasUrl=!!url;
-  ideas.unshift({id,cat:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()});
+  // "Мейк"/"Зачіска" — це під-категорії конкретної людини (cat:'makeup'/'hair', who:'her'/'his'),
+  // не окрема верхня вкладка, як каблучки чи одяг
+  const isPersonSub=(activeIdea==='her'||activeIdea==='his')&&(activeSub==='makeup'||activeSub==='hair');
+  const newIdea={id,cat:isPersonSub?activeSub:activeIdea,url:url||'',title:name,desc:'',img:'',icon:'',note,price,loading:hasUrl,ts:Date.now()};
+  if(isPersonSub) newIdea.who=activeIdea;
+  ideas.unshift(newIdea);
   ['iUrl','iName','iPrice','iNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   saveJSON('wed-ideas',ideas); renderIdeas();
   if(!hasUrl) return;
@@ -2308,6 +2337,8 @@ function renderCouple(){
   slots.forEach(s=>{
     const el=document.getElementById(s.id); if(!el) return;
     el.classList.toggle('busy', !!coupleBusy[s.who]);
+    el.classList.add('cs-clickable');
+    el.title='Натисни, щоб редагувати образ';
     const dressed=outfit[s.who], base=mannequin[s.who]||photos[s.who];
     if(dressed){
       el.innerHTML=`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap">${s.name}</div>`;
@@ -2316,6 +2347,8 @@ function renderCouple(){
     }else{
       el.innerHTML=`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
     }
+    // клік на персонажа → одразу відкрити для нього редактор одягу (як у CAS)
+    el.onclick=(e)=>{ if(e.target.closest('[data-csx]')) return; openPersonEditor(s.who,'cloth'); };
   });
   const hintEl=document.getElementById('csHint');
   if(hintEl){
@@ -2532,7 +2565,8 @@ function closeCrop(result){
 }
 
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
-const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика'};
+const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика',makeup:'Краса (візаж, зачіска)',hair:'Краса (візаж, зачіска)'};
+const IDEA_FALLBACK_EMOJI={rings:'💍',makeup:'💄',hair:'💇'};
 function approveIdea(it){
   if(it.approved){
     // скасувати: прибрати звʼязану статтю бюджету
@@ -2772,7 +2806,8 @@ async function aiImagine(it){
   if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка)'); return; }
   aiBusy(it.id,true);
   try{
-    const pre=it.cat==='rings'?'Обручка / каблучка: ':'Ідея для весілля: ';
+    const whoText=it.who==='his'?'нареченого':'нареченої';
+    const pre=it.cat==='rings'?'Обручка / каблучка: ':it.cat==='makeup'?`Макіяж для ${whoText}: `:it.cat==='hair'?`Зачіска для ${whoText}: `:'Ідея для весілля: ';
     const img=await aiGenerate([`${pre}${text}. Створи гарне фотореалістичне зображення цього. Світла естетика.`]);
     downscaleSrc(img,768,small=>{
       const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
