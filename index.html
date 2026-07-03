@@ -435,6 +435,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow-sm);}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
+.idea-thumb[data-thumbview]{cursor:zoom-in;}
 /* картка: велике фото зверху на всю ширину (як Pinterest), деталі під ним */
 .idea-card.idea-row{display:flex;flex-direction:column;align-items:stretch;}
 .idea-card.idea-row .idea-thumb-wrap{width:100%;flex:0 0 auto;height:280px;border-left:none;border-bottom:1px solid var(--line);}
@@ -720,12 +721,18 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .moodboard-box{max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;text-align:left;}
 .moodboard-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .moodboard-head .modal-btn{flex:0 0 auto;width:auto;padding:9px 16px;}
-.moodboard-canvas{position:relative;flex:1;margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;}
+.mb-zoom-bar{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.mb-zoom-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mb-zoom-lbl{min-width:52px;padding:0 8px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;}
+.moodboard-canvas{position:relative;flex:1;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;touch-action:pan-x pan-y;}
 .moodboard-inner{position:relative;width:1400px;height:1100px;background:repeating-linear-gradient(45deg,var(--surface2) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,var(--surface2) 0 1px,transparent 1px 22px);background-color:var(--bg);}
 .moodboard-tile{position:absolute;width:132px;border-radius:10px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:grab;background:var(--surface);border:1px solid var(--line);touch-action:none;user-select:none;}
 .moodboard-tile:active{cursor:grabbing;z-index:50;}
 .moodboard-tile img{width:100%;height:172px;object-fit:contain;display:block;background:var(--surface);pointer-events:none;}
-.moodboard-tile.cloth img{background:#fff;}
+/* одяг — без картки-підложки, просто вирізаний предмет "по-паперовому" вільно на дошці */
+.moodboard-tile.cloth{background:none;border:none;box-shadow:none;border-radius:0;}
+.moodboard-tile.cloth img{height:auto;background:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25));}
+.moodboard-tile.cloth .mb-cap{background:rgba(20,20,18,.55);color:#fff;border-radius:6px;padding:2px 6px;}
 .moodboard-tile .mb-cap{font-size:10px;padding:3px 6px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
 .moodboard-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px;}
 .imgpick-extract-hint{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px;}
@@ -800,7 +807,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="imgpick-title" id="moodboardTitle">🎨 Мудборд</div>
       <button class="modal-btn ghost" id="moodboardClose">Закрити</button>
     </div>
-    <div class="imgpick-sub">Перетягуй картинки, щоб розкласти дошку по-своєму.</div>
+    <div class="imgpick-sub">Перетягуй картинки, щоб розкласти дошку по-своєму. Два пальці на картинці — змінити її розмір, два пальці на порожньому місці (або Ctrl+колесо) — зум усієї дошки.</div>
+    <div class="mb-zoom-bar">
+      <button class="mb-zoom-btn" id="mbZoomOut" aria-label="Зменшити">－</button>
+      <button class="mb-zoom-lbl" id="mbZoomReset" title="Скинути до 100%">100%</button>
+      <button class="mb-zoom-btn" id="mbZoomIn" aria-label="Збільшити">＋</button>
+    </div>
     <div class="moodboard-canvas" id="moodboardCanvas"><div class="moodboard-inner" id="moodboardInner"></div></div>
   </div>
 </div>
@@ -2226,7 +2238,7 @@ function renderIdeas(){
     const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
     const rc=isTry?favCount(it):0;
     const ratingBadge=rc>0?`<span class="idea-rating-badge">⭐×${rc}</span>`:'';
-    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}${aiBadge}${ratingBadge}${overlay}</div>`;
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" data-thumbview="${it.id}" onerror="this.style.display='none'">`:''}${aiBadge}${ratingBadge}${overlay}</div>`;
     // кнопки ШІ
     let aiBtns='';
     if(it.cat==='her'||it.cat==='his'){
@@ -2275,6 +2287,9 @@ function renderIdeas(){
     const it=ideas.find(x=>x.id===b.dataset.idel);
     if(it && it.budgetId){ const i=budget.findIndex(x=>x.id===it.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
     delUndo('wed-ideas',b.dataset.idel,'Видалено');
+  });
+  listEl.querySelectorAll('[data-thumbview]').forEach(im=>im.onclick=()=>{
+    const it=ideas.find(x=>x.id===im.dataset.thumbview); if(it) showImgBig(im.src, it.title||'');
   });
   listEl.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
     const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
@@ -4274,47 +4289,117 @@ function renderMoodboard(){
     const tile=document.createElement('div');
     tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':''); tile.dataset.mbid=it.id;
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
+    if(pos.w) tile.style.width=pos.w+'px';
     tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}`;
     inner.appendChild(tile);
   });
   saveJSON('wed-moodboard',moodboard);
   wireMoodboardDrag();
 }
+// перетягування картки одним пальцем/мишею; два пальці НА картці — пінч-зум самої картки (зміна розміру)
 function wireMoodboardDrag(){
   const inner=document.getElementById('moodboardInner');
   inner.querySelectorAll('.moodboard-tile').forEach(tile=>{
-    let drag=null;
+    let mode=null;              // 'drag' | 'pinch'
+    let dragOff=null;
+    const active=new Map();     // pointerId -> {x,y}
+    let pinchStartDist=0, pinchStartW=0;
+    const dist2=()=>{ const p=[...active.values()]; return Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y); };
     tile.addEventListener('pointerdown',e=>{
-      const tRect=tile.getBoundingClientRect();
-      drag={dx:e.clientX-tRect.left, dy:e.clientY-tRect.top};
-      tile.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      try{ tile.setPointerCapture(e.pointerId); }catch(err){}
+      active.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      e.preventDefault(); e.stopPropagation();
+      if(active.size===1){
+        mode='drag';
+        const r=tile.getBoundingClientRect();
+        dragOff={dx:e.clientX-r.left, dy:e.clientY-r.top};
+      }else if(active.size===2){
+        mode='pinch';
+        pinchStartDist=dist2();
+        pinchStartW=tile.offsetWidth;
+      }
     });
     tile.addEventListener('pointermove',e=>{
-      if(!drag) return;
-      const iRect=inner.getBoundingClientRect();
-      let left=e.clientX-iRect.left-drag.dx;
-      let top=e.clientY-iRect.top-drag.dy;
-      left=Math.max(0,Math.min(left, iRect.width-tile.offsetWidth));
-      top=Math.max(0,Math.min(top, iRect.height-tile.offsetHeight));
-      tile.style.left=(100*left/iRect.width)+'%';
-      tile.style.top=(100*top/iRect.height)+'%';
+      if(!active.has(e.pointerId)) return;
+      active.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(mode==='drag' && active.size===1){
+        const iRect=inner.getBoundingClientRect();
+        let left=e.clientX-iRect.left-dragOff.dx;
+        let top=e.clientY-iRect.top-dragOff.dy;
+        left=Math.max(0,Math.min(left, iRect.width-tile.offsetWidth));
+        top=Math.max(0,Math.min(top, iRect.height-tile.offsetHeight));
+        tile.style.left=(100*left/iRect.width)+'%';
+        tile.style.top=(100*top/iRect.height)+'%';
+      }else if(mode==='pinch' && active.size===2 && pinchStartDist>0){
+        const w=Math.max(60,Math.min(360, pinchStartW*(dist2()/pinchStartDist)));
+        tile.style.width=w+'px';
+      }
     });
-    const end=()=>{
-      if(!drag) return; drag=null;
-      const id=tile.dataset.mbid;
-      moodboard[_mbType][id]={x:parseFloat(tile.style.left)||0, y:parseFloat(tile.style.top)||0};
-      saveJSON('wed-moodboard',moodboard);
+    const release=e=>{
+      if(!active.has(e.pointerId)) return;
+      active.delete(e.pointerId);
+      if(active.size===0){
+        const id=tile.dataset.mbid;
+        const cur=moodboard[_mbType][id]||{};
+        moodboard[_mbType][id]={x:parseFloat(tile.style.left)||cur.x||0, y:parseFloat(tile.style.top)||cur.y||0, w:tile.offsetWidth};
+        saveJSON('wed-moodboard',moodboard);
+        mode=null;
+      }else if(active.size===1){
+        // лишився один палець після пінчу — продовжуємо як перетягування
+        mode='drag';
+        const remaining=[...active.values()][0];
+        const r=tile.getBoundingClientRect();
+        dragOff={dx:remaining.x-r.left, dy:remaining.y-r.top};
+      }
     };
-    tile.addEventListener('pointerup',end);
-    tile.addEventListener('pointercancel',end);
+    tile.addEventListener('pointerup',release);
+    tile.addEventListener('pointercancel',release);
   });
+}
+/* Figma-подібний зум усієї дошки: пінч на порожньому місці, Ctrl+колесо, або кнопки ± */
+let _mbZoom=1;
+function applyMbZoom(){
+  const inner=document.getElementById('moodboardInner'); if(!inner) return;
+  inner.style.zoom=_mbZoom;
+  const lbl=document.getElementById('mbZoomReset'); if(lbl) lbl.textContent=Math.round(_mbZoom*100)+'%';
+}
+function mbZoomBy(delta){ _mbZoom=Math.max(0.3,Math.min(2.5,_mbZoom+delta)); applyMbZoom(); }
+function mbZoomReset(){ _mbZoom=1; applyMbZoom(); }
+{
+  const zi=document.getElementById('mbZoomIn'), zo=document.getElementById('mbZoomOut'), zr=document.getElementById('mbZoomReset');
+  if(zi) zi.onclick=()=>mbZoomBy(0.15);
+  if(zo) zo.onclick=()=>mbZoomBy(-0.15);
+  if(zr) zr.onclick=mbZoomReset;
+  const canvas=document.getElementById('moodboardCanvas');
+  if(canvas){
+    let pinchStartDist=0, pinchStartZoom=1;
+    canvas.addEventListener('touchstart',e=>{
+      if(e.touches.length!==2 || e.target.closest('.moodboard-tile')){ pinchStartDist=0; return; }
+      const [a,b]=e.touches;
+      pinchStartDist=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      pinchStartZoom=_mbZoom;
+    },{passive:true});
+    canvas.addEventListener('touchmove',e=>{
+      if(e.touches.length!==2 || !pinchStartDist) return;
+      const [a,b]=e.touches;
+      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      _mbZoom=Math.max(0.3,Math.min(2.5, pinchStartZoom*(d/pinchStartDist)));
+      applyMbZoom();
+    },{passive:true});
+    canvas.addEventListener('touchend',()=>{ pinchStartDist=0; });
+    canvas.addEventListener('wheel',e=>{
+      if(!e.ctrlKey) return;
+      e.preventDefault();
+      mbZoomBy(e.deltaY<0?0.1:-0.1);
+    },{passive:false});
+  }
 }
 function openMoodboard(type){
   _mbType=type;
   const title=document.getElementById('moodboardTitle');
   if(title) title.textContent = type==='cloth' ? '🎨 Мудборд одягу' : '🎨 Мудборд декору';
   document.getElementById('moodboardModal').style.display='flex';
+  mbZoomReset();
   renderMoodboard();
 }
 function closeMoodboard(){ document.getElementById('moodboardModal').style.display='none'; }
