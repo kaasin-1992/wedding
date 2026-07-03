@@ -2356,6 +2356,7 @@ document.getElementById('addBeautyBtn').onclick=async()=>{
     if(!cur.price){ const p=extractPrice(prev.title+' '+prev.desc); if(p) cur.price=p; }
   }
   saveJSON('wed-ideas',ideas); renderBeauty();
+  if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-ideas',ideas); renderBeauty(); });
 };
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
@@ -2388,6 +2389,15 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
     if(!cur.price){ const p=extractPrice(prev.title+' '+prev.desc); if(p) cur.price=p; }
   }
   saveJSON('wed-ideas',ideas); renderIdeas();
+  // забетонувати картинку (щоб не зникла, якщо сайт-джерело її пізніше змінить), і для одягу —
+  // одразу автоматично вирізати сам предмет без людини/фону (для колажу й ШІ-примірки)
+  if(cur.img){
+    embedImgInto(cur, ()=>{
+      saveJSON('wed-ideas',ideas);
+      if((cur.cat==='her'||cur.cat==='his') && !cur.cleanImg) ensureCleanGarment(cur).then(()=>renderIdeas());
+      renderIdeas();
+    });
+  }
 };
 
 /* ── ВИБІР КАРТИНКИ ДЛЯ ІДЕЇ ── */
@@ -3118,12 +3128,14 @@ async function srcToDataUrl(src){
   du=await fetchToDataUrl(prox);
   return du||null;
 }
-// фонова спроба вбудувати обрану картинку одягу для ідеї it
-function embedImg(it){
-  if(!it || !it.img || /^data:/.test(it.img)) return;
-  const url=it.img;
-  srcToDataUrl(url).then(du=>{ if(du && it.img===url){ it.img=du; saveJSON('wed-ideas',ideas); } });
+// фонова спроба "забетонувати" картинку-посилання як data:URL, щоб вона не залежала від сайту-джерела
+// (інакше картинка виглядає збереженою, але зникає пізніше, коли магазин змінить/приховає фото на своєму сайті)
+function embedImgInto(item, onSaved){
+  if(!item || !item.img || /^data:/.test(item.img)) return;
+  const url=item.img;
+  srcToDataUrl(url).then(du=>{ if(du && item.img===url){ item.img=du; onSaved(); } });
 }
+function embedImg(it){ embedImgInto(it, ()=>saveJSON('wed-ideas',ideas)); }
 // проста «лупа» — показати картинку на весь екран
 function showImgBig(src,cap){
   if(!src) return;
@@ -3479,6 +3491,7 @@ function renderInvites(){
     const cur=invites.find(x=>x.id===id); if(!cur)return; cur.loading=false;
     if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; }
     saveJSON('wed-invites',invites); renderInvites();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-invites',invites); renderInvites(); });
   };
 })();
 
@@ -3851,6 +3864,7 @@ document.getElementById('addHotelBtn').onclick=async()=>{
     cur.loading=false;
     if(prev){ if(!cur.title)cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
     saveJSON('wed-hotels',hotels); renderHotels();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-hotels',hotels); renderHotels(); });
   }
 };
 
@@ -3902,6 +3916,7 @@ document.getElementById('addDecorBtn').onclick=async()=>{
     cur.loading=false;
     if(prev){ if(!cur.title)cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
     saveJSON('wed-decor',decor); renderDecor();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-decor',decor); renderDecor(); });
   }
 };
 
@@ -3950,6 +3965,7 @@ document.getElementById('addMusicBtn').onclick=async()=>{
     cur.loading=false;
     if(prev){ if(!cur.name)cur.name=prev.title; cur.img=prev.img; }
     saveJSON('wed-music',music); renderMusic();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-music',music); renderMusic(); });
   }
 };
 
@@ -4002,6 +4018,7 @@ document.getElementById('addInspoBtn').onclick=async()=>{
   if(prev){ cur.title=prev.title||''; cur.img=prev.img||''; }
   saveJSON('wed-inspo',inspo); renderInspo();
   if(!prev || !prev.img) showToast('Картинку не вдалось підтягнути — ідея збережена з посиланням 🙂');
+  if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-inspo',inspo); renderInspo(); });
 };
 
 /* ── UTILS ── */
