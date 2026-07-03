@@ -1546,6 +1546,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="add-form">
         <input type="text" id="hName" placeholder="Назва готелю / варіант">
         <input type="url" id="hUrl" placeholder="Посилання (Booking, сайт…) — необовʼязково" autocapitalize="none" spellcheck="false">
+        <button type="button" class="idea-photo-btn" id="hFileBtn">📁 Завантажити фото</button>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Заїзд та виїзд:</div>
         <div class="form-row">
           <input type="date" id="hIn">
@@ -1579,6 +1580,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         <input type="text" id="dName" placeholder="Що це (напр. «арка з евкаліпта»)">
         <input type="url" id="dUrl" placeholder="Посилання (Pinterest, магазин…) — необовʼязково" autocapitalize="none" spellcheck="false">
         <div class="form-row">
+          <button type="button" class="idea-photo-btn" id="dFileBtn">📁 Завантажити фото</button>
+          <button type="button" class="idea-ai-btn" id="dImagineBtn">🪄 Уявити словами</button>
+        </div>
+        <div class="form-row">
           <input type="text" id="dPrice" placeholder="Ціна (напр. 1200 грн)">
           <input type="text" id="dPlace" placeholder="Локація (Софі / Хвильовий)">
         </div>
@@ -1594,8 +1599,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
           </select>
         </div>
         <label class="dd-diy-check"><input type="checkbox" id="dDiy"> 🔨 Своїми руками</label>
-        <input type="text" id="dNote" placeholder="Нотатка (деталі, кількість…)">
-        <button class="submit-btn" id="addDecorBtn">Додати</button>
+        <input type="text" id="dNote" placeholder="Нотатка (деталі, кількість…) — для «Уявити словами» теж піде як опис">
+        <button class="submit-btn" id="addDecorBtn">Додати за посиланням / текстом</button>
       </div>
     </details>
   </div>
@@ -1620,10 +1625,14 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="add-form">
         <input type="text" id="mName" placeholder="Імʼя / назва (напр. «DJ …» або гурт)">
         <input type="url" id="mUrl" placeholder="Посилання (Instagram, SoundCloud, сайт…)" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <button type="button" class="idea-photo-btn" id="mFileBtn">📁 Завантажити фото</button>
+          <button type="button" class="idea-ai-btn" id="mImagineBtn">🪄 Уявити словами</button>
+        </div>
         <input type="text" id="mRole" placeholder="Хто це (діджей / гурт / соло / ведучий-музикант)">
         <textarea id="mTerms" rows="2" placeholder="Умови роботи: ціна, тривалість сету, апаратура/звук, райдер, передоплата…"></textarea>
-        <input type="text" id="mNote" placeholder="Нотатка (враження, стиль, де грали…)">
-        <button class="submit-btn" id="addMusicBtn">Додати</button>
+        <input type="text" id="mNote" placeholder="Нотатка (враження, стиль, де грали…) — для «Уявити словами» теж піде як опис">
+        <button class="submit-btn" id="addMusicBtn">Додати за посиланням / текстом</button>
       </div>
     </details>
   </div>
@@ -1638,6 +1647,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <summary>＋ Додати ідею (встав посилання)</summary>
       <div class="add-form">
         <input type="url" id="inUrl" placeholder="Посилання (Pinterest, Instagram, сайт…)" autocapitalize="none" spellcheck="false">
+        <div class="form-row">
+          <button type="button" class="idea-photo-btn" id="inFileBtn">📁 Завантажити фото</button>
+          <button type="button" class="idea-ai-btn" id="inImagineBtn">🪄 Уявити словами</button>
+        </div>
         <div class="form-row">
           <select id="inCat" class="inspo-cat-sel">
             <option value="образ">👗 Образ</option>
@@ -4446,6 +4459,19 @@ document.getElementById('addHotelBtn').onclick=async()=>{
     if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-hotels',hotels); renderHotels(); });
   }
 };
+document.getElementById('hFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      const id='h'+Date.now();
+      hotels.unshift({id,title:val('hName')||'Готель',url:'',checkin:document.getElementById('hIn').value||'',checkout:document.getElementById('hOut').value||'',who:val('hWho'),note:val('hNote'),pricePerNight:val('hPrice'),surcharge:val('hSur'),img:data,desc:'',booked:false,loading:false,ts:Date.now()});
+      ['hName','hUrl','hWho','hNote','hPrice','hSur'].forEach(i=>document.getElementById(i).value='');
+      document.getElementById('hIn').value=''; document.getElementById('hOut').value='';
+      saveJSON('wed-hotels',hotels); renderHotels();
+      showToast('📸 Фото додано');
+    },0.85);
+  });
+};
 
 /* ════ ДЕКОР ════ */
 const VENUE_LABELS={sofia:'💒 Софі', wave:'🥂 Хвильовий'};
@@ -4548,7 +4574,7 @@ function renderDecor(){
       <button class="del-x" data-ddel="${d.id}" aria-label="Видалити декор">✕</button>
       ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
-        ${d.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
         <div class="idea-title" data-dtitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Декор')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
@@ -4651,6 +4677,46 @@ document.getElementById('addDecorBtn').onclick=async()=>{
     if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-decor',decor); renderDecor(); });
   }
 };
+function decorFormMeta(){
+  return {price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote')};
+}
+function resetDecorForm(){
+  ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('dWho').value='me'; document.getElementById('dType').value='item'; document.getElementById('dDiy').checked=false;
+}
+document.getElementById('dFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      const id='d'+Date.now();
+      decor.unshift({id,title:val('dName')||'Декор',url:'',img:data,desc:'',taken:false,bought:false,loading:false,...decorFormMeta(),ts:Date.now()});
+      resetDecorForm();
+      saveJSON('wed-decor',decor); renderDecor();
+      showToast('📸 Фото додано');
+    },0.85);
+  });
+};
+document.getElementById('dImagineBtn').onclick=async()=>{
+  const name=val('dName'), note=val('dNote');
+  const text=[name,note].filter(Boolean).join('. ');
+  if(!text){ showToast('Спершу опиши словами, що уявити (назва або нотатка) 🙂'); return; }
+  const id='d'+Date.now();
+  decor.unshift({id,title:name||text,url:'',img:'',desc:'',taken:false,bought:false,loading:true,_ai:true,...decorFormMeta(),ts:Date.now()});
+  resetDecorForm();
+  saveJSON('wed-decor',decor); renderDecor();
+  try{
+    const img=await aiGenerate([`Створи фотореалістичне зображення весільного декору за описом: ${text}. Чисте естетичне фото, елегантне весілля, мʼяке природне освітлення, без тексту й водяних знаків.`]);
+    const cur=decor.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false; cur._ai=false;
+    if(img) downscaleSrc(img,768,small=>{ cur.img=small||img; saveJSON('wed-decor',decor); renderDecor(); },0.8);
+    else{ saveJSON('wed-decor',decor); renderDecor(); }
+  }catch(e){
+    console.warn('decorImagine',e);
+    const cur=decor.find(x=>x.id===id); if(cur){ cur.loading=false; cur._ai=false; }
+    saveJSON('wed-decor',decor); renderDecor();
+    showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
+  }
+};
 
 /* ════ МУЗИКА (артисти / діджеї) ════ */
 const MUSIC_STATUS={search:'🔍 Шукаємо',contacted:'✉️ Написали',booked:'✅ Заброньовано'};
@@ -4667,7 +4733,7 @@ function renderMusic(){
       <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
       ${m.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(m.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
-        ${m.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        ${m.loading?`<div class="idea-loading">${m._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
         <div class="idea-title">${esc(m.name||m.url||'Артист')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         <div class="hotel-meta">${role}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span></div>
@@ -4700,6 +4766,41 @@ document.getElementById('addMusicBtn').onclick=async()=>{
     if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-music',music); renderMusic(); });
   }
 };
+function musicFormMeta(){ return {role:val('mRole'),terms:val('mTerms'),note:val('mNote')}; }
+function resetMusicForm(){ ['mName','mUrl','mRole','mTerms','mNote'].forEach(i=>document.getElementById(i).value=''); }
+document.getElementById('mFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      const id='m'+Date.now();
+      music.unshift({id,name:val('mName')||'Артист',url:'',img:data,status:'search',loading:false,...musicFormMeta(),ts:Date.now()});
+      resetMusicForm();
+      saveJSON('wed-music',music); renderMusic();
+      showToast('📸 Фото додано');
+    },0.85);
+  });
+};
+document.getElementById('mImagineBtn').onclick=async()=>{
+  const name=val('mName'), note=val('mNote');
+  const text=[name,note].filter(Boolean).join('. ');
+  if(!text){ showToast('Спершу опиши словами, що уявити (імʼя або нотатка) 🙂'); return; }
+  const id='m'+Date.now();
+  music.unshift({id,name:name||text,url:'',img:'',status:'search',loading:true,_ai:true,...musicFormMeta(),ts:Date.now()});
+  resetMusicForm();
+  saveJSON('wed-music',music); renderMusic();
+  try{
+    const img=await aiGenerate([`Створи фотореалістичне зображення для картки музичного виконавця на весіллі за описом: ${text}. Атмосферне фото виступу/сцени, без тексту й водяних знаків.`]);
+    const cur=music.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false; cur._ai=false;
+    if(img) downscaleSrc(img,768,small=>{ cur.img=small||img; saveJSON('wed-music',music); renderMusic(); },0.8);
+    else{ saveJSON('wed-music',music); renderMusic(); }
+  }catch(e){
+    console.warn('musicImagine',e);
+    const cur=music.find(x=>x.id===id); if(cur){ cur.loading=false; cur._ai=false; }
+    saveJSON('wed-music',music); renderMusic();
+    showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
+  }
+};
 
 /* ════ НАТХНЕННЯ (дошка ідей із Pinterest / інтернету) ════ */
 const INSPO_CATS=['образ','зачіска / мейк','декор','флористика','торт','локація','фотоідея','запрошення','інше'];
@@ -4723,7 +4824,7 @@ function renderInspo(){
                    :`<div class="inspo-img noimg">🖼</div>`;
     return `<div class="inspo-card" data-pid="${i.id}">
       <button class="del-x" data-indel="${i.id}" aria-label="Видалити">✕</button>
-      ${i.loading?'<div class="idea-loading" style="margin:8px;">Підтягую…</div>':img}
+      ${i.loading?`<div class="idea-loading" style="margin:8px;">${i._ai?'🪄 ШІ малює…':'Підтягую…'}</div>`:img}
       <div class="inspo-body">
         ${i.cat?`<span class="inspo-cat">${INSPO_ICON[i.cat]||''} ${esc(i.cat)}</span>`:''}
         ${i.title?`<div class="inspo-title">${esc(i.title)}</div>`:''}
@@ -4751,6 +4852,38 @@ document.getElementById('addInspoBtn').onclick=async()=>{
   saveJSON('wed-inspo',inspo); renderInspo();
   if(!prev || !prev.img) showToast('Картинку не вдалось підтягнути — ідея збережена з посиланням 🙂');
   if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-inspo',inspo); renderInspo(); });
+};
+document.getElementById('inFileBtn').onclick=()=>{
+  pickImageFile(f=>{ if(!f) return;
+    loadPhotoFile(f,1024,data=>{
+      if(!data){ showToast('Не вдалося обробити фото'); return; }
+      const id='in'+Date.now();
+      inspo.unshift({id,url:'',cat:document.getElementById('inCat').value||'інше',note:val('inNote'),title:'',img:data,loading:false,ts:Date.now()});
+      ['inUrl','inNote'].forEach(i=>document.getElementById(i).value='');
+      saveJSON('wed-inspo',inspo); renderInspo();
+      showToast('📸 Фото додано');
+    },0.85);
+  });
+};
+document.getElementById('inImagineBtn').onclick=async()=>{
+  const text=val('inNote');
+  if(!text){ showToast('Спершу опиши словами ідею в нотатці 🙂'); return; }
+  const id='in'+Date.now();
+  inspo.unshift({id,url:'',cat:document.getElementById('inCat').value||'інше',note:text,title:text,img:'',loading:true,_ai:true,ts:Date.now()});
+  ['inUrl','inNote'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-inspo',inspo); renderInspo();
+  try{
+    const img=await aiGenerate([`Створи фотореалістичне мудборд-зображення весільної ідеї за описом: ${text}. Естетичне фото, елегантне весілля, мʼяке природне освітлення, без тексту й водяних знаків.`]);
+    const cur=inspo.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false; cur._ai=false;
+    if(img) downscaleSrc(img,768,small=>{ cur.img=small||img; saveJSON('wed-inspo',inspo); renderInspo(); },0.8);
+    else{ saveJSON('wed-inspo',inspo); renderInspo(); }
+  }catch(e){
+    console.warn('inspoImagine',e);
+    const cur=inspo.find(x=>x.id===id); if(cur){ cur.loading=false; cur._ai=false; }
+    saveJSON('wed-inspo',inspo); renderInspo();
+    showToast('ШІ не зміг намалювати 😕 '+aiErr(e));
+  }
 };
 
 /* ── ДРЕС-КОД: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах ── */
