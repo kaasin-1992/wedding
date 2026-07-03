@@ -460,6 +460,11 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-ai-btn:disabled{opacity:.55;cursor:default;}
 .idea-ai-btn.on{background:var(--done-dim);color:var(--done);}
 .idea-ai-badge{position:absolute;top:8px;left:8px;z-index:2;background:var(--gold);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.idea-rating-badge{position:absolute;top:8px;left:8px;z-index:2;background:rgba(20,20,18,.62);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.idea-fav-row{display:flex;gap:6px;margin-top:11px;}
+.idea-fav-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;opacity:.6;transition:.15s;}
+.idea-fav-btn .ffi{font-size:15px;}
+.idea-fav-btn.on{opacity:1;background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
 .idea-ai-x{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .idea-ai-overlay{position:absolute;inset:0;z-index:4;background:rgba(20,22,30,.78);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:600;text-align:center;}
 .idea-ai-overlay small{opacity:.7;font-weight:400;}
@@ -1111,6 +1116,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <select id="ideaSort" aria-label="Сортування одягу">
       <option value="">за датою (нові згори)</option>
       <option value="gtype">за одиницею гардеробу</option>
+      <option value="rating">за рейтингом (улюблене)</option>
       <option value="price-asc">за ціною ↑ (дешевші)</option>
       <option value="price-desc">за ціною ↓ (дорожчі)</option>
     </select>
@@ -2165,6 +2171,8 @@ function renderIdeas(){
     }else if(ideaSort==='price-asc'||ideaSort==='price-desc'){
       const pv=it=>{ const n=parseMoney(it.price); return (n&&n>0)?n:null; };
       arr.sort((a,b)=>{ const pa=pv(a), pb=pv(b); if(pa==null&&pb==null) return (b.ts||0)-(a.ts||0); if(pa==null) return 1; if(pb==null) return -1; return ideaSort==='price-asc'?pa-pb:pb-pa; });
+    }else if(ideaSort==='rating'){
+      arr.sort((a,b)=> favCount(b)-favCount(a) || (b.ts||0)-(a.ts||0));
     }
     items=arr;
   }
@@ -2183,7 +2191,9 @@ function renderIdeas(){
       </div>`;
     const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
     const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
-    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}${aiBadge}${overlay}</div>`;
+    const rc=isTry?favCount(it):0;
+    const ratingBadge=rc>0?`<span class="idea-rating-badge">⭐×${rc}</span>`:'';
+    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" onerror="this.style.display='none'">`:''}${aiBadge}${ratingBadge}${overlay}</div>`;
     // кнопки ШІ
     let aiBtns='';
     if(it.cat==='her'||it.cat==='his'){
@@ -2201,6 +2211,8 @@ function renderIdeas(){
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
+    const favs=it.favs||{};
+    const favRow=isTry?`<div class="idea-fav-row">${FAV_ROLES.map(r=>`<button class="idea-fav-btn${favs[r.k]?' on':''}" data-fav="${it.id}" data-favrole="${r.k}" title="${esc(r.lbl)} — вподобати">${favs[r.k]?'⭐':'☆'} <span class="ffi">${r.ic}</span></button>`).join('')}</div>`:'';
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
     const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
@@ -2216,6 +2228,7 @@ function renderIdeas(){
         ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
+        ${favRow}
         <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
       </div>`;
     listEl.appendChild(card);
@@ -2236,6 +2249,12 @@ function renderIdeas(){
   listEl.querySelectorAll('[data-bought]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.bought); if(!it)return;
     it.bought=!it.bought; saveJSON('wed-ideas',ideas); renderIdeas();
+  });
+  listEl.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.fav); if(!it)return;
+    const role=b.dataset.favrole;
+    it.favs=it.favs||{}; it.favs[role]=!it.favs[role];
+    saveJSON('wed-ideas',ideas); renderIdeas();
   });
   listEl.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.photo); if(!it) return;
@@ -2840,6 +2859,8 @@ function closeCrop(result){
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
 const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика',makeup:'Краса (візаж, зачіска)',hair:'Краса (візаж, зачіска)'};
 const IDEA_FALLBACK_EMOJI={rings:'💍',makeup:'💄',hair:'💇'};
+const FAV_ROLES=[{k:'her',ic:'👰',lbl:'Катя'},{k:'his',ic:'🤵',lbl:'Дмитро'},{k:'maid',ic:'💃',lbl:'Дружка'}];
+function favCount(it){ return Object.values(it.favs||{}).filter(Boolean).length; }
 function approveIdea(it){
   if(it.approved){
     // скасувати: прибрати звʼязану статтю бюджету
