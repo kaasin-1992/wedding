@@ -1462,7 +1462,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- SCRIPT -->
 <div class="panel" id="tab-script">
-  <div class="section-hint">Хід дня по хвилинах. Таймлайн окремий для Софі та Хвильового, а беклог (плани без часу) — <b>спільний</b>: накидай ідеї, признач локацію, а коли поставиш час — пункт піде в таймлайн тієї локації, яку зараз дивишся.</div>
+  <div class="section-hint">Хід дня по хвилинах. Таймлайн окремий для Софі та Хвильового, а беклог (плани без часу) — <b>спільний</b>: накидай ідеї, признач локацію, а коли поставиш час — пункт піде в таймлайн тієї локації, яку зараз дивишся. Нижче — фільтр по конкретній локації (📍 «Збори / дім», «Дорога / трансфер»…), він звужує і таймлайн, і беклог разом.</div>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати пункт</summary>
@@ -1484,6 +1484,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn active" data-s="sofia">💒 Розпис · Софі</button>
     <button class="filt-btn" data-s="wave">🥂 Хвильовий</button>
   </div>
+  <div class="filters" id="scriptLocFilters"></div>
   <div id="scriptList"></div>
 </div>
 
@@ -3743,6 +3744,7 @@ async function aiExtractGarment(it){
 
 /* ════ SCRIPT / SCENARIO ════ */
 let activeScript='sofia';
+let scriptLocFilter='';   // '' = усі локації; інакше — точна локація (item.loc), звужує і таймлайн, і беклог
 const scriptRef=()=> activeScript==='sofia'?scriptSofia:scriptWave;
 const scriptKey=()=> activeScript==='sofia'?'wed-scriptS':'wed-scriptW';
 const SEED_LOCS=['Бути Софі','Бар «Хвильовий»','Збори / дім','Локація фотосесії','Дорога / трансфер'];
@@ -3757,16 +3759,32 @@ function fillLocDatalist(){
 function scriptArrays(){ return [[scriptSofia,'wed-scriptS'],[scriptWave,'wed-scriptW']]; }
 function findScript(id){ for(const [arr,key] of scriptArrays()){ const it=arr.find(x=>x.id===id); if(it) return {arr,key,it}; } return null; }
 function visScript(arr){ return weedUnlocked?arr:arr.filter(m=>!isWeed(m.text)); }
+// чипси фільтра по конкретній локації (item.loc) — окремо від таб «Софі/Хвильовий», звужує
+// одразу і таймлайн, і беклог (навіть пункти без призначеного часу)
+function renderScriptLocFilters(){
+  const wrap=document.getElementById('scriptLocFilters'); if(!wrap) return;
+  const locs=locSuggestions();
+  if(scriptLocFilter && !locs.includes(scriptLocFilter)) scriptLocFilter='';
+  wrap.innerHTML=`<button class="filt-btn${scriptLocFilter?'':' active'}" data-slf="">📍 Усі локації</button>`
+    + locs.map(l=>`<button class="filt-btn${scriptLocFilter===l?' active':''}" data-slf="${esc(l)}">${esc(l)}</button>`).join('');
+  wrap.querySelectorAll('[data-slf]').forEach(b=>b.onclick=()=>{
+    scriptLocFilter=b.dataset.slf; renderScripts();
+  });
+}
 function renderScripts(){
   fillLocDatalist();
+  renderScriptLocFilters();
   // таймлайн (з часом) — окремий для кожної локації; беклог — СПІЛЬНИЙ для обох
-  const timed=visScript(scriptRef()).filter(m=>m.time).sort((a,b)=>a.time.localeCompare(b.time));
-  const backlog=[...visScript(scriptSofia),...visScript(scriptWave)].filter(m=>!m.time);
+  const locMatch=m=>!scriptLocFilter || m.loc===scriptLocFilter;
+  const timed=visScript(scriptRef()).filter(m=>m.time).filter(locMatch).sort((a,b)=>a.time.localeCompare(b.time));
+  const backlog=[...visScript(scriptSofia),...visScript(scriptWave)].filter(m=>!m.time).filter(locMatch);
   const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
   // ── Таймлайн (з часом) ──
   if(!timed.length){
     const e=document.createElement('div'); e.className='empty-state';
-    e.innerHTML='Поки жоден пункт не має часу.<br>Накидай ідеї в беклог нижче і постав їм час ⏱';
+    e.innerHTML=scriptLocFilter
+      ? `Нема пунктів із часом для локації «${esc(scriptLocFilter)}».`
+      : 'Поки жоден пункт не має часу.<br>Накидай ідеї в беклог нижче і постав їм час ⏱';
     listEl.appendChild(e);
   }else{
     timed.forEach(m=>{
