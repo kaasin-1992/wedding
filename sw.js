@@ -1,11 +1,14 @@
-const CACHE = 'wedding-v57';
+const CACHE = 'wedding-v58';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-180.png',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './lib/guest-utils.js',
+  './lib/task-utils.js',
+  './lib/budget-utils.js'
 ];
 
 self.addEventListener('install', e => {

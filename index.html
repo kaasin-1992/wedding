@@ -1267,6 +1267,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="lib/guest-utils.js"></script>
+<script src="lib/task-utils.js"></script>
+<script src="lib/budget-utils.js"></script>
 <script>
 const WEDDING = new Date('2026-09-06');
 
@@ -1501,8 +1504,6 @@ let weedPassHash = loadJSON('wed-weed-pass', '');   // хеш пароля (си
 // розблоковано на ЦЬОМУ пристрої (зберігається локально, НЕ синхронізується):
 // ти і Дмитро вводите пароль раз на своєму телефоні — далі видно завжди; дружки на своїх пристроях пароля не мають.
 let weedUnlocked = (()=>{ try{ return localStorage.getItem('wed-weed-ok')==='1'; }catch(e){ return false; } })();
-function hashStr(s){ let h=5381; s=String(s); for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return 'h'+h.toString(36); }
-function isWeed(text){ return /(?<![а-яіїєґ])трав(а|и|у|і|о|к|ичк|ʼ|')|weed|🌿|канабіс|каннабіс|косяк|джойнт|шишк/i.test(String(text||'')); }
 function reRenderWeedAreas(){ try{ renderGuests(); renderBar(); renderBudget(); renderTasks(); renderScripts(); }catch(e){} }
 function unlockWeed(){
   if(weedUnlocked) return true;
@@ -1540,22 +1541,9 @@ let bar         = loadJSON('wed-bar', DEFAULT_BAR);
 let team        = loadJSON('wed-team', DEFAULT_TEAM);
 
 /* ── HELPERS ── */
-const today = ()=> new Date(new Date().toDateString());
-const daysUntil = s => s ? Math.ceil((new Date(s)-today())/86400000) : null;
-const daysUntilWedding = ()=> Math.ceil((WEDDING-today())/86400000);
 const fmtDate = s => { if(!s)return''; const p=s.split('-'); return`${p[2]}.${p[1]}`; };
 const fmtMoney = n => (Number(n)||0).toLocaleString('uk-UA') + ' ₴';
 const MONTHS = ['','Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
-
-function getStatus(t){
-  if(t.done) return'done';
-  if(t.asap&&!t.deadline) return'asap';
-  const d=daysUntil(t.deadline);
-  if(d===null) return'ok';
-  if(d<0||d<=7) return'hot';
-  if(d<=21) return'warn';
-  return'ok';
-}
 
 /* ════ TASKS ════ */
 function renderTasks(){
@@ -1614,32 +1602,6 @@ document.getElementById('addTaskBtn').onclick=()=>{
 
 /* ════ GUESTS ════ */
 let activeFilter='all';
-const headCount=g=>1+(g.plus1==='confirmed'?1:0)+(Number(g.kids)||0);
-const totalPeople=()=>guests.filter(g=>g.status!=='declined').reduce((s,g)=>s+headCount(g),0);
-const peopleAt=ev=>guests.filter(g=>g.status!=='declined'&&(g.event===ev||g.event==='both')).reduce((s,g)=>s+headCount(g),0);
-function applyFilter(g,f){
-  if(f==='all')return true;
-  if(f==='her')return g.side==='her';
-  if(f==='his')return g.side==='his';
-  if(f==='family')return (g.group||'friends')==='family';
-  if(f==='friends')return (g.group||'friends')==='friends';
-  if(f==='ceremony')return g.event==='ceremony'||g.event==='both';
-  if(f==='party')return g.event==='party'||g.event==='both';
-  if(f==='plus1')return g.plus1!=='none';
-  if(f==='maybe')return !!g.maybe;
-  if(f==='backup')return !!g.backup;
-  if(f==='wparty')return !!g.wparty;
-  if(f==='pending')return g.status==='pending';
-  return true;
-}
-/* порядок у списку: підтверджені → запрошені → під питанням → запасні → відмовили */
-function guestRank(g){
-  if(g.status==='confirmed') return 0;
-  if(g.status==='declined')  return 4;
-  if(g.backup)               return 3;
-  if(g.maybe)                return 2;
-  return 1;
-}
 const GUEST_ROLES={photo:'📷 Фотограф',video:'🎥 Відеограф',mc:'🎤 Ведуча'};
 const ROLE_ORDER=['','photo','video','mc'];
 function renderGuests(){
@@ -1649,9 +1611,9 @@ function renderGuests(){
     <div class="stat-box"><div class="stat-num">${guests.length}</div><div class="stat-lbl">Всього запрошених</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--done)">${confirmed}</div><div class="stat-lbl">Підтвердили</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--warn)">${pending}</div><div class="stat-lbl">Очікуємо</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople()}</div><div class="stat-lbl">Людей разом</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt('ceremony')}</div><div class="stat-lbl">На розписі</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt('party')}</div><div class="stat-lbl">На вечірці</div></div>`;
+    <div class="stat-box"><div class="stat-num" style="color:var(--sage)">${totalPeople(guests)}</div><div class="stat-lbl">Людей разом</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--rose)">${peopleAt(guests,'ceremony')}</div><div class="stat-lbl">На розписі</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--terra)">${peopleAt(guests,'party')}</div><div class="stat-lbl">На вечірці</div></div>`;
 
   const listEl=document.getElementById('guestList');
   const filtered=guests.filter(g=>applyFilter(g,activeFilter)).sort((a,b)=>guestRank(a)-guestRank(b));
@@ -1820,85 +1782,9 @@ function askConfirm(message, yesLabel='Додати', noLabel='Не додати
   });
 }
 
-/* ── ПЕРЕВІРКА НА ПОВТОРИ (схожі імена в будь-якій формі) ── */
-const NICK_GROUPS=[
-  ['олександр','саша','сашко','санько','алекс'],
-  ['олександра','сашка','леся'],
-  ['катерина','катя','катруся','катеринка'],
-  ['олена','оленка','аленка'],
-  ['ольга','оля'],
-  ['михайло','міша','мишко'],
-  ['дмитро','діма','дмитрик'],
-  ['володимир','вова','володя','вовка'],
-  ['наталія','наталя','наташа','ната'],
-  ['анна','аня','анничка'],
-  ['марія','маша','маруся'],
-  ['іван','ваня','іванко'],
-  ['юлія','юля','юлька'],
-  ['тетяна','таня','танюша'],
-  ['ірина','іра','іринка'],
-  ['сергій','сергійко','сєрьожа'],
-  ['андрій','андрійко'],
-  ['вікторія','віка'],
-  ['євген','женя','жека'],
-  ['артем','тьома','артемко'],
-  ['назар','назарко'],
-  ['богдан','бодя'],
-  ['софія','соня','софійка'],
-  ['дарина','даша','даря','даринка'],
-  ['христина','христя'],
-  ['роман','рома','ромчик'],
-  ['петро','петрик','петя'],
-  ['василь','вася','васько'],
-  ['микола','коля','миколка'],
-  ['григорій','гриша','грицько'],
-  ['павло','паша','павлик'],
-  ['денис','деня'],
-  ['максим','макс','максимко'],
-  ['людмила','люда','люся'],
-  ['валентина','валя'],
-  ['валерій','валера'],
-  ['станіслав','стас'],
-  ['ярослав','ярік','слава'],
-  ['владислав','влад'],
-  ['віталій','віталік'],
-  ['олег','олежко'],
-  ['ігор','ігорьок'],
-  ['юрій','юра','юрко'],
-];
-const NICK_MAP=(()=>{const m={};NICK_GROUPS.forEach((g,i)=>g.forEach(n=>{if(m[n]===undefined)m[n]=i;}));return m;})();
-function normName(s){ return String(s||'').toLowerCase().replace(/[ʼ'’`.,!?]/g,'').replace(/\s+/g,' ').trim(); }
-function canon(tok){ return NICK_MAP[tok]!==undefined ? 'g'+NICK_MAP[tok] : tok; }
-function lev(a,b){
-  const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
-  let prev=Array.from({length:n+1},(_,i)=>i);
-  for(let i=1;i<=m;i++){ const cur=[i];
-    for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); }
-    prev=cur;
-  }
-  return prev[n];
-}
-function similarTok(a,b){
-  if(!a||!b)return false;
-  if(a===b)return true;
-  const min=Math.min(a.length,b.length);
-  if(min>=3&&(a.startsWith(b)||b.startsWith(a)))return true;
-  const mx=Math.max(a.length,b.length);
-  return mx>0 && (1-lev(a,b)/mx)>=0.8;
-}
-function findDuplicateGuest(name){
-  const inFull=normName(name), inFirst=inFull.split(' ')[0], inCanon=canon(inFirst);
-  for(const g of guests){
-    const exFull=normName(g.name), exFirst=exFull.split(' ')[0];
-    if(exFull===inFull) return g.name;
-    if(canon(exFirst)===inCanon) return g.name;
-    if(similarTok(inFirst,exFirst)) return g.name;
-  }
-  return null;
-}
 document.getElementById('addGuestBtn').onclick=async()=>{
   const name=val('gName'); if(!name)return;
-  const dup=findDuplicateGuest(name);
+  const dup=findDuplicateGuest(name, guests);
   if(dup){
     const add=await askConfirm(`Здається, такий гість вже є: «${dup}».\nЦе той самий (повтор)?`, 'Додати', 'Не додати');
     if(!add) return;
@@ -1915,17 +1801,15 @@ document.getElementById('capInput').addEventListener('input',e=>{
 function renderBudget(){
   // 🌿 статті про травку приховані, поки не введено пароль
   const vbudget = weedUnlocked ? budget : budget.filter(b=>!isWeed(b.name+' '+(b.note||'')));
-  const planned=vbudget.reduce((s,b)=>s+(Number(b.planned)||0),0);
-  const paid=vbudget.reduce((s,b)=>s+(Number(b.paid)||0),0);
+  const {planned, paid, remaining, capDiff} = computeBudgetTotals(vbudget, budgetCap);
   document.getElementById('sumPlanned').textContent=fmtMoney(planned);
   document.getElementById('sumPaid').textContent=fmtMoney(paid);
-  document.getElementById('sumRemain').textContent=fmtMoney(planned-paid);
+  document.getElementById('sumRemain').textContent=fmtMoney(remaining);
 
   const noteEl=document.getElementById('capNote');
   if(budgetCap>0){
-    const diff=budgetCap-planned;
-    noteEl.className='cap-note '+(diff>=0?'under':'over');
-    noteEl.textContent=diff>=0?`В межах бюджету — лишається ${fmtMoney(diff)}`:`Перевищення бюджету на ${fmtMoney(-diff)}`;
+    noteEl.className='cap-note '+(capDiff>=0?'under':'over');
+    noteEl.textContent=capDiff>=0?`В межах бюджету — лишається ${fmtMoney(capDiff)}`:`Перевищення бюджету на ${fmtMoney(-capDiff)}`;
   } else noteEl.className='', noteEl.textContent='';
 
   const groups={};
@@ -2105,15 +1989,6 @@ let activeIdea='her';
 let ideaSort='';
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
-// витягуємо ціну з тексту прев'ю: "1 250 грн", "₴1250", "3200 UAH", "від 4500 грн"
-function extractPrice(t){
-  const s=String(t||'');
-  let m=s.match(/(?:₴|UAH)\s*([\d][\d\s.,]{1,9}\d|\d)/i);
-  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
-  m=s.match(/([\d][\d\s.,]{1,9}\d|\d)\s*(?:грн|₴|uah|грн\.|гривень)/i);
-  if(m){ const n=m[1].replace(/[\s.,]/g,''); if(n) return n+' грн'; }
-  return '';
-}
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
 async function microlink(url, extra, timeout){
   const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), timeout||14000);
@@ -2648,7 +2523,6 @@ function closeCrop(result){
 }
 
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
-function parseMoney(s){ const n=parseInt(String(s||'').replace(/[^\d]/g,''),10); return isNaN(n)?0:n; }
 const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика'};
 function approveIdea(it){
   if(it.approved){
@@ -3104,9 +2978,6 @@ document.querySelectorAll('#scriptTabs .filt-btn').forEach(btn=>btn.onclick=()=>
   document.querySelectorAll('#scriptTabs .filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); activeScript=btn.dataset.s; renderScripts();
 });
-/* маска часу ГГ:ХХ — без авто-«зараз», лише те, що вводять руками */
-function timeMask(v){ const d=String(v||'').replace(/\D/g,'').slice(0,4); return d.length>2?d.slice(0,2)+':'+d.slice(2):d; }
-function timeNorm(v){ const m=/^(\d{1,2}):?(\d{2})$/.exec(String(v||'').trim()); if(!m)return''; const h=+m[1],mn=+m[2]; if(h>23||mn>59)return''; return String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0'); }
 { const st=document.getElementById('sTime'); if(st) st.addEventListener('input',()=>{ st.value=timeMask(st.value); }); }
 document.getElementById('addScriptBtn').onclick=()=>{
   const text=val('sText'); if(!text)return;
@@ -3881,7 +3752,6 @@ function renderAll(){
   renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites();
   document.getElementById('capInput').value = budgetCap||'';
 }
-function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
 updateCountdown();
 renderAll();
