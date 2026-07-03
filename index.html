@@ -704,6 +704,14 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .game-add-row button{flex:0 0 auto;background:#ffd166;color:#2a2440;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;}
 .game-url{width:100%;background:rgba(255,255,255,.06);border:1px solid #4a4170;border-radius:9px;padding:8px 11px;color:#f0edfa;font-family:var(--mono,monospace);font-size:16px;margin-bottom:10px;}
 .game-frame{width:100%;height:300px;border:none;border-radius:12px;background:#000;display:block;}
+.music-embed-frame{width:100%;border:none;border-radius:12px;margin-top:8px;display:block;}
+.mustplay-block{margin-top:22px;padding-top:16px;border-top:1px dashed var(--line);}
+.mustplay-title{font-family:var(--serif);font-size:16px;font-weight:700;margin-bottom:4px;}
+.mp-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
+.mp-row-body{flex:1;min-width:0;}
+.mp-row-title{font-size:13.5px;font-weight:600;color:var(--text);}
+.mp-row-artist{font-size:12px;color:var(--muted);}
+.mp-row-link{font-size:11.5px;color:var(--terra);text-decoration:none;}
 .game-slot{display:flex;align-items:center;justify-content:center;text-align:center;min-height:160px;border:2px dashed #4a4170;border-radius:12px;color:#9890b8;font-size:13px;padding:18px;line-height:1.5;}
 .inv-ideas-title{font-family:var(--serif);font-size:16px;color:var(--text);margin:6px 0 12px;}
 
@@ -1666,6 +1674,22 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </details>
   </div>
   <div id="musicList"></div>
+  <div class="mustplay-block">
+    <div class="mustplay-title">🔒 Обовʼязкові треки плейлиста</div>
+    <div class="section-hint" style="margin-top:0;">Пісні, які МАЮТЬ прозвучати на весіллі — DJ/гурт побачить цей список.</div>
+    <div class="add-section" style="margin-bottom:10px;">
+      <details>
+        <summary>＋ Додати обовʼязковий трек</summary>
+        <div class="add-form">
+          <input type="text" id="mpTitle" placeholder="Назва треку">
+          <input type="text" id="mpArtist" placeholder="Виконавець">
+          <input type="url" id="mpUrl" placeholder="Посилання Spotify/YouTube — необовʼязково" autocapitalize="none" spellcheck="false">
+          <button class="submit-btn" id="addMustPlayBtn">Додати</button>
+        </div>
+      </details>
+    </div>
+    <div id="mustPlayList"></div>
+  </div>
 </div>
 
 <!-- INSPIRATION -->
@@ -1725,7 +1749,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -1931,6 +1955,7 @@ let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже дода
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
 let music       = loadJSON('wed-music', []);
+let mustPlay    = loadJSON('wed-mustplay', []);   // обовʼязкові треки плейлиста {id,title,artist,url,ts}
 let inspo       = loadJSON('wed-inspo', []);
 let dresscode   = loadJSON('wed-dresscode', {colors:[], refs:[], gen:''}); // дрес-код: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах
 let inspoCat    = 'all';
@@ -2281,6 +2306,7 @@ const ARR={
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
   'wed-decor':{get:()=>decor,set:v=>decor=v,render:()=>renderDecor()},
   'wed-music':{get:()=>music,set:v=>music=v,render:()=>renderMusic()},
+  'wed-mustplay':{get:()=>mustPlay,set:v=>mustPlay=v,render:()=>renderMustPlay()},
   'wed-inspo':{get:()=>inspo,set:v=>inspo=v,render:()=>renderInspo()},
   'wed-scriptS':{get:()=>scriptSofia,set:v=>scriptSofia=v,render:()=>renderScripts()},
   'wed-scriptW':{get:()=>scriptWave,set:v=>scriptWave=v,render:()=>renderScripts()},
@@ -2534,12 +2560,15 @@ async function microlink(url, extra, timeout){
 async function fetchPreview(url){
   const host=hostOf(url);
   const favicon=faviconOf(host);
+  // Instagram майже завжди віддає в og:image просто лого застосунку, а не останній пост/фото
+  // профілю — тому для IG одразу йдемо по скрін сторінки (гілка нижче), а не довіряємо og:image.
+  const isInstagram=/(^|\.)instagram\.com$/.test(host);
   const d=await microlink(url);
   let title='', desc='', img='', icon=favicon;
   const cands=[];                          // кандидати-картинки (для вибору вручну)
   if(d){
     title=d.title||''; desc=d.description||'';
-    img=(d.image&&d.image.url)||'';
+    img=isInstagram?'':((d.image&&d.image.url)||'');
     icon=(d.logo&&d.logo.url)||favicon;
     if(d.image&&d.image.url) cands.push(d.image.url);
     if(d.logo&&d.logo.url) cands.push(d.logo.url);
@@ -4859,6 +4888,25 @@ document.getElementById('ckImagineBtn').onclick=async()=>{
 /* ════ МУЗИКА (артисти / діджеї) ════ */
 const MUSIC_STATUS={search:'🔍 Шукаємо',contacted:'✉️ Написали',booked:'✅ Заброньовано'};
 const MUSIC_NEXT={search:'contacted',contacted:'booked',booked:'search'};
+// розпізнає Spotify/YouTube посилання й повертає embed-src для програвання прямо в картці
+function musicEmbedSrc(url){
+  if(!url) return null;
+  let u; try{ u=new URL(url); }catch{ return null; }
+  const host=u.hostname.replace(/^www\./,'');
+  if(host==='open.spotify.com'){
+    const m=u.pathname.match(/^\/(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/);
+    if(m) return {src:`https://open.spotify.com/embed/${m[1]}/${m[2]}`, height:(m[1]==='track'?152:352)};
+  }else if(host==='youtube.com'||host==='m.youtube.com'){
+    const v=u.searchParams.get('v');
+    if(v) return {src:`https://www.youtube.com/embed/${v}`, height:200};
+    const list=u.searchParams.get('list');
+    if(u.pathname==='/playlist' && list) return {src:`https://www.youtube.com/embed/videoseries?list=${list}`, height:200};
+  }else if(host==='youtu.be'){
+    const id=u.pathname.slice(1);
+    if(id) return {src:`https://www.youtube.com/embed/${id}`, height:200};
+  }
+  return null;
+}
 function renderMusic(){
   const listEl=document.getElementById('musicList'); if(!listEl) return; listEl.innerHTML='';
   if(!music.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай артиста чи діджея 🎵</div>'; return; }
@@ -4866,6 +4914,7 @@ function renderMusic(){
     const host=hostOf(m.url);
     const role=m.role?`<span class="badge">🎚 ${esc(m.role)}</span>`:'';
     const st=m.status||'search';
+    const embed=musicEmbedSrc(m.url);
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
@@ -4877,6 +4926,7 @@ function renderMusic(){
         <div class="hotel-meta">${role}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span></div>
         ${m.terms?`<div class="idea-note">📋 ${esc(m.terms)}</div>`:''}
         ${m.note?`<div class="idea-desc">${esc(m.note)}</div>`:''}
+        ${embed?`<iframe class="music-embed-frame" src="${esc(embed.src)}" style="height:${embed.height}px" loading="lazy" allow="encrypted-media; autoplay" referrerpolicy="no-referrer"></iframe>`:''}
         ${m.url?`<div class="idea-actions"><a class="idea-open" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
     listEl.appendChild(card);
@@ -4887,6 +4937,32 @@ function renderMusic(){
     m.status=MUSIC_NEXT[m.status||'search']; saveJSON('wed-music',music); renderMusic();
   });
 }
+function renderMustPlay(){
+  const listEl=document.getElementById('mustPlayList'); if(!listEl) return; listEl.innerHTML='';
+  if(!mustPlay.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай перший обовʼязковий трек 🔒</div>'; return; }
+  listEl.innerHTML=mustPlay.map(t=>{
+    const embed=musicEmbedSrc(t.url);
+    return `<div class="mp-row">
+      <div class="mp-row-body">
+        <div class="mp-row-title">🎵 ${esc(t.title||'Трек')}</div>
+        ${t.artist?`<div class="mp-row-artist">${esc(t.artist)}</div>`:''}
+        ${t.url?`<a class="mp-row-link" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}
+        ${embed?`<iframe class="music-embed-frame" src="${esc(embed.src)}" style="height:${embed.height}px" loading="lazy" allow="encrypted-media; autoplay" referrerpolicy="no-referrer"></iframe>`:''}
+      </div>
+      <button class="del-x" data-mpdel="${t.id}" aria-label="Видалити трек" style="position:static;">✕</button>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-mpdel]').forEach(b=>b.onclick=()=>delUndo('wed-mustplay',b.dataset.mpdel,'Трек видалено'));
+}
+document.getElementById('addMustPlayBtn').onclick=()=>{
+  const title=val('mpTitle'); let url=val('mpUrl');
+  const artist=val('mpArtist');
+  if(!title&&!artist)return;
+  if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+  mustPlay.unshift({id:'mp'+Date.now(),title,artist,url,ts:Date.now()});
+  ['mpTitle','mpArtist','mpUrl'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-mustplay',mustPlay); renderMustPlay();
+};
 document.getElementById('addMusicBtn').onclick=async()=>{
   const name=val('mName'); let url=val('mUrl');
   if(!name&&!url)return;
@@ -5433,7 +5509,7 @@ function maybeSwipeHint(){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
@@ -5505,6 +5581,7 @@ function startSync(){
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(Array.isArray(d.decor))       decor=d.decor;
     if(Array.isArray(d.music))       music=d.music;
+    if(Array.isArray(d.mustPlay))    mustPlay=d.mustPlay;
     if(Array.isArray(d.inspo))       inspo=d.inspo;
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
@@ -5553,6 +5630,7 @@ function startSync(){
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-decor',JSON.stringify(decor));
     DB.set('wed-music',JSON.stringify(music));
+    DB.set('wed-mustplay',JSON.stringify(mustPlay));
     DB.set('wed-inspo',JSON.stringify(inspo));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
