@@ -2641,11 +2641,10 @@ function renderIdeas(){
             : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
       const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
       const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">📸 ${it.realTryon?'Замінити фото на мені':'Фото на мені (приміряла)'}</button>`;
-      const toBeautyBtn=`<button class="idea-photo-btn" data-tobeauty="${it.id}">💄 Це зачіска/мейк → в «Красу»</button>`;
       aiBtns=gsel
         +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
         +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
-        +wearBtn+swapBtn+realBtn+toBeautyBtn;
+        +wearBtn+swapBtn+realBtn;
     }else{
       aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
     }
@@ -2800,17 +2799,6 @@ function renderIdeas(){
     if(oldSlot) delete collage[oldWho][oldSlot];
     it.cat=it.cat==='his'?'her':'his';
     saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
-  });
-  // річ насправді про зачіску/мейк, а не про вбрання — переносимо у вкладку "Краса"
-  listEl.querySelectorAll('[data-tobeauty]').forEach(b=>b.onclick=()=>{
-    const it=ideas.find(x=>x.id===b.dataset.tobeauty); if(!it)return;
-    const who=it.cat==='his'?'his':'her';
-    const oldSlot=equippedSlotFor(who, it.id);
-    if(oldSlot) delete collage[who][oldSlot];
-    it.who=who; it.cat='makeup'; delete it.gtype;
-    saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage);
-    renderIdeas(); renderCouple(); renderBeauty();
-    showToast('💄 Перенесено до "Краса"');
   });
 }
 
