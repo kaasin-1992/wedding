@@ -4787,14 +4787,32 @@ function renderHotels(){
           <label class="hotel-pl">🛏 за ніч<input class="hotel-pinp" data-hpn="${h.id}" inputmode="numeric" value="${esc(h.pricePerNight||'')}" placeholder="грн"></label>
           <label class="hotel-pl">➕ доплата<input class="hotel-pinp" data-hsur="${h.id}" value="${esc(h.surcharge||'')}" placeholder="грн / опис"></label>
         </div>
-        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span>${whoSelectHTML('hresp',h.id,h.resp)}${photoBtn}</div>
+        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span>${whoSelectHTML('hresp',h.id,h.resp)}<span class="badge diy-badge${h.budgetId?' on':''}" data-hbudget="${h.id}">${h.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>${photoBtn}</div>
         ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
         ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-hmsg="${h.id}">✉️ Написати</button></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hdel);
+    if(h && h.budgetId){ const i=budget.findIndex(x=>x.id===h.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
     delUndo('wed-hotels',b.dataset.hdel,'Готель видалено');
+  });
+  listEl.querySelectorAll('[data-hbudget]').forEach(b=>b.onclick=()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hbudget); if(!h)return;
+    if(h.budgetId){
+      const i=budget.findIndex(x=>x.id===h.budgetId); if(i>-1) budget.splice(i,1);
+      delete h.budgetId; saveJSON('wed-budget',budget); saveJSON('wed-hotels',hotels); renderHotels(); renderBudget();
+      showToast('Прибрано з бюджету');
+    }else{
+      const nights=(h.checkin&&h.checkout)?Math.max(0,Math.round((new Date(h.checkout)-new Date(h.checkin))/86400000)):0;
+      const pn=parseMoney(h.pricePerNight), sur=parseMoney(h.surcharge);
+      const total=(pn?pn*(nights||1):0)+(sur||0);
+      const bid='b'+Date.now(); h.budgetId=bid;
+      budget.push({id:bid,name:h.title||'Готель',cat:'Готель / Ночівля',planned:Math.round(total),paid:0});
+      saveJSON('wed-budget',budget); saveJSON('wed-hotels',hotels); renderHotels(); renderBudget();
+      showToast(total?'💰 Додано в бюджет':'💰 Додано в бюджет — впиши ціну за ніч');
+    }
   });
   listEl.querySelectorAll('[data-hmsg]').forEach(b=>b.onclick=()=>{
     const h=hotels.find(x=>x.id===b.dataset.hmsg); if(!h)return;
@@ -4970,6 +4988,7 @@ function renderDecor(){
     const dtypeBadge=`<span class="badge dtype-${dtypeKey}" data-ddtype="${d.id}" role="button" tabindex="0" title="Тицяй, щоб перемкнути">${dtypeKey==='idea'?'💭 Загальна ідея':'🎯 Конкретний елемент'}</span>`;
     const whoBadge=whoSelectHTML('dwho',d.id,d.who);
     const diyBadge=`<span class="badge diy-badge${d.diy?' on':''}" data-ddiy="${d.id}">${d.diy?'🔨 Своїми руками':'🔨 Можна своїми руками?'}</span>`;
+    const budgetBadge=`<span class="badge diy-badge${d.budgetId?' on':''}" data-dbudget="${d.id}">${d.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>`;
     const vis=d.vis||{};
     const visBtns=`<div class="decor-vis-row">
         <button class="decor-vis-btn" data-dvis="${d.id}:sofia" ${venuePhotos.sofia?'':'disabled title="Спершу додай фото локації вище"'}>📍 Показати на Софі</button>
@@ -4993,17 +5012,34 @@ function renderDecor(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
-        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
+        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}${budgetBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
         <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-dmsg="${d.id}">✉️ Написати</button></div>`:''}
         ${visBtns}${visThumbs}
       </div>`;
     listEl.appendChild(card);
   });
-  listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ddel,'Декор видалено'));
+  listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ddel);
+    if(d && d.budgetId){ const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    delUndo('wed-decor',b.dataset.ddel,'Декор видалено');
+  });
   listEl.querySelectorAll('[data-dmsg]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dmsg); if(!d)return;
     copyMsgAndGo(vendorMsg(d.title||'декор на весілля'), d.url);
+  });
+  listEl.querySelectorAll('[data-dbudget]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dbudget); if(!d)return;
+    if(d.budgetId){
+      const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1) budget.splice(i,1);
+      delete d.budgetId; saveJSON('wed-budget',budget); saveJSON('wed-decor',decor); renderDecor(); renderBudget();
+      showToast('Прибрано з бюджету');
+    }else{
+      const bid='b'+Date.now(); d.budgetId=bid;
+      budget.push({id:bid,name:d.title||'Декор',cat:'Декор / Флористика',planned:parseMoney(d.price),paid:0});
+      saveJSON('wed-budget',budget); saveJSON('wed-decor',decor); renderDecor(); renderBudget();
+      showToast(parseMoney(d.price)?'💰 Додано в бюджет':'💰 Додано в бюджет — впиши ціну');
+    }
   });
   listEl.querySelectorAll('[data-dphoto]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dphoto); if(!d)return;
@@ -5159,6 +5195,7 @@ function renderCake(){
     const price=parseMoney(d.price);
     const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
     const whoBadge=whoSelectHTML('ckwho',d.id,d.who);
+    const budgetBadge=`<span class="badge diy-badge${d.budgetId?' on':''}" data-ckbudget="${d.id}">${d.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>`;
     const noImgHint=(!d.img && !d.loading)?`<div class="photo-missing-hint">📷 ${d.url?'Фото не підтягнулось автоматично':'Фото ще нема'}</div>`:'';
     const photoBtn=(!d.img && !price && d.url && !d.loading)
       ? `<button class="idea-photo-btn" data-ckcombo="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸✨ Скрін + ШІ-інфо</button>`
@@ -5172,13 +5209,30 @@ function renderCake(){
         <div class="idea-title" data-cktitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Торт')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
-        <div class="hotel-meta">${priceBadge}${whoBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span>${photoBtn}</div>
+        <div class="hotel-meta">${priceBadge}${whoBadge}${budgetBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span>${photoBtn}</div>
         <div class="idea-note" data-cknote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-ckmsg="${d.id}">✉️ Написати</button></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
-  listEl.querySelectorAll('[data-ckdel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ckdel,'Ідею торта видалено'));
+  listEl.querySelectorAll('[data-ckdel]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ckdel);
+    if(d && d.budgetId){ const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    delUndo('wed-decor',b.dataset.ckdel,'Ідею торта видалено');
+  });
+  listEl.querySelectorAll('[data-ckbudget]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ckbudget); if(!d)return;
+    if(d.budgetId){
+      const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1) budget.splice(i,1);
+      delete d.budgetId; saveJSON('wed-budget',budget); saveJSON('wed-decor',decor); renderCake(); renderBudget();
+      showToast('Прибрано з бюджету');
+    }else{
+      const bid='b'+Date.now(); d.budgetId=bid;
+      budget.push({id:bid,name:d.title||'Торт',cat:'Торт',planned:parseMoney(d.price),paid:0});
+      saveJSON('wed-budget',budget); saveJSON('wed-decor',decor); renderCake(); renderBudget();
+      showToast(parseMoney(d.price)?'💰 Додано в бюджет':'💰 Додано в бюджет — впиши ціну');
+    }
+  });
   listEl.querySelectorAll('[data-ckmsg]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.ckmsg); if(!d)return;
     copyMsgAndGo(vendorMsg(d.title||'весільний торт'), d.url);
@@ -5316,6 +5370,7 @@ function renderMusic(){
     const st=m.status||'search';
     const embed=musicEmbedSrc(m.url);
     const whoBadge=whoSelectHTML('mwho',m.id,m.who||'vendor');
+    const budgetBadge=`<span class="badge diy-badge${m.budgetId?' on':''}" data-mbudget="${m.id}">${m.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
@@ -5326,7 +5381,7 @@ function renderMusic(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         <div class="idea-price-row"><span class="pl">🎚</span><input class="idea-price-inp" data-mrole="${m.id}" value="${esc(m.role||'')}" placeholder="роль (діджей/гурт…)" aria-label="Роль"></div>
         <div class="idea-price-row"><span class="pl">🔗</span><input class="idea-price-inp" data-murl="${m.id}" value="${esc(m.url||'')}" placeholder="посилання" aria-label="Посилання" autocapitalize="none" spellcheck="false"></div>
-        <div class="hotel-meta">${whoBadge}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
+        <div class="hotel-meta">${whoBadge}${budgetBadge}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
           <button class="idea-photo-btn" data-mphoto="${m.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${m.img?'Змінити фото':'Додати фото'}</button>
           <button class="idea-photo-btn" data-mshot="${m.id}" ${m.url?'':'disabled title="Спершу встав посилання"'} style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸 Скрін з посилання</button>
         </div>
@@ -5337,7 +5392,24 @@ function renderMusic(){
       </div>`;
     listEl.appendChild(card);
   });
-  listEl.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>delUndo('wed-music',b.dataset.mdel,'Артиста видалено'));
+  listEl.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>{
+    const m=music.find(x=>x.id===b.dataset.mdel);
+    if(m && m.budgetId){ const i=budget.findIndex(x=>x.id===m.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    delUndo('wed-music',b.dataset.mdel,'Артиста видалено');
+  });
+  listEl.querySelectorAll('[data-mbudget]').forEach(b=>b.onclick=()=>{
+    const m=music.find(x=>x.id===b.dataset.mbudget); if(!m)return;
+    if(m.budgetId){
+      const i=budget.findIndex(x=>x.id===m.budgetId); if(i>-1) budget.splice(i,1);
+      delete m.budgetId; saveJSON('wed-budget',budget); saveJSON('wed-music',music); renderMusic(); renderBudget();
+      showToast('Прибрано з бюджету');
+    }else{
+      const bid='b'+Date.now(); m.budgetId=bid;
+      budget.push({id:bid,name:m.name||m.role||'Музика',cat:'Музика',planned:0,paid:0});
+      saveJSON('wed-budget',budget); saveJSON('wed-music',music); renderMusic(); renderBudget();
+      showToast('💰 Додано в бюджет — впиши ціну');
+    }
+  });
   listEl.querySelectorAll('[data-mmsg]').forEach(b=>b.onclick=()=>{
     const m=music.find(x=>x.id===b.dataset.mmsg); if(!m)return;
     copyMsgAndGo(vendorMsg(m.name||m.role||'музику на весілля'), m.url);
