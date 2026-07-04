@@ -147,7 +147,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* неінтерактивна підпис-розділювач між логічними групами вкладок — щоб довга стрічка з 19
    розділів читалась як кілька осмислених блоків, а не суцільна стіна. Не має класу .tab-btn,
    тож TAB_ORDER/навігація автоматично її ігнорують. */
-.tabs-group-lbl{flex:0 0 auto;align-self:center;margin:6px 2px 0 8px;padding:3px 9px;border-left:2px solid var(--terra);border-radius:999px;background:var(--surface2);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text);white-space:nowrap;}
+.tabs-group-lbl{flex:0 0 auto;align-self:center;margin:6px 2px 0 8px;padding:3px 9px;border:none;border-left:2px solid var(--terra);border-radius:999px;background:var(--surface2);font-family:inherit;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text);white-space:nowrap;cursor:pointer;}
+.tabs-group-lbl:active{background:var(--terra-dim);color:var(--terra);}
 
 /* PANEL */
 .panel{display:none;padding:24px 18px 0;}
@@ -1082,23 +1083,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="tabs-bar-wrap">
 <div class="tabs-bar" id="tabsBar">
   <button class="tab-btn active" data-tab="home">🏠 Головна</button>
-  <span class="tabs-group-lbl">Підготовка</span>
+  <button class="tabs-group-lbl" data-jump="tasks">Підготовка</button>
   <button class="tab-btn" data-tab="tasks">✅ Завдання</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
-  <span class="tabs-group-lbl">Стиль</span>
+  <button class="tabs-group-lbl" data-jump="inspo">Стиль</button>
   <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="dresscode">🎨 Дрес-код</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="beauty">💄 Краса</button>
-  <span class="tabs-group-lbl">Вендори</span>
+  <button class="tabs-group-lbl" data-jump="decor">Вендори</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="cake">🎂 Торт</button>
   <button class="tab-btn" data-tab="music">🎵 Музика</button>
   <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
-  <span class="tabs-group-lbl">День-Х</span>
+  <button class="tabs-group-lbl" data-jump="invites">День-Х</button>
   <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
@@ -1473,23 +1474,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <button type="button" class="cam-shot" id="camShot">📸 Зняти</button>
     </div>
   </div>
-  <details class="portrait-studio" id="portraitStudio">
-    <summary>💇 Портрети — зачіски, вінки, мейк</summary>
-    <div class="ps-body">
-      <div class="ps-who" id="psWho">
-        <button type="button" class="ps-who-btn active" data-psw="her">👰 Катерина</button>
-        <button type="button" class="ps-who-btn" data-psw="his">🤵 Дмитро</button>
-      </div>
-      <textarea id="psDesc" class="ps-desc" rows="2" placeholder="Опиши зачіску / вінок / мейк — напр.: «низький пучок, тонкий вінок із польових квітів, природний мейк, ніжні рум’яна»"></textarea>
-      <div id="psRefWrap"></div>
-      <div class="ps-btns">
-        <label class="ps-ref-btn">🖼 Реф стилю<input type="file" accept="image/*" id="psRef" hidden></label>
-        <button type="button" class="ps-gen" id="psGen">🪄 Згенерувати портрет</button>
-      </div>
-      <div class="ps-hint">Лице береться з твого «Портрет»-фото вище і лишається незмінним — ШІ міняє лише зачіску, вінок, макіяж і прикраси на голові. Реф (необовʼязково) — лише приклад стилю, не обличчя.</div>
-      <div class="ps-grid" id="psGrid"></div>
-    </div>
-  </details>
   <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». Одяг можна додати й без посилання — напиши опис (напр. «шовкова сукня кольору шампань, міді») і тисни 🪄 «Уявити річ», ШІ намалює сам предмет, далі — 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» так само 🪄 «Уявити». Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
@@ -1529,6 +1513,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- КРАСА (мейк / зачіска) -->
 <div class="panel" id="tab-beauty">
   <div class="section-hint">Ідеї макіяжу й зачіски — окремо для Каті та Діми. Встав посилання (Pinterest, приклад) — підтягнеться фото й опис, або просто опиши текстом.</div>
+  <details class="portrait-studio" id="portraitStudio">
+    <summary>💇 Портрети — зачіски, вінки, мейк</summary>
+    <div class="ps-body">
+      <div class="ps-who" id="psWho">
+        <button type="button" class="ps-who-btn active" data-psw="her">👰 Катерина</button>
+        <button type="button" class="ps-who-btn" data-psw="his">🤵 Дмитро</button>
+      </div>
+      <textarea id="psDesc" class="ps-desc" rows="2" placeholder="Опиши зачіску / вінок / мейк — напр.: «низький пучок, тонкий вінок із польових квітів, природний мейк, ніжні рум’яна»"></textarea>
+      <div id="psRefWrap"></div>
+      <div class="ps-btns">
+        <label class="ps-ref-btn">🖼 Реф стилю<input type="file" accept="image/*" id="psRef" hidden></label>
+        <button type="button" class="ps-gen" id="psGen">🪄 Згенерувати портрет</button>
+      </div>
+      <div class="ps-hint">Лице береться з твого «Портрет»-фото вище і лишається незмінним — ШІ міняє лише зачіску, вінок, макіяж і прикраси на голові. Реф (необовʼязково) — лише приклад стилю, не обличчя.</div>
+      <div class="ps-grid" id="psGrid"></div>
+    </div>
+  </details>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати ідею</summary>
@@ -6170,6 +6171,8 @@ function activateTab(name){
   if(typeof renderMenu==='function') renderMenu();   // підсвітка активного розділу на головному екрані
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
+// розділювачі груп (Підготовка/Стиль/Вендори/День-Х) — тап переносить одразу до першої вкладки групи
+document.querySelectorAll('.tabs-group-lbl').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.jump));
 function currentTab(){ const a=document.querySelector('.tab-btn.active'); return a?a.dataset.tab:TAB_ORDER[0]; }
 /* ── ХАБ-МЕНЮ (плитки всіх розділів, ДОДАТКОВО до стрічки вкладок) ── */
 // плитки будуються з тих самих .tab-btn — щоб не дублювати список розділів у двох місцях
