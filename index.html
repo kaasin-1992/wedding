@@ -130,7 +130,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .chip.ok{background:var(--terra-dim);color:var(--terra);}
 .chip.asap{background:var(--danger);color:#fff;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-.task-meta{font-size:12px;color:var(--muted);margin-top:5px;}
+.task-meta{font-size:12px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .days-red{color:var(--danger);font-weight:600;}
 .days-yellow{color:var(--warn);font-weight:600;}
 .days-green{color:var(--done);font-weight:600;}
@@ -268,6 +268,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .budget-cat{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--terra);font-weight:600;margin:20px 0 9px;}
 .budget-item{padding:12px 14px;margin-bottom:8px;}
 .bi-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
+.bi-who{margin-bottom:8px;}
 .bi-name{font-size:14px;font-weight:500;}
 .bi-amounts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
 .bi-field{display:flex;flex-direction:column;gap:4px;}
@@ -2091,7 +2092,9 @@ function renderTasks(){
       }else{
         dlSpan=`<span class="task-dl-edit add" data-dledit="${task.id}" role="button" tabindex="0">+ додати дедлайн</span>`;
       }
-      const metaHtml=`<div class="task-meta">${dlSpan}</div>`;
+      const whoKey=task.who||'me';
+      const whoBadge=`<span class="badge who-${whoKey}" data-taskwho="${task.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
+      const metaHtml=`<div class="task-meta">${dlSpan}${whoBadge}</div>`;
       card.innerHTML=`<button class="del-x" data-del="${task.id}" aria-label="Видалити завдання">✕</button>
         <div class="task-top"><div class="task-text">${esc(task.text)}</div>
         <span class="chip ${st==='asap'?'asap':st}">${chipTxt}</span></div>${metaHtml}`;
@@ -2100,6 +2103,12 @@ function renderTasks(){
       });
       card.querySelector('[data-dledit]').addEventListener('click',e=>{
         e.stopPropagation(); openTaskDeadlineEdit(task.id, e.currentTarget);
+      });
+      card.querySelector('[data-taskwho]').addEventListener('click',e=>{
+        e.stopPropagation();
+        const order=['me','maids','vendor'];
+        task.who=order[(order.indexOf(task.who||'me')+1)%order.length];
+        saveJSON('wed-tasks',tasks); renderTasks();
       });
       row.appendChild(dot); row.appendChild(card); grp.appendChild(row);
     });
@@ -2404,10 +2413,13 @@ function renderBudget(){
     items.forEach(b=>{
       const remain=(Number(b.planned)||0)-(Number(b.paid)||0);
       const fromLook=ideas.some(x=>x.budgetId===b.id);
+      const whoKey=b.who||'me';
+      const whoBadge=`<span class="badge who-${whoKey}" data-budgetwho="${b.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
       const item=document.createElement('div'); item.className='budget-item';
       item.innerHTML=`
         <div class="bi-top"><div class="bi-name">${esc(b.name)}${fromLook?' <span class="bi-from">👗 образ</span>':''}</div>
           <button class="icon-btn danger" data-bdel="${b.id}">🗑</button></div>
+        <div class="bi-who">${whoBadge}</div>
         <div class="bi-amounts">
           <label class="bi-field"><span>Заплановано</span><input type="number" min="0" data-bid="${b.id}" data-fld="planned" value="${b.planned||''}" placeholder="0"></label>
           <label class="bi-field paid"><span>Сплачено</span><input type="number" min="0" data-bid="${b.id}" data-fld="paid" value="${b.paid||''}" placeholder="0"></label>
@@ -2434,6 +2446,16 @@ function renderBudget(){
     const linked=ideas.find(x=>x.budgetId===bid);
     if(linked){ linked.approved=false; delete linked.budgetId; saveJSON('wed-ideas',ideas); renderIdeas(); }
     delUndo('wed-budget',bid,'Витрату видалено');
+  });
+  listEl.querySelectorAll('[data-budgetwho]').forEach(el=>{
+    const cycle=()=>{
+      const b=budget.find(x=>x.id===el.dataset.budgetwho); if(!b)return;
+      const order=['me','maids','vendor'];
+      b.who=order[(order.indexOf(b.who||'me')+1)%order.length];
+      saveJSON('wed-budget',budget); renderBudget();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
   });
 }
 document.getElementById('addBudgetBtn').onclick=()=>{
@@ -2468,6 +2490,8 @@ function renderContacts(){
   contacts.forEach(c=>{
     const opts=c.options||[];
     const chosen=opts.find(o=>o.id===c.chosen)||null;
+    const whoKey=c.who||'me';
+    const whoBadge=`<span class="badge who-${whoKey}" data-contactwho="${c.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
     const card=document.createElement('div'); card.className='contact-card';
     card.innerHTML=`
       <div class="cc-top">
@@ -2476,6 +2500,7 @@ function renderContacts(){
           <div class="cc-name ${chosen?'':'empty'}">${chosen?esc(chosen.name||'—'):'не обрано'}</div>
           ${chosen&&chosen.contact?`<div class="cc-contact">${esc(chosen.contact)}</div>`:''}
           ${chosen&&chosen.note?`<div class="cc-note">${esc(chosen.note)}</div>`:''}
+          <div style="margin-top:6px;">${whoBadge}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
           <span class="cc-status ${c.status}" data-cid="${c.id}">${CSTAT_LBL[c.status]}</span>
@@ -2511,6 +2536,16 @@ function renderContacts(){
   });
   listEl.querySelectorAll('[data-cdel]').forEach(btn=>btn.onclick=()=>{
     delUndo('wed-contacts',btn.dataset.cdel,'Контакт видалено');
+  });
+  listEl.querySelectorAll('[data-contactwho]').forEach(el=>{
+    const cycle=()=>{
+      const c=contacts.find(x=>x.id===el.dataset.contactwho); if(!c)return;
+      const order=['me','maids','vendor'];
+      c.who=order[(order.indexOf(c.who||'me')+1)%order.length];
+      saveJSON('wed-contacts',contacts); renderContacts();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
   });
   listEl.querySelectorAll('[data-choose]').forEach(btn=>btn.onclick=()=>{
     const [cid,oid]=btn.dataset.choose.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
@@ -4376,8 +4411,9 @@ function renderParties(){
   const rowHTML=p=>{
     const tag=isHer?`<button class="party-prague pg-${p.prague||'none'}" data-pprag="${p.id}" title="Празька позначка — тапни, щоб змінити">${PRAGUE_SHORT[p.prague||'']}</button>`:'';
     const note=`<div class="party-note" data-pnote="${p.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false">${esc(p.note||'')}</div>`;
+    const whoBadge=IS_GUEST?'':`<span class="badge who-${p.who||'me'} party-who" data-pwho="${p.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[p.who||'me']}</span>`;
     return `<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
-      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${note}</div>${tag}`;
+      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${note}${whoBadge}</div>${tag}`;
   };
   if(isHer){
     const groups={}; arr.forEach(p=>{ const k=p.prague||''; (groups[k]=groups[k]||[]).push(p); });
@@ -4398,6 +4434,16 @@ function renderParties(){
     const save=()=>{ const cur=partyRef(); const p=cur.find(x=>x.id===el.dataset.pnote); if(!p) return; const v=el.textContent.trim(); if(v===(p.note||'')) return; p.note=v; saveJSON(partyKey(),cur); };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+  });
+  listEl.querySelectorAll('[data-pwho]').forEach(el=>{
+    const cycle=()=>{
+      const cur=partyRef(); const p=cur.find(x=>x.id===el.dataset.pwho); if(!p)return;
+      const order=['me','maids','vendor'];
+      p.who=order[(order.indexOf(p.who||'me')+1)%order.length];
+      saveJSON(partyKey(),cur); renderParties();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
   });
 }
 document.querySelectorAll('#partyTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
@@ -4657,7 +4703,7 @@ function renderHotels(){
           <label class="hotel-pl">🛏 за ніч<input class="hotel-pinp" data-hpn="${h.id}" inputmode="numeric" value="${esc(h.pricePerNight||'')}" placeholder="грн"></label>
           <label class="hotel-pl">➕ доплата<input class="hotel-pinp" data-hsur="${h.id}" value="${esc(h.surcharge||'')}" placeholder="грн / опис"></label>
         </div>
-        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span>${photoBtn}</div>
+        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span><span class="badge who-${h.resp||'me'}" data-hresp="${h.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[h.resp||'me']}</span>${photoBtn}</div>
         ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
         ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
@@ -4691,6 +4737,16 @@ function renderHotels(){
   listEl.querySelectorAll('[data-hbook]').forEach(b=>b.onclick=()=>{
     const h=hotels.find(x=>x.id===b.dataset.hbook); if(!h)return;
     h.booked=!h.booked; saveJSON('wed-hotels',hotels); renderHotels();
+  });
+  listEl.querySelectorAll('[data-hresp]').forEach(el=>{
+    const cycle=()=>{
+      const h=hotels.find(x=>x.id===el.dataset.hresp); if(!h)return;
+      const order=['me','maids','vendor'];
+      h.resp=order[(order.indexOf(h.resp||'me')+1)%order.length];
+      saveJSON('wed-hotels',hotels); renderHotels();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
   });
   listEl.querySelectorAll('[data-hpn]').forEach(inp=>inp.onchange=()=>{
     const h=hotels.find(x=>x.id===inp.dataset.hpn); if(!h)return;
@@ -5168,6 +5224,8 @@ function renderMusic(){
     const host=hostOf(m.url);
     const st=m.status||'search';
     const embed=musicEmbedSrc(m.url);
+    const whoKey=m.who||'vendor';
+    const whoBadge=`<span class="badge who-${whoKey}" data-mwho="${m.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
@@ -5178,7 +5236,7 @@ function renderMusic(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         <div class="idea-price-row"><span class="pl">🎚</span><input class="idea-price-inp" data-mrole="${m.id}" value="${esc(m.role||'')}" placeholder="роль (діджей/гурт…)" aria-label="Роль"></div>
         <div class="idea-price-row"><span class="pl">🔗</span><input class="idea-price-inp" data-murl="${m.id}" value="${esc(m.url||'')}" placeholder="посилання" aria-label="Посилання" autocapitalize="none" spellcheck="false"></div>
-        <div class="hotel-meta"><span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
+        <div class="hotel-meta">${whoBadge}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
           <button class="idea-photo-btn" data-mphoto="${m.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${m.img?'Змінити фото':'Додати фото'}</button>
           <button class="idea-photo-btn" data-mshot="${m.id}" ${m.url?'':'disabled title="Спершу встав посилання"'} style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸 Скрін з посилання</button>
         </div>
@@ -5193,6 +5251,16 @@ function renderMusic(){
   listEl.querySelectorAll('[data-mst]').forEach(b=>b.onclick=()=>{
     const m=music.find(x=>x.id===b.dataset.mst); if(!m)return;
     m.status=MUSIC_NEXT[m.status||'search']; saveJSON('wed-music',music); renderMusic();
+  });
+  listEl.querySelectorAll('[data-mwho]').forEach(el=>{
+    const cycle=()=>{
+      const m=music.find(x=>x.id===el.dataset.mwho); if(!m)return;
+      const order=['me','maids','vendor'];
+      m.who=order[(order.indexOf(m.who||'vendor')+1)%order.length];
+      saveJSON('wed-music',music); renderMusic();
+    };
+    el.onclick=cycle;
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycle(); } };
   });
   listEl.querySelectorAll('[data-mtitle]').forEach(el=>{
     const save=()=>{ const m=music.find(x=>x.id===el.dataset.mtitle); if(!m)return;
