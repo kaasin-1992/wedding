@@ -388,7 +388,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .note-text{font-size:14px;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
 
 /* ── IDEAS / LINKS ── */
-.couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;position:sticky;top:var(--tabsh,48px);z-index:9;transition:padding .2s,background .2s,box-shadow .2s;box-shadow:var(--shadow-sm);}
+.couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;transition:padding .2s,background .2s,box-shadow .2s;box-shadow:var(--shadow-sm);}
+/* липким (sticky) робимо ЛИШЕ коли розкрито — інакше згорнута смужка все одно приколюється
+   зверху й перекриває (ховає кнопки видалення/фото) рядок тайлів одягу, що прокручується під неї */
+.couple-stage[open]{position:sticky;top:var(--tabsh,48px);z-index:9;}
 .couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;transition:.2s;cursor:pointer;list-style:none;}
 .couple-stage-title::-webkit-details-marker{display:none;}
 .couple-stage-row{display:flex;gap:10px;}
