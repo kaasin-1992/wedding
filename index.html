@@ -1927,7 +1927,31 @@ function saveJSON(key, val){
     return;
   }
   if(FIELD[key]){
-    DOC.set({[FIELD[key]]: val, _updated: Date.now()}, {merge:true})
+    const field=FIELD[key];
+    // той самий захист від застарілої вкладки, що й для wed-ideas: якщо val — масив
+    // об'єктів з id (завдання/гості/бюджет/контакти/нотатки/сценарій/готелі/декор/
+    // музика/натхнення тощо), підтягуємо актуальний масив із хмари й домішуємо назад
+    // елементи, яких немає в цій вкладці — інакше застарілий full-array-replace стер би
+    // те, що додали деінде, поки ця вкладка не оновлювалась.
+    if(Array.isArray(val) && val.every(it=>it && typeof it==='object' && it.id!=null)){
+      DOC.get().then(snap=>{
+        const cloudArr=(snap.exists && Array.isArray(snap.data()[field])) ? snap.data()[field] : [];
+        const localIds=new Set(val.map(it=>it.id));
+        const missingFromLocal=cloudArr.filter(it=>it && it.id!=null && !localIds.has(it.id));
+        if(missingFromLocal.length){
+          missingFromLocal.forEach(it=>val.push(it));   // val — той самий масив, що й жива змінна виклику
+          try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after merge', key, e); }
+        }
+        DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
+           .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
+      }).catch(e=>{
+        console.warn('cloud pre-read', key, e);
+        DOC.set({[field]: val, _updated: Date.now()}, {merge:true})   // не вдалось прочитати — пишемо як є, аби не блокувати збереження
+           .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save', err); flashSync(false); });
+      });
+      return;
+    }
+    DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
        .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
   }
 }
