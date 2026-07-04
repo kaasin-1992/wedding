@@ -1418,6 +1418,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </select>
   </div>
   <div class="filters" id="ideaGtypeBar" style="display:none;"></div>
+  <button class="idea-photo-btn" id="ideaBulkProcessBtn" style="display:none;margin-bottom:16px;">🪄 Обробити все одразу (скрін + вирізати)</button>
   <div class="add-section" style="margin-bottom:16px;">
     <details open>
       <summary>＋ Додати (посилання або текстом)</summary>
@@ -2652,6 +2653,7 @@ let activeIdea='her';
 let ideaSort='';
 let ideaGtypeFilter='';   // фільтр плитки одягу по типу речі (gtype), скидається при зміні вкладки
 let _ideaDetailId=null;   // яка ідея зараз відкрита в overlay "деталі/дії" плитки
+let _bulkBusy=false;      // масова обробка (скрін+вирізати) вже доданого одягу — в процесі
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
@@ -2776,6 +2778,40 @@ function ideaFieldsHTML(it){
   const aiTipRow=(isTry&&it.aiTip)?`<div class="idea-note">💭 ${esc(it.aiTip)}</div>`:'';
   return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow};
 }
+// річ одягу ще не має ані фото, ані чистого вирізаного варіанту — кандидат на масову обробку
+function clothNeedsProcessing(it){
+  if(it.loading || it._ai) return false;
+  if(it.url && !it.img) return true;
+  if(it.img) return !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img));
+  return false;
+}
+// послідовно (не паралельно, щоб не задавити ШІ-виклики) прогонити скрін+ШІ-інфо і вирізання
+// для всього одягу, доданого раніше без фото чи без чистого cleanImg
+async function bulkProcessCloth(ids){
+  if(_bulkBusy) return;
+  _bulkBusy=true; renderIdeas();
+  for(const id of ids){
+    const it=ideas.find(x=>x.id===id); if(!it) continue;
+    try{
+      if(it.url && !it.img){
+        const res=await screenshotAndReadInfo(it.url);
+        if(res){
+          it.img=res.img;
+          if(res.title && !it.title) it.title=res.title;
+          if(res.price && !it.price) it.price=res.price;
+        }
+      }
+      if(it.img){
+        const cut=await ensureCleanGarment(it);
+        if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
+      }
+      saveJSON('wed-ideas',ideas);
+    }catch(e){ console.warn('bulkProcessCloth',id,e); }
+  }
+  _bulkBusy=false;
+  renderIdeas();
+  showToast(`✨ Оброблено ${ids.length} реч.`);
+}
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   // панель сортування — лише для одягу (Вона/Він)
@@ -2807,6 +2843,21 @@ function renderIdeas(){
       gbar.innerHTML=`<button class="filt-btn${ideaGtypeFilter?'':' active'}" data-igf="">Усі типи</button>`
         + usedGtypes.map(g=>`<button class="filt-btn${ideaGtypeFilter===g?' active':''}" data-igf="${esc(g)}">${esc(gLabel(g))}</button>`).join('');
       gbar.querySelectorAll('[data-igf]').forEach(b=>b.onclick=()=>{ ideaGtypeFilter=b.dataset.igf; renderIdeas(); });
+    }
+  }
+  // масова обробка: скрін+ШІ-інфо для речей без фото, вирізання для речей із "брудним" фото
+  const bulkBtn=document.getElementById('ideaBulkProcessBtn');
+  if(bulkBtn){
+    const needsWork=isCloth?items.filter(clothNeedsProcessing):[];
+    if(!isCloth || (!needsWork.length && !_bulkBusy)){ bulkBtn.style.display='none'; }
+    else{
+      bulkBtn.style.display='block';
+      if(_bulkBusy){ bulkBtn.textContent='🪄 Обробляю…'; bulkBtn.disabled=true; }
+      else{
+        bulkBtn.textContent=`🪄 Обробити все одразу (${needsWork.length})`;
+        bulkBtn.disabled=false;
+        bulkBtn.onclick=()=>bulkProcessCloth(needsWork.map(i=>i.id));
+      }
     }
   }
   if(isCloth && ideaGtypeFilter) items=items.filter(i=>i.gtype===ideaGtypeFilter);
