@@ -661,6 +661,12 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-realtryon img{width:52px;height:52px;border-radius:8px;object-fit:cover;cursor:zoom-in;flex:0 0 auto;}
 .idea-realtryon-lbl{flex:1;font-size:12px;color:var(--text);font-weight:600;}
 .idea-realtryon-x{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:8px;line-height:1;}
+/* додаткові фото цієї ж речі (інший ракурс/деталь) — стрічка мініатюр під основним фото,
+   не замінює it.img, лише доповнює */
+.idea-extra-photos{display:flex;gap:8px;padding:10px 14px 0;overflow-x:auto;}
+.idea-extra-thumb{position:relative;flex:0 0 auto;width:56px;height:56px;border-radius:9px;overflow:hidden;border:1px solid var(--line);}
+.idea-extra-thumb img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block;}
+.idea-extra-x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
 /* низ (не верх!) thumb-wrap — верхній правий кут уже зайнятий .del-x картки в цілому, і на
    малих екранах вони збігались пікселя в піксель, перекриваючи одна одну */
 .idea-ai-x{position:absolute;bottom:8px;right:8px;z-index:3;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -1947,11 +1953,15 @@ function splitIdeas(arr){
     const c={...it};
     ['img','gen','tryon','cleanImg','realTryon'].forEach(k=>{ if(isDataUrl(c[k])) c[k]='@m'; });   // base64 → маркер
     if(Array.isArray(c.imgChoices)) c.imgChoices=c.imgChoices.filter(s=>!isDataUrl(s)).slice(0,8);
+    // додаткові фото (extraImgs) — той самий принцип, маркер на кожну позицію окремо, щоб
+    // не гнати важкі картинки в основний state-документ
+    if(Array.isArray(c.extraImgs)) c.extraImgs=c.extraImgs.map(s=>isDataUrl(s)?'@m':s);
     return c;
   });
   arr.forEach(it=>{
     const m={};
     ['img','gen','tryon','cleanImg','realTryon'].forEach(k=>{ if(isDataUrl(it[k])) m[k]=it[k]; });
+    if(Array.isArray(it.extraImgs) && it.extraImgs.some(s=>isDataUrl(s))) m.extraImgs=it.extraImgs;
     const docId='m_idea_'+it.id;
     // Пишемо документ із картинками лише коли вони реально є.
     // НІКОЛИ не видаляємо документ неявно: якщо тут порожньо, це майже завжди
@@ -2050,6 +2060,13 @@ function applyMedia(){
         else it[k]='';
       }
     });
+    // extraImgs — масив маркерів; резолвимо ЦІЛИЙ масив з хмари чи локального кешу разом (позиційно),
+    // а поки не прилетіло жодне джерело — лишаємо '@m' як є (renderIdeas/деталі просто не рендерять
+    // ще не завантажені позиції), НІКОЛИ не обнуляємо масив тут, щоб не стерти реальні фото гонкою
+    if(Array.isArray(it.extraImgs) && it.extraImgs.some(s=>s==='@m')){
+      if(Array.isArray(m.extraImgs)) it.extraImgs=m.extraImgs;
+      else if(Array.isArray(fb.extraImgs)) it.extraImgs=fb.extraImgs;
+    }
   });
   // оновлюємо локальний кеш повними даними
   applyingSnapshot=true;
@@ -2077,7 +2094,7 @@ function startMediaSync(){
       else if(id.indexOf('m_idea_')===0){
         const iid=id.slice(7);
         if(ch.type==='removed') delete mediaCache.idea[iid];
-        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon,cleanImg:data.cleanImg,realTryon:data.realTryon};
+        else mediaCache.idea[iid]={img:data.img,gen:data.gen,tryon:data.tryon,cleanImg:data.cleanImg,realTryon:data.realTryon,extraImgs:data.extraImgs};
       }
     });
     applyMedia();
@@ -2925,7 +2942,14 @@ function ideaFieldsHTML(it){
   const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
   const aiTipBtn=isTry?`<button class="idea-photo-btn" data-aitip="${it.id}">💭 ${it.aiTip?'Оновити пораду':'Порада ШІ'}</button>`:'';
   const aiTipRow=(isTry&&it.aiTip)?`<div class="idea-note">💭 ${esc(it.aiTip)}</div>`:'';
-  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow};
+  // ще фото цієї ж речі (напр. інший ракурс/деталь) — ДОДАЄТЬСЯ до основного фото (it.img),
+  // а не замінює його; '@m'-маркери (ще не підтягнулись з хмари) не рендеримо, щоб не показувати биту картинку
+  const extraImgsReal=Array.isArray(it.extraImgs)?it.extraImgs.filter(s=>isDataUrl(s)):[];
+  const addPhotoBtn=isTry?`<button class="idea-photo-btn" data-addphoto="${it.id}">➕ Ще фото</button>`:'';
+  const extraPhotosRow=isTry?`<div class="idea-extra-photos">${extraImgsReal.map((src,i)=>
+      `<div class="idea-extra-thumb"><img src="${esc(src)}" alt="" loading="lazy" data-extraview="${it.id}:${i}"><button class="idea-extra-x" data-extradel="${it.id}:${i}" aria-label="Видалити фото">✕</button></div>`
+    ).join('')}</div>`:'';
+  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow,addPhotoBtn,extraPhotosRow};
 }
 // річ одягу ще не має ані фото, ані чистого вирізаного варіанту — кандидат на масову обробку
 function clothNeedsProcessing(it){
@@ -3071,6 +3095,7 @@ function renderIdeaDetail(){
   panel.innerHTML=`
     <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
     ${f.thumb}
+    ${f.extraPhotosRow}
     <div class="idea-body">
       ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
       <div class="idea-title">${esc(it.title||f.host||it.url||'Ідея')}</div>
@@ -3083,7 +3108,7 @@ function renderIdeaDetail(){
       ${f.aiTipRow}
       ${f.shopRoomRow}
       ${f.realTryonRow}
-      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.aiTipBtn}${f.pickBtn}${f.photoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
+      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.aiTipBtn}${f.pickBtn}${f.photoBtn}${f.addPhotoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
     </div>`;
   wireIdeaDetailHandlers(panel);
 }
@@ -3151,6 +3176,29 @@ function wireIdeaDetailHandlers(panel){
   });
   panel.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
+  });
+  // додаткове фото цієї ж речі — ДОДАЄТЬСЯ в extraImgs, ніколи не чіпає основне it.img
+  panel.querySelectorAll('[data-addphoto]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.addphoto); if(!it) return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,768,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        if(!Array.isArray(it.extraImgs)) it.extraImgs=[];
+        it.extraImgs.push(data);
+        saveJSON('wed-ideas',ideas); refreshIdeaViews();
+        showToast('📷 Ще фото додано');
+      },0.8);
+    });
+  });
+  panel.querySelectorAll('[data-extraview]').forEach(im=>im.onclick=()=>{
+    const [id]=im.dataset.extraview.split(':'); const it=ideas.find(x=>x.id===id);
+    if(it) showImgBig(im.src, it.title||'');
+  });
+  panel.querySelectorAll('[data-extradel]').forEach(b=>b.onclick=()=>{
+    const [id,idx]=b.dataset.extradel.split(':'); const it=ideas.find(x=>x.id===id);
+    if(!it || !Array.isArray(it.extraImgs)) return;
+    it.extraImgs.splice(Number(idx),1);
+    saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
   panel.querySelectorAll('[data-combo]').forEach(b=>b.onclick=async()=>{
     const it=ideas.find(x=>x.id===b.dataset.combo); if(!it||!it.url)return;
