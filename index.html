@@ -88,6 +88,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .tab-btn{flex:0 0 auto;padding:15px 16px;margin:6px 1px 0;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--muted);background:none;cursor:pointer;white-space:nowrap;scroll-snap-align:center;
   border:none;border-radius:10px 10px 0 0;border-bottom:2px solid transparent;transition:.2s;}
 .tab-btn.active{color:var(--terra);background:var(--terra-dim);border-bottom-color:var(--terra);}
+/* неінтерактивна підпис-розділювач між логічними групами вкладок — щоб довга стрічка з 19
+   розділів читалась як кілька осмислених блоків, а не суцільна стіна. Не має класу .tab-btn,
+   тож TAB_ORDER/навігація автоматично її ігнорують. */
+.tabs-group-lbl{flex:0 0 auto;align-self:center;margin:6px 2px 0 8px;padding-left:8px;border-left:1px solid var(--line);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap;}
 
 /* PANEL */
 .panel{display:none;padding:24px 18px 0;}
@@ -947,19 +951,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="tabs-bar-wrap">
 <div class="tabs-bar" id="tabsBar">
   <button class="tab-btn active" data-tab="home">🏠 Головна</button>
+  <span class="tabs-group-lbl">Підготовка</span>
   <button class="tab-btn" data-tab="tasks">✅ Завдання</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
   <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
+  <span class="tabs-group-lbl">Стиль</span>
   <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
   <button class="tab-btn" data-tab="dresscode">🎨 Дрес-код</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="beauty">💄 Краса</button>
+  <span class="tabs-group-lbl">Вендори</span>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
   <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="cake">🎂 Торт</button>
   <button class="tab-btn" data-tab="music">🎵 Музика</button>
   <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
+  <span class="tabs-group-lbl">День-Х</span>
   <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
