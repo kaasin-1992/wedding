@@ -674,6 +674,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .backlog-row .script-text{padding-right:6px;}
 .backlog-time{flex:0 0 auto;width:88px;border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-family:var(--sans);font-size:12.5px;background:var(--surface2);color:var(--text);}
 .script-loc{display:inline-block;margin-top:4px;font-size:12px;color:var(--terra);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:1px 8px;}
+.script-resp{margin-top:6px;}
 .backlog-loc{flex:0 0 auto;width:118px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;font-family:var(--sans);font-size:12.5px;background:var(--surface2);color:var(--text);}
 .backlog-row{flex-wrap:wrap;}
 .backlog-empty{font-size:12.5px;color:var(--muted);}
@@ -4103,6 +4104,13 @@ function fillLocDatalist(){
   const dl=document.getElementById('locOptions'); if(!dl) return;
   dl.innerHTML=locSuggestions().map(l=>`<option value="${esc(l)}"></option>`).join('');
 }
+// чипси фільтра локацій: лише те, що реально трапляється в АКТИВНОМУ вені (таймлайн) або в
+// спільному беклозі — інакше локація сусіднього веня показувалась би як чіп, під яким пусто
+function filterLocSuggestions(){
+  const activeLocs=scriptRef().map(m=>m&&m.loc).filter(Boolean);
+  const backlogLocs=[...scriptSofia,...scriptWave].filter(m=>m&&!m.time).map(m=>m.loc).filter(Boolean);
+  return [...new Set([...SEED_LOCS,...activeLocs,...backlogLocs])];
+}
 function scriptArrays(){ return [[scriptSofia,'wed-scriptS'],[scriptWave,'wed-scriptW']]; }
 function findScript(id){ for(const [arr,key] of scriptArrays()){ const it=arr.find(x=>x.id===id); if(it) return {arr,key,it}; } return null; }
 function visScript(arr){ return weedUnlocked?arr:arr.filter(m=>!isWeed(m.text)); }
@@ -4110,7 +4118,7 @@ function visScript(arr){ return weedUnlocked?arr:arr.filter(m=>!isWeed(m.text));
 // одразу і таймлайн, і беклог (навіть пункти без призначеного часу)
 function renderScriptLocFilters(){
   const wrap=document.getElementById('scriptLocFilters'); if(!wrap) return;
-  const locs=locSuggestions();
+  const locs=filterLocSuggestions();
   if(scriptLocFilter && !locs.includes(scriptLocFilter)) scriptLocFilter='';
   wrap.innerHTML=`<button class="filt-btn${scriptLocFilter?'':' active'}" data-slf="">📍 Усі локації</button>`
     + locs.map(l=>`<button class="filt-btn${scriptLocFilter===l?' active':''}" data-slf="${esc(l)}">${esc(l)}</button>`).join('');
@@ -4138,7 +4146,7 @@ function renderScripts(){
       const row=document.createElement('div'); row.className='script-row';
       row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
         <div class="script-time">${esc(m.time)}</div>
-        <div class="script-text"><span data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати'}">${esc(m.text)}</span>${m.loc?`<br><span class="script-loc">📍 ${esc(m.loc)}</span>`:''}</div>
+        <div class="script-text"><span data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати'}">${esc(m.text)}</span>${m.loc?`<br><span class="script-loc">📍 ${esc(m.loc)}</span>`:''}${IS_GUEST?'':`<div class="script-resp">${whoSelectHTML('sresp',m.id,m.resp)}</div>`}</div>
         <button class="script-untime" data-suntime="${m.id}" title="Прибрати час → назад у беклог">↩︎</button>`;
       listEl.appendChild(row);
     });
@@ -4154,7 +4162,8 @@ function renderScripts(){
       row.innerHTML=`<button class="del-x" data-sdel="${m.id}" aria-label="Видалити пункт">✕</button>
         <div class="script-text" data-stext="${m.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб редагувати текст'}">${esc(m.text)}</div>
         <input type="text" class="backlog-loc" data-sloc="${m.id}" list="locOptions" placeholder="📍 локація" value="${esc(m.loc||'')}">
-        <input type="text" class="backlog-time" inputmode="numeric" maxlength="5" data-stime="${m.id}" value="${esc(m.time||'')}" placeholder="чч:хх" title="Постав час → у таймлайн">`;
+        <input type="text" class="backlog-time" inputmode="numeric" maxlength="5" data-stime="${m.id}" value="${esc(m.time||'')}" placeholder="чч:хх" title="Постав час → у таймлайн">
+        ${IS_GUEST?'':whoSelectHTML('sresp',m.id,m.resp)}`;
       bl.appendChild(row);
     });
   }else{
@@ -4186,6 +4195,10 @@ function renderScripts(){
   listEl.querySelectorAll('[data-sloc]').forEach(inp=>inp.onchange=()=>{
     const f=findScript(inp.dataset.sloc); if(!f)return;
     f.it.loc=inp.value.trim(); saveJSON(f.key,f.arr); renderScripts();
+  });
+  listEl.querySelectorAll('[data-sresp]').forEach(el=>el.onchange=()=>{
+    const f=findScript(el.dataset.sresp); if(!f)return;
+    f.it.resp=el.value; saveJSON(f.key,f.arr); renderScripts();
   });
   listEl.querySelectorAll('[data-suntime]').forEach(b=>b.onclick=()=>{
     const f=findScript(b.dataset.suntime); if(!f)return;
