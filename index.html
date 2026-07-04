@@ -856,6 +856,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .menu-tile.active{border-color:var(--terra);background:var(--terra-dim);color:var(--terra);}
 .menu-tile-icon{font-size:22px;line-height:1;}
 .menu-tile-lbl{font-size:11px;font-weight:500;line-height:1.25;}
+.menu-tile-prog{width:100%;margin-top:1px;}
+.menu-tile-bar{height:4px;border-radius:99px;background:var(--surface);overflow:hidden;}
+.menu-tile-bar-fill{height:100%;background:linear-gradient(90deg,var(--rose),var(--terra));border-radius:99px;}
+.menu-tile-prog-txt{display:block;font-size:9px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;}
+.menu-tile.done{border-color:var(--done);}
+.menu-tile.done .menu-tile-bar-fill{background:var(--done);}
 /* мудборд — дошка з вільно перетягуваними картинками */
 .moodboard-btn{display:block;width:100%;margin-bottom:14px;padding:11px;border-radius:12px;border:1px dashed var(--terra);background:var(--terra-dim);color:var(--terra);font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;}
 .moodboard-btn:active{transform:scale(.98);}
@@ -1895,10 +1901,29 @@ function saveJSON(key, val){
     mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
     return;
   }
-  if(key==='wed-ideas'){                             // ідеї: легке в state, картинки — окремо
-    const light=splitIdeas(val);
-    DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
-       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save ideas', e); flashSync(false); });
+  if(key==='wed-ideas'){
+    // ідеї: легке в state, картинки — окремо. ПЕРЕД записом підтягуємо актуальний масив із
+    // хмари й домішуємо елементи, яких немає в цій вкладці (за id) — інакше вкладка/пристрій,
+    // що довго простояв без оновлень (напр. телефон + забутий комп'ютерний браузер одночасно),
+    // записала б СВІЙ застарілий масив цілком і стерла б речі/фото, додані деінде тим часом.
+    DOC.get().then(snap=>{
+      const cloudIdeas=(snap.exists && Array.isArray(snap.data().ideas)) ? snap.data().ideas : [];
+      const localIds=new Set(val.map(it=>it.id));
+      const missingFromLocal=cloudIdeas.filter(it=>it && it.id && !localIds.has(it.id));
+      const merged=missingFromLocal.length ? [...val, ...missingFromLocal] : val;
+      if(missingFromLocal.length){
+        missingFromLocal.forEach(it=>ideas.push(it));
+        applyMedia();   // резолвить '@m'-маркери підмішаних елементів у реальні картинки й перемальовує
+      }
+      const light=splitIdeas(merged);
+      DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
+         .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save ideas', e); flashSync(false); });
+    }).catch(e=>{
+      console.warn('cloud pre-read ideas', e);
+      const light=splitIdeas(val);   // не вдалось прочитати хмару — пишемо як є, аби не заблокувати збереження
+      DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
+         .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save ideas', err); flashSync(false); });
+    });
     return;
   }
   if(FIELD[key]){
