@@ -11,8 +11,9 @@
 <meta name="apple-mobile-web-app-title" content="Весілля">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script>try{const t=localStorage.getItem('wed-theme'); if(t==='dark'||t==='nokia')document.documentElement.classList.add(t);}catch(e){}</script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<script>try{const t=localStorage.getItem('wed-theme'); if(t==='dark'||t==='nokia')document.documentElement.classList.add(t);}catch(e){}
+if('scrollRestoration' in history) history.scrollRestoration='manual';</script>
 <style>
 /* ════════ ДВІ ТЕМИ = ДВІ ПОЛОВИНИ ДНЯ: ☀️ СОФІЯ / 🌙 ХВИЛЬОВИЙ ════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -63,11 +64,32 @@
   --warn:#FF9F3C;--warn-dim:#4A2E12;
   --danger:#FF4B4B;--danger-dim:#4A1414;
   --line:#2C5490;
-  --r:20px;
+  --r:8px;
   --shadow-sm:0 2px 10px rgba(0,10,30,.4);
   --shadow-md:0 8px 22px rgba(0,10,30,.55);
   --glass-bg:rgba(12,42,84,.75);
+  --pixel:'Press Start 2P',var(--serif);
 }
+/* пікселястий дисплейний шрифт старих LCD-екранів — лише для великих цифр/заголовків,
+   не для основного тексту (Press Start 2P нечитабельний у довгих реченнях) */
+:root.nokia .hero-title,:root.nokia .hero-surname,:root.nokia .cnt-num,:root.nokia .menu-tile-lbl{
+  font-family:var(--pixel);
+}
+:root.nokia .hero-title{font-size:clamp(16px,4.6vw,26px);line-height:1.5;letter-spacing:0;}
+:root.nokia .hero-surname{font-size:9px;letter-spacing:.3em;}
+:root.nokia .cnt-num{font-size:clamp(22px,6vw,32px);}
+:root.nokia .menu-tile-lbl{font-size:9px;line-height:1.4;letter-spacing:.02em;}
+/* тонкі горизонтальні лінії — імітація розгортки старого LCD-екрана, ледь помітні, щоб не заважати читанню */
+:root.nokia body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay;
+}
+/* декоративна смужка статус-бару телефона (сигнал/годинник/батарея) над шапкою */
+:root:not(.nokia) .nokia-statusbar{display:none;}
+.nokia-statusbar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;
+  font-family:var(--pixel,monospace);font-size:9px;color:var(--muted);background:var(--surface2);
+  border-bottom:1px solid var(--line);letter-spacing:.05em;}
 /* «іконки меню» — кожна плитка хаба своїм кольором, як на екрані вибору розділу старого
    телефона, плюс глянцева діагональ, як на випуклих іконках тодішніх меню */
 :root.nokia .menu-tile{position:relative;overflow:hidden;border-width:2px;}
@@ -1041,6 +1063,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 </div>
 
 <div class="guest-banner" id="guestBanner">👋 Гостьовий перегляд — можна читати плани й лишати коментарі 💬</div>
+
+<div class="nokia-statusbar"><span>📶📶📶</span><span id="nokiaClock">--:--</span><span>🔋100%</span></div>
 
 <div class="hero">
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
@@ -6907,6 +6931,14 @@ function currentTheme(){
 }
 themeBtn.onclick=()=>applyTheme(THEME_NEXT[currentTheme()]);
 applyTheme(currentTheme());
+// живий годинник у декоративному статус-барі теми "Нокія" (сам блок прихований в інших темах)
+function tickNokiaClock(){
+  const el=document.getElementById('nokiaClock'); if(!el) return;
+  const d=new Date();
+  el.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+tickNokiaClock();
+setInterval(tickNokiaClock,15000);
 
 /* ── PWA: офлайн + іконка на екрані ── */
 if('serviceWorker' in navigator){
