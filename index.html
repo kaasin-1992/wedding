@@ -2316,32 +2316,49 @@ function renderTasks(){
   });
 }
 function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; saveJSON('wed-tasks',tasks); renderTasks();} }
-// клік на дедлайн у списку завдань → інлайн date-picker замість того щоб видаляти й додавати завдання заново
+// розпізнає "ДД.ММ", "ДД.ММ.РРРР" чи "ДД.ММ.РР" (рік необовʼязковий — весілля все одно 2026);
+// повертає ISO-рядок YYYY-MM-DD або null, якщо не вдалось розібрати чи рік явно абсурдний
+function parseTaskDeadlineInput(str){
+  const parts=(str||'').trim().split(/[.\/\-\s]+/).filter(Boolean);
+  if(parts.length<2) return null;
+  const d=parseInt(parts[0],10), m=parseInt(parts[1],10);
+  if(!d||!m||d<1||d>31||m<1||m>12) return null;
+  let y=parts[2]?parseInt(parts[2],10):2026;
+  if(y<100) y+=2000;
+  if(y<2020||y>2100) return null;   // явно абсурдний рік (напр. "0002") — краще перепитати, ніж мовчки зберегти сміття
+  return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+// клік на дедлайн у списку завдань → інлайн текстове поле замість того щоб видаляти й додавати
+// завдання заново. РАНІШЕ був нативний <input type="date"> — на мобільних (особливо iOS) сегмент
+// року в ньому легко "з'їжджає" при швидкому наборі і замість 2026 виходить щось на кшталт 0002,
+// причому це ТЕХНІЧНО валідне значення для браузера (не пусте), тож стара перевірка на blur його
+// пропускала. Простий текстовий формат ДД.ММ (рік типово 2026, як і все весілля) — надійніший.
 function openTaskDeadlineEdit(id, el){
   const task=tasks.find(t=>t.id===id); if(!task) return;
   const inp=document.createElement('input');
-  inp.type='date'; inp.className='task-dl-inp';
-  inp.value=task.deadline||'';
+  inp.type='text'; inp.inputMode='numeric'; inp.className='task-dl-inp';
+  inp.placeholder='ДД.ММ (напр. 17.06)';
+  inp.value=task.deadline?fmtDate(task.deadline):'';
   el.replaceWith(inp);
   inp.focus();
   let done=false;
   const commit=()=>{
     if(done) return; done=true;
-    task.deadline=inp.value||''; saveJSON('wed-tasks',tasks); renderTasks();
+    const v=inp.value.trim();
+    if(!v){ task.deadline=''; saveJSON('wed-tasks',tasks); renderTasks(); return; }
+    const parsed=parseTaskDeadlineInput(v);
+    if(!parsed){ showToast('Не розпізнав дату — формат ДД.ММ, напр. 17.06 🙂'); renderTasks(); return; }
+    task.deadline=parsed; saveJSON('wed-tasks',tasks); renderTasks();
   };
-  // просто закриває інпут назад без збереження — НЕ чіпає task.deadline. Потрібно, бо на мобільних
-  // взаємодія з нативним пікером дати часто спричиняє blur ще ДО того, як користувач ввів усі три
-  // сегменти (день/місяць/рік) — раніше це трактувалось як "готово" і стирало дедлайн порожнім
-  // значенням, через що вікно вибору дати "закривалось" передчасно.
   const cancel=()=>{
     if(done) return; done=true;
     renderTasks();
   };
-  inp.addEventListener('change',commit);
-  // на blur комітимо лише якщо дата вже ПОВНІСТЮ введена (inp.value непорожній) — інакше це майже
-  // напевно передчасна втрата фокусу під час взаємодії з пікером, а не намір користувача закрити поле
-  inp.addEventListener('blur',()=>{ if(inp.value) commit(); else cancel(); });
-  inp.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); cancel(); } });
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
+    else if(e.key==='Escape'){ e.preventDefault(); cancel(); }
+  });
 }
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
@@ -6341,15 +6358,7 @@ function moodboardItems(type){
     ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||''}))
     : decor.filter(d=>d.img).map(d=>({id:d.id, img:d.img, title:d.title||''}));
   const extra=(moodboardExtra[type]||[]).map(x=>({id:x.id, img:x.img, title:x.title||'', extra:true}));
-  // манекени-ляльки Каті й Діми — базовий шар мудборду одягу, щоб перетягувати вирізаний
-  // одяг зверху і "приміряти" прямо на дошці. Йдуть ПЕРШИМИ в масиві → DOM-порядок ставить
-  // їх у самий низ стеку, і будь-яка річ, покладена зверху, візуально лягає на манекен.
-  const dolls = type==='cloth'
-    ? [['her','👰 Катя'],['his','🤵 Дима']].map(([who,name])=>{
-        const img=personBase(who); return img?{id:'mb-doll-'+who, img, title:name, doll:true}:null;
-      }).filter(Boolean)
-    : [];
-  return [...dolls, ...base, ...extra];
+  return [...base, ...extra];
 }
 function renderMoodboard(){
   const canvas=document.getElementById('moodboardCanvas'), inner=document.getElementById('moodboardInner');
@@ -6370,9 +6379,8 @@ function renderMoodboard(){
   items.forEach((it,idx)=>{
     let pos=board[it.id];
     if(!pos){ // перша поява на дошці — розкладаємо приблизною сіткою, далі можна перетягнути
-      pos = it.doll
-        ? (it.id==='mb-doll-her' ? {x:2,y:36} : {x:52,y:36})
-        : (()=>{ const col=idx%cols, row=Math.floor(idx/cols); return {x:4+col*30, y:4+row*24}; })();
+      const col=idx%cols, row=Math.floor(idx/cols);
+      pos={x:4+col*30, y:4+row*24};
       board[it.id]=pos;
     }
     // одяг у мудборді (не вільно завантажені фото) — та сама ретроактивна перевірка/довирізання,
@@ -6380,7 +6388,7 @@ function renderMoodboard(){
     // взагалі не було жодного тригера ensureCleanGarment. Спільний _cleaningAttempted Set із
     // колажем — якщо річ уже поставлена в чергу там, тут вдруге не запускаємо.
     let cleaning=false;
-    if(_mbType==='cloth' && !it.extra && !it.doll){
+    if(_mbType==='cloth' && !it.extra){
       const srcIt=ideas.find(x=>x.id===it.id);
       if(srcIt){
         const hasCleanCutout=srcIt.cleanImg && /^data:/.test(srcIt.cleanImg) && srcIt.cleanFor===garmentSig(srcIt.img);
@@ -6392,7 +6400,7 @@ function renderMoodboard(){
       }
     }
     const tile=document.createElement('div');
-    tile.className='moodboard-tile'+(_mbType==='cloth'&&!it.doll?' cloth':'')+(it.doll?' doll':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
+    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
     if(it.extra) tile.dataset.mbextra='1';
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
     if(pos.w) tile.style.width=pos.w+'px';
