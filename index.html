@@ -942,22 +942,22 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="tabs-bar" id="tabsBar">
   <button class="tab-btn active" data-tab="home">🏠 Головна</button>
   <button class="tab-btn" data-tab="tasks">✅ Завдання</button>
-  <button class="tab-btn" data-tab="guests">👥 Гості</button>
   <button class="tab-btn" data-tab="budget">💰 Бюджет</button>
+  <button class="tab-btn" data-tab="guests">👥 Гості</button>
+  <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
+  <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
+  <button class="tab-btn" data-tab="dresscode">🎨 Дрес-код</button>
   <button class="tab-btn" data-tab="ideas">💡 Образ та ідеї</button>
   <button class="tab-btn" data-tab="beauty">💄 Краса</button>
-  <button class="tab-btn" data-tab="dresscode">🎨 Дрес-код</button>
-  <button class="tab-btn" data-tab="inspo">📌 Натхнення</button>
-  <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="decor">🌸 Декор</button>
+  <button class="tab-btn" data-tab="bar">🍽 Бар та меню</button>
   <button class="tab-btn" data-tab="cake">🎂 Торт</button>
   <button class="tab-btn" data-tab="music">🎵 Музика</button>
+  <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
+  <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
   <button class="tab-btn" data-tab="parties">🎉 Дівич / мальчік</button>
   <button class="tab-btn" data-tab="script">📜 Сценарій</button>
-  <button class="tab-btn" data-tab="invites">💌 Запрошення</button>
   <button class="tab-btn" data-tab="seating">🪑 Розсадка</button>
-  <button class="tab-btn" data-tab="hotel">🏨 Готель</button>
-  <button class="tab-btn" data-tab="contacts">📇 Контакти</button>
   <button class="tab-btn" data-tab="notes">📝 Нотатки</button>
 </div>
 <div class="tabs-bar-hint" id="tabsBarHint">›</div>
@@ -5043,6 +5043,7 @@ function renderMusic(){
         <div class="idea-price-row"><span class="pl">🔗</span><input class="idea-price-inp" data-murl="${m.id}" value="${esc(m.url||'')}" placeholder="посилання" aria-label="Посилання" autocapitalize="none" spellcheck="false"></div>
         <div class="hotel-meta"><span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
           <button class="idea-photo-btn" data-mphoto="${m.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${m.img?'Змінити фото':'Додати фото'}</button>
+          <button class="idea-photo-btn" data-mshot="${m.id}" ${m.url?'':'disabled title="Спершу встав посилання"'} style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸 Скрін з посилання</button>
         </div>
         <div class="idea-note" data-mterms="${m.id}" contenteditable="true" spellcheck="false" data-ph="Умови роботи (ціна, сет, апаратура…)" title="Тицяй, щоб редагувати умови">${m.terms?esc(m.terms):''}</div>
         <div class="idea-note" data-mnote="${m.id}" contenteditable="true" spellcheck="false" data-ph="Нотатка (враження, стиль…)" title="Тицяй, щоб редагувати нотатку">${m.note?esc(m.note):''}</div>
@@ -5098,6 +5099,17 @@ function renderMusic(){
         showToast('📸 Фото оновлено');
       },0.85);
     });
+  });
+  listEl.querySelectorAll('[data-mshot]').forEach(b=>b.onclick=async()=>{
+    const m=music.find(x=>x.id===b.dataset.mshot); if(!m||!m.url)return;
+    const old=b.textContent; b.textContent='📸 Роблю скрін…'; b.disabled=true;
+    const s=await microlink(m.url,'&screenshot=true&meta=false',22000);
+    const url=s&&s.screenshot&&s.screenshot.url;
+    if(!url){ b.textContent=old; b.disabled=false; showToast('Скрін не вдався 😕 спробуй ще раз'); return; }
+    let du=await srcToDataUrl(url);
+    if(du){ du=await new Promise(ok=>downscaleSrc(du,1024,r=>ok(r||du),0.85)); }
+    m.img=du||url; saveJSON('wed-music',music); renderMusic();
+    showToast('📸 Скрін додано');
   });
 }
 function renderMustPlay(){
