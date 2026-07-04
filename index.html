@@ -1832,7 +1832,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=fa
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2078,6 +2078,7 @@ let ideas       = loadJSON('wed-ideas', []);
 let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже додані українські традиції в беклог (раз)
+let rozpysTaskSeeded  = loadJSON('wed-rozpys-seed', false); // чи вже додано нагадування про розпис 24.08 (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
 let music       = loadJSON('wed-music', []);
@@ -4536,6 +4537,16 @@ function seedTraditions(){
   saveJSON('wed-trad-seed',true);
   renderScripts();
 }
+// одноразове нагадування про офіційний розпис (окрема дата від дня вечірки) — додається в
+// Завдання рівно один раз, той самий патерн, що й seedTraditions()
+function seedRozpysTask(){
+  if(rozpysTaskSeeded || IS_GUEST) return;
+  rozpysTaskSeeded=true;
+  tasks.push({id:'rozpys24', text:'📋 Розпис (офіційна реєстрація)', deadline:'2026-08-24', done:false});
+  saveJSON('wed-tasks',tasks);
+  saveJSON('wed-rozpys-seed',true);
+  renderTasks();
+}
 
 /* ════ РОЗСАДКА ════ */
 let activeSeat='sofia';
@@ -6637,6 +6648,7 @@ function startSync(){
     if(d.outfit && typeof d.outfit==='object') legacyMedia.outfit=d.outfit;
     if(typeof d.weedPass==='string') weedPassHash=d.weedPass;
     if(typeof d.traditionsSeeded==='boolean') traditionsSeeded=d.traditionsSeeded;
+    if(typeof d.rozpysTaskSeeded==='boolean') rozpysTaskSeeded=d.rozpysTaskSeeded;
     // одноразова міграція старих картинок зі state в окремі документи
     if(!IS_GUEST) ['photos','photosFull','mannequin','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
@@ -6681,6 +6693,7 @@ function startSync(){
     DB.set('wed-inspo',JSON.stringify(inspo));
     DB.set('wed-weed-pass',JSON.stringify(weedPassHash));
     DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
+    DB.set('wed-rozpys-seed',JSON.stringify(rozpysTaskSeeded));
     DB.set('wed-metrics',JSON.stringify(bodyMetrics));
     DB.set('wed-seating',JSON.stringify(seating));
     DB.set('wed-invites',JSON.stringify(invites));
@@ -6698,6 +6711,7 @@ function startSync(){
     applyingSnapshot=false;
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
+    seedRozpysTask();   // один раз додаємо нагадування про розпис 24.08 в Завдання
   }, err=>{ console.warn('snapshot', err); });
   startMediaSync();
 }
@@ -6739,7 +6753,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
