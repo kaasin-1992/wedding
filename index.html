@@ -325,6 +325,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .icon-btn:hover{color:var(--text);border-color:var(--terra);}
 .icon-btn:active{transform:scale(.92);}
 .icon-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
+/* активний стан "Підтвердив"/"Відмовив" — тицьнути ще раз повертає гостя в "Очікує" */
+.icon-btn.active-confirm{background:var(--done-dim);border-color:var(--done);color:var(--done);}
+.icon-btn.danger.on{background:var(--danger-dim);border-color:var(--danger);color:var(--danger);}
 /* press-feedback для всього, що тицяється */
 .badge.ev-badge:active,.badge.grp-family:active,.badge.grp-friends:active,
 .attr-chip:active,.cc-status:active,.hotel-status:active,.filt-btn:active,.del-x:active,.tab-btn:active{transform:scale(.93);}
@@ -2485,8 +2488,8 @@ function renderGuests(){
       </div>
       <div class="guest-status">
         <div class="row-actions">
-          ${g.status!=='confirmed'?`<button class="icon-btn" data-id="${g.id}" data-a="confirm" aria-label="Підтвердити, що буде" title="Підтвердити">✓</button>`:''}
-          ${g.status!=='declined'?`<button class="icon-btn danger" data-id="${g.id}" data-a="decline" aria-label="Відмовився" title="Відмова">✕</button>`:''}
+          <button class="icon-btn${g.status==='confirmed'?' active-confirm':''}" data-id="${g.id}" data-a="confirm" aria-label="Підтвердити, що буде" title="${g.status==='confirmed'?'Тицьни ще раз, щоб повернути в «Очікує»':'Підтвердити'}">✓</button>
+          <button class="icon-btn danger${g.status==='declined'?' on':''}" data-id="${g.id}" data-a="decline" aria-label="Відмовився" title="${g.status==='declined'?'Тицьни ще раз, щоб повернути в «Очікує»':'Відмова'}">✕</button>
           <button class="icon-btn danger" data-id="${g.id}" data-a="del" aria-label="Видалити гостя" title="Видалити">🗑</button>
         </div>
         <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
@@ -2501,8 +2504,8 @@ function renderGuests(){
     const g=guests.find(x=>x.id===btn.dataset.id); if(!g)return;
     const a=btn.dataset.a;
     if(a==='del'){ delUndo('wed-guests',g.id,`«${g.name}» видалено`); return; }
-    if(a==='confirm')g.status='confirmed';
-    else if(a==='decline')g.status='declined';
+    if(a==='confirm')g.status=(g.status==='confirmed')?'pending':'confirmed';
+    else if(a==='decline')g.status=(g.status==='declined')?'pending':'declined';
     else if(a==='maybe')g.maybe=!g.maybe;
     else if(a==='wparty')g.wparty=!g.wparty;
     saveJSON('wed-guests',guests); renderGuests();
