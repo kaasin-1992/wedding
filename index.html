@@ -5783,7 +5783,15 @@ function moodboardItems(type){
     ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||''}))
     : decor.filter(d=>d.img).map(d=>({id:d.id, img:d.img, title:d.title||''}));
   const extra=(moodboardExtra[type]||[]).map(x=>({id:x.id, img:x.img, title:x.title||'', extra:true}));
-  return [...base, ...extra];
+  // манекени-ляльки Каті й Діми — базовий шар мудборду одягу, щоб перетягувати вирізаний
+  // одяг зверху і "приміряти" прямо на дошці. Йдуть ПЕРШИМИ в масиві → DOM-порядок ставить
+  // їх у самий низ стеку, і будь-яка річ, покладена зверху, візуально лягає на манекен.
+  const dolls = type==='cloth'
+    ? [['her','👰 Катя'],['his','🤵 Дима']].map(([who,name])=>{
+        const img=personBase(who); return img?{id:'mb-doll-'+who, img, title:name, doll:true}:null;
+      }).filter(Boolean)
+    : [];
+  return [...dolls, ...base, ...extra];
 }
 function renderMoodboard(){
   const canvas=document.getElementById('moodboardCanvas'), inner=document.getElementById('moodboardInner');
@@ -5804,8 +5812,9 @@ function renderMoodboard(){
   items.forEach((it,idx)=>{
     let pos=board[it.id];
     if(!pos){ // перша поява на дошці — розкладаємо приблизною сіткою, далі можна перетягнути
-      const col=idx%cols, row=Math.floor(idx/cols);
-      pos={x:4+col*30, y:4+row*24};
+      pos = it.doll
+        ? (it.id==='mb-doll-her' ? {x:2,y:36} : {x:52,y:36})
+        : (()=>{ const col=idx%cols, row=Math.floor(idx/cols); return {x:4+col*30, y:4+row*24}; })();
       board[it.id]=pos;
     }
     // одяг у мудборді (не вільно завантажені фото) — та сама ретроактивна перевірка/довирізання,
@@ -5813,7 +5822,7 @@ function renderMoodboard(){
     // взагалі не було жодного тригера ensureCleanGarment. Спільний _cleaningAttempted Set із
     // колажем — якщо річ уже поставлена в чергу там, тут вдруге не запускаємо.
     let cleaning=false;
-    if(_mbType==='cloth' && !it.extra){
+    if(_mbType==='cloth' && !it.extra && !it.doll){
       const srcIt=ideas.find(x=>x.id===it.id);
       if(srcIt){
         const hasCleanCutout=srcIt.cleanImg && /^data:/.test(srcIt.cleanImg) && srcIt.cleanFor===garmentSig(srcIt.img);
@@ -5825,7 +5834,7 @@ function renderMoodboard(){
       }
     }
     const tile=document.createElement('div');
-    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
+    tile.className='moodboard-tile'+(_mbType==='cloth'&&!it.doll?' cloth':'')+(it.doll?' doll':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
     if(it.extra) tile.dataset.mbextra='1';
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
     if(pos.w) tile.style.width=pos.w+'px';
