@@ -223,8 +223,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .guest-info{flex:1;min-width:0;}
 .guest-name{font-size:14.5px;font-weight:500;line-height:1.2;}
 .guest-sub{font-size:12px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-.guest-contact{font-size:12px;color:var(--terra);margin-top:4px;}
+.guest-contact-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.guest-contact{font-size:12px;color:var(--terra);flex:1;min-width:0;}
 .guest-contact.empty{color:var(--muted);opacity:.6;}
+/* швидка дія "написати" — якщо контакт розпізнано як телефон/IG/TG-посилання (✉️), або
+   голий @хендл без вказаної платформи (тоді дві кнопки — Instagram і Telegram окремо) */
+.guest-contact-go{flex:0 0 auto;font-size:14px;line-height:1;text-decoration:none;padding:2px;}
 /* картки гостей раніше завжди показували весь ряд чипсів (дружка/+1/діти/алко/вега/травка тощо) —
    тепер згорнуто за замовчуванням під "⋯ ще", щоб список гостей був компактнішим */
 .guest-more{margin-top:4px;}
@@ -2463,7 +2467,17 @@ function renderGuests(){
       <div class="guest-info">
         <div class="guest-name" data-gname="${g.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб виправити імʼя'}">${esc(g.name)}</div>
         <div class="guest-sub">${grpBadge}${evBadge}${roleBadge}${p1}</div>
-        ${IS_GUEST?'':`<div class="guest-contact${g.contact?'':' empty'}" data-gcontact="${g.id}" contenteditable="true" spellcheck="false" title="Телефон, Instagram чи Telegram">${esc(g.contact||'＋ контакт')}</div>`}
+        ${IS_GUEST?'':(()=>{
+          const link=contactLink(g.contact);
+          const handle=!link?contactHandle(g.contact):'';
+          const actions=link
+            ? `<a class="guest-contact-go" href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="Написати">✉️</a>`
+            : (handle?`<a class="guest-contact-go" href="https://instagram.com/${esc(handle)}" target="_blank" rel="noopener noreferrer" title="Instagram">📸</a><a class="guest-contact-go" href="https://t.me/${esc(handle)}" target="_blank" rel="noopener noreferrer" title="Telegram">✈️</a>`:'');
+          return `<div class="guest-contact-row">
+            <div class="guest-contact${g.contact?'':' empty'}" data-gcontact="${g.id}" contenteditable="true" spellcheck="false" title="Телефон, Instagram чи Telegram">${esc(g.contact||'＋ контакт')}</div>
+            ${actions}
+          </div>`;
+        })()}
         <details class="guest-more">
           <summary>⋯ ще</summary>
           ${attrRow}
