@@ -507,6 +507,31 @@ body.guest .cmt-bar,body.guest .cmt-bar *{pointer-events:auto;}
 body.guest .panel a{pointer-events:auto;}
 body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capInput{display:none !important;}
 .idea-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+/* плитка одягу — компактний вигляд "як у магазині" замість стовпця високих карток; клік відкриває
+   деталі/дії в overlay нижче (idea-detail-*), щоб довгий стовпець кнопок не займав стрічку */
+.idea-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin-bottom:12px;}
+.idea-tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-sm);cursor:pointer;}
+.idea-tile.approved{border-color:var(--done);box-shadow:0 0 0 1px var(--done) inset;}
+.idea-tile.bought{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+.idea-tile-thumb{position:relative;width:100%;height:120px;background:var(--surface2);overflow:hidden;}
+.idea-tile-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.idea-tile-thumb .idea-thumb-fallback{gap:4px;}
+.idea-tile-thumb .idea-fav{width:26px;height:26px;}
+.idea-tile-thumb .idea-fallback-host{font-size:9px;}
+.idea-tile-thumb .idea-ai-badge{font-size:9px;padding:1px 6px;top:4px;left:4px;}
+.idea-tile-thumb .idea-ai-x{width:18px;height:18px;font-size:10px;bottom:4px;right:4px;}
+.idea-tile-thumb .idea-rating-badge{font-size:9px;padding:2px 6px;top:4px;left:4px;}
+.idea-tile-thumb .idea-ai-overlay{font-size:10px;gap:2px;}
+.idea-tile-thumb .idea-ai-overlay small{font-size:8px;}
+.idea-tile-info{padding:7px 8px 9px;}
+.idea-tile-title{font-size:12px;font-weight:600;line-height:1.3;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.idea-tile-price{font-size:12px;font-weight:700;color:var(--terra);margin-top:3px;}
+.idea-tile-host{font-size:10px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.idea-tile .del-x{z-index:5;}
+.idea-detail-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,20,18,.72);display:none;align-items:flex-end;justify-content:center;}
+.idea-detail-panel{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;margin:0;border-radius:18px 18px 0 0;}
+.idea-detail-close{position:fixed;top:16px;right:16px;z-index:1501;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
 .idea-thumb[data-thumbview]{cursor:zoom-in;}
@@ -1390,6 +1415,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <option value="price-desc">за ціною ↓ (дорожчі)</option>
     </select>
   </div>
+  <div class="filters" id="ideaGtypeBar" style="display:none;"></div>
   <div class="add-section" style="margin-bottom:16px;">
     <details open>
       <summary>＋ Додати (посилання або текстом)</summary>
@@ -2622,6 +2648,8 @@ document.getElementById('addNoteBtn').onclick=()=>{
 /* ════ IDEAS / LINKS (образ, каблучки, ідеї) ════ */
 let activeIdea='her';
 let ideaSort='';
+let ideaGtypeFilter='';   // фільтр плитки одягу по типу речі (gtype), скидається при зміні вкладки
+let _ideaDetailId=null;   // яка ідея зараз відкрита в overlay "деталі/дії" плитки
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
@@ -2686,6 +2714,64 @@ async function fetchPreview(url){
   // прев'ю є завжди: хоч фавікон + назва сайту
   return {title, desc, img, icon, host, candidates:[...new Set(cands.filter(Boolean))]};
 }
+// поля картки одягу/каблучки/ідеї, спільні для плитки й детального overlay
+function ideaFieldsHTML(it){
+  const host=hostOf(it.url);
+  const fav=it.icon||faviconOf(host);
+  const isTry=(it.cat==='her'||it.cat==='his');
+  const isMakeable=isTry||it.cat==='rings';   // "хто робить" стосується і одягу, і обручок (якщо хендмейд)
+  // у СПИСКУ для одягу лишаємо фото ТОВАРУ; примірка з людиною показується лише зверху (couple stage).
+  // для каблучок/ідей (без верхнього стейджу) показуємо згенероване зображення.
+  const aiImg=isTry?null:it.gen;
+  const showImg=aiImg||it.img;
+  const fallback=`<div class="idea-thumb-fallback">
+      ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
+      <div class="idea-fallback-host">${esc(host||'ідея')}</div>
+    </div>`;
+  const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
+  const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
+  const rc=isTry?favCount(it):0;
+  const ratingBadge=rc>0?`<span class="idea-rating-badge">⭐×${rc}</span>`:'';
+  const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" data-thumbview="${it.id}" onerror="this.style.display='none'">`:''}${aiBadge}${ratingBadge}${overlay}</div>`;
+  // кнопки ШІ
+  let aiBtns='';
+  if(it.cat==='her'||it.cat==='his'){
+    const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
+    const wearWho=it.cat==='his'?'his':'her';
+    const equippedSlot=equippedSlotFor(wearWho, it.id);
+    const wearBtn=equippedSlot
+      ? `<button class="idea-ai-btn on" data-unwear="${it.id}" data-unwearwho="${wearWho}" data-unwearslot="${esc(equippedSlot)}">✕ Зняти</button>`
+      : (it.gtype
+          ? `<button class="idea-ai-btn" data-wear="${it.id}">👕 Вдягнути (колаж)</button>`
+          : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
+    const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
+    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">📸 ${it.realTryon?'Замінити фото на мені':'Фото на мені (приміряла)'}</button>`;
+    aiBtns=gsel
+      +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
+      +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
+      +wearBtn+swapBtn+realBtn;
+  }else{
+    aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
+  }
+  const favs=it.favs||{};
+  const favRow=isTry?`<div class="idea-fav-row">${FAV_ROLES.map(r=>`<button class="idea-fav-btn${favs[r.k]?' on':''}" data-fav="${it.id}" data-favrole="${r.k}" title="${esc(r.lbl)} — вподобати">${favs[r.k]?'⭐':'☆'} <span class="ffi">${r.ic}</span></button>`).join('')}</div>`:'';
+  const whoKey=it.who||'me';
+  const fabricPlaceholder=it.cat==='rings'?'💍 Матеріал (напр. золото, срібло)':'🧵 Тканина (напр. атлас, льон)';
+  const clothWhoRow=isMakeable?`<div class="cloth-who-row">
+      <span class="badge who-${whoKey}" data-clothwho="${it.id}" role="button" tabindex="0" title="Тицьни, щоб змінити">${CLOTH_WHO[whoKey]}</span>
+      ${whoKey==='maids'?`<input class="cloth-fabric-inp" data-fabric="${it.id}" value="${esc(it.fabric||'')}" placeholder="${fabricPlaceholder}">`:''}
+    </div>`:'';
+  const shopInfo=isTry?SHOP_INFO[host]:null;
+  const shopRoomRow=shopInfo?`<details class="shop-room-details"><summary>🏬 Де поміряти — ${esc(shopInfo.name)}</summary><div class="shop-room-text">${shopInfo.room?esc(shopInfo.room):'Адреси шоуруму не знайшли — краще запитати напряму в Instagram.'}</div></details>`:'';
+  const realTryonRow=(isTry&&it.realTryon)?`<div class="idea-realtryon"><img data-realview="${it.id}" src="${esc(it.realTryon)}" alt="" loading="lazy"><span class="idea-realtryon-lbl">📸 Твоє фото на мені</span><button class="idea-realtryon-x" data-realdel="${it.id}" aria-label="Видалити фото на мені">✕</button></div>`:'';
+  const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
+  const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
+  const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
+  const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
+  const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
+  const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
+  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow};
+}
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
   // панель сортування — лише для одягу (Вона/Він)
@@ -2705,134 +2791,148 @@ function renderIdeas(){
     }
     items=arr;
   }
-  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
-  items.forEach(it=>{
-    const host=hostOf(it.url);
-    const fav=it.icon||faviconOf(host);
-    const isTry=(it.cat==='her'||it.cat==='his');
-    const isMakeable=isTry||it.cat==='rings';   // "хто робить" стосується і одягу, і обручок (якщо хендмейд)
-    // у СПИСКУ для одягу лишаємо фото ТОВАРУ; примірка з людиною показується лише зверху (couple stage).
-    // для каблучок/ідей (без верхнього стейджу) показуємо згенероване зображення.
-    const aiImg=isTry?null:it.gen;
-    const showImg=aiImg||it.img;
-    const fallback=`<div class="idea-thumb-fallback">
-        ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
-        <div class="idea-fallback-host">${esc(host||'ідея')}</div>
-      </div>`;
-    const aiBadge=aiImg?`<span class="idea-ai-badge">🪄 ШІ</span><button class="idea-ai-x" data-aix="${it.id}" aria-label="Прибрати ШІ-картинку">✕</button>`:'';
-    const overlay=it._ai?`<div class="idea-ai-overlay">🪄 ШІ малює…<br><small>до 30 сек</small></div>`:'';
-    const rc=isTry?favCount(it):0;
-    const ratingBadge=rc>0?`<span class="idea-rating-badge">⭐×${rc}</span>`:'';
-    const thumb=`<div class="idea-thumb-wrap">${fallback}${showImg?`<img class="idea-thumb" src="${esc(showImg)}" loading="lazy" alt="" data-thumbview="${it.id}" onerror="this.style.display='none'">`:''}${aiBadge}${ratingBadge}${overlay}</div>`;
-    // кнопки ШІ
-    let aiBtns='';
-    if(it.cat==='her'||it.cat==='his'){
-      const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
-      const wearWho=it.cat==='his'?'his':'her';
-      const equippedSlot=equippedSlotFor(wearWho, it.id);
-      const wearBtn=equippedSlot
-        ? `<button class="idea-ai-btn on" data-unwear="${it.id}" data-unwearwho="${wearWho}" data-unwearslot="${esc(equippedSlot)}">✕ Зняти</button>`
-        : (it.gtype
-            ? `<button class="idea-ai-btn" data-wear="${it.id}">👕 Вдягнути (колаж)</button>`
-            : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
-      const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
-      const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">📸 ${it.realTryon?'Замінити фото на мені':'Фото на мені (приміряла)'}</button>`;
-      aiBtns=gsel
-        +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
-        +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
-        +wearBtn+swapBtn+realBtn;
+  // категорійний фільтр по типу речі (gtype) — лише для одягу, лише реально наявні в цій вкладці типи
+  const gbar=document.getElementById('ideaGtypeBar');
+  if(gbar){
+    const usedGtypes=isCloth?[...new Set(items.map(i=>i.gtype).filter(Boolean))].sort((a,b)=>GTYPES.indexOf(a)-GTYPES.indexOf(b)):[];
+    if(!isCloth || !usedGtypes.length){
+      gbar.style.display='none'; ideaGtypeFilter='';
     }else{
-      aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
+      if(ideaGtypeFilter && !usedGtypes.includes(ideaGtypeFilter)) ideaGtypeFilter='';
+      gbar.style.display='flex';
+      gbar.innerHTML=`<button class="filt-btn${ideaGtypeFilter?'':' active'}" data-igf="">Усі типи</button>`
+        + usedGtypes.map(g=>`<button class="filt-btn${ideaGtypeFilter===g?' active':''}" data-igf="${esc(g)}">${esc(gLabel(g))}</button>`).join('');
+      gbar.querySelectorAll('[data-igf]').forEach(b=>b.onclick=()=>{ ideaGtypeFilter=b.dataset.igf; renderIdeas(); });
     }
-    const favs=it.favs||{};
-    const favRow=isTry?`<div class="idea-fav-row">${FAV_ROLES.map(r=>`<button class="idea-fav-btn${favs[r.k]?' on':''}" data-fav="${it.id}" data-favrole="${r.k}" title="${esc(r.lbl)} — вподобати">${favs[r.k]?'⭐':'☆'} <span class="ffi">${r.ic}</span></button>`).join('')}</div>`:'';
-    const whoKey=it.who||'me';
-    const fabricPlaceholder=it.cat==='rings'?'💍 Матеріал (напр. золото, срібло)':'🧵 Тканина (напр. атлас, льон)';
-    const clothWhoRow=isMakeable?`<div class="cloth-who-row">
-        <span class="badge who-${whoKey}" data-clothwho="${it.id}" role="button" tabindex="0" title="Тицьни, щоб змінити">${CLOTH_WHO[whoKey]}</span>
-        ${whoKey==='maids'?`<input class="cloth-fabric-inp" data-fabric="${it.id}" value="${esc(it.fabric||'')}" placeholder="${fabricPlaceholder}">`:''}
-      </div>`:'';
-    const shopInfo=isTry?SHOP_INFO[host]:null;
-    const shopRoomRow=shopInfo?`<details class="shop-room-details"><summary>🏬 Де поміряти — ${esc(shopInfo.name)}</summary><div class="shop-room-text">${shopInfo.room?esc(shopInfo.room):'Адреси шоуруму не знайшли — краще запитати напряму в Instagram.'}</div></details>`:'';
-    const realTryonRow=(isTry&&it.realTryon)?`<div class="idea-realtryon"><img data-realview="${it.id}" src="${esc(it.realTryon)}" alt="" loading="lazy"><span class="idea-realtryon-lbl">📸 Твоє фото на мені</span><button class="idea-realtryon-x" data-realdel="${it.id}" aria-label="Видалити фото на мені">✕</button></div>`:'';
-    const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
-    const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
-    const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
-    const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
-    const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
-    const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
-    const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'')+(it.bought?' bought':'');
-    card.innerHTML=`
+  }
+  if(isCloth && ideaGtypeFilter) items=items.filter(i=>i.gtype===ideaGtypeFilter);
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
+  listEl.className='idea-grid';
+  items.forEach(it=>{
+    const f=ideaFieldsHTML(it);
+    const priceRow=it.price?`<div class="idea-tile-price">💰 ${esc(it.price)}</div>`:'';
+    const tile=document.createElement('div');
+    tile.className='idea-tile'+(it.approved?' approved':'')+(it.bought?' bought':'');
+    tile.dataset.tileid=it.id;
+    tile.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
-      ${thumb}
-      <div class="idea-body">
-        ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
-        <div class="idea-title">${esc(it.title||host||it.url||'Ідея')}</div>
-        ${host?`<div class="idea-host">${esc(host)}</div>`:''}
-        ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
-        <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
-        ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
-        ${favRow}
-        ${clothWhoRow}
-        ${shopRoomRow}
-        ${realTryonRow}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${comboBtn}${msgBtn}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
+      <div class="idea-tile-thumb">${f.thumb}</div>
+      <div class="idea-tile-info">
+        <div class="idea-tile-title">${esc(it.title||f.host||it.url||'Ідея')}</div>
+        ${priceRow}
+        ${f.host?`<div class="idea-tile-host">${esc(f.host)}</div>`:''}
       </div>`;
-    listEl.appendChild(card);
+    tile.addEventListener('click',e=>{ if(e.target.closest('[data-idel]'))return; openIdeaDetail(it.id); });
+    listEl.appendChild(tile);
   });
-  listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
+  listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=(e)=>{
+    e.stopPropagation();
     const it=ideas.find(x=>x.id===b.dataset.idel);
     if(it && it.budgetId){ const i=budget.findIndex(x=>x.id===it.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
     delUndo('wed-ideas',b.dataset.idel,'Видалено');
+    if(_ideaDetailId===b.dataset.idel) closeIdeaDetail();
   });
-  listEl.querySelectorAll('[data-thumbview]').forEach(im=>im.onclick=()=>{
+}
+// плитка одягу/каблучків/ідей відкриває деталі й усі дії в одному overlay замість довгого
+// стовпця кнопок під кожним фото у стрічці (лежала мотивація задачі — картки були надто довгі)
+function refreshIdeaViews(){ renderIdeas(); if(_ideaDetailId) renderIdeaDetail(); }
+function closeIdeaDetail(){
+  _ideaDetailId=null;
+  const ov=document.getElementById('ideaDetailOverlay'); if(ov) ov.style.display='none';
+}
+function openIdeaDetail(id){
+  _ideaDetailId=id;
+  renderIdeaDetail();
+  const ov=document.getElementById('ideaDetailOverlay'); if(ov) ov.style.display='flex';
+}
+function renderIdeaDetail(){
+  let ov=document.getElementById('ideaDetailOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ideaDetailOverlay'; ov.className='idea-detail-overlay';
+    ov.innerHTML=`<button class="idea-detail-close" id="ideaDetailCloseBtn" aria-label="Закрити">✕</button><div class="idea-card idea-row idea-detail-panel" id="ideaDetailPanel"></div>`;
+    document.body.appendChild(ov);
+    ov.onclick=(e)=>{ if(e.target===ov) closeIdeaDetail(); };
+    document.getElementById('ideaDetailCloseBtn').onclick=closeIdeaDetail;
+  }
+  const panel=document.getElementById('ideaDetailPanel');
+  const it=ideas.find(x=>x.id===_ideaDetailId);
+  if(!it){ closeIdeaDetail(); return; }
+  const f=ideaFieldsHTML(it);
+  panel.innerHTML=`
+    <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
+    ${f.thumb}
+    <div class="idea-body">
+      ${it.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+      <div class="idea-title">${esc(it.title||f.host||it.url||'Ідея')}</div>
+      ${f.host?`<div class="idea-host">${esc(f.host)}</div>`:''}
+      ${it.desc?`<div class="idea-desc">${esc(it.desc)}</div>`:''}
+      <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
+      ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
+      ${f.favRow}
+      ${f.clothWhoRow}
+      ${f.shopRoomRow}
+      ${f.realTryonRow}
+      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.pickBtn}${f.photoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
+    </div>`;
+  wireIdeaDetailHandlers(panel);
+}
+function wireIdeaDetailHandlers(panel){
+  panel.querySelectorAll('[data-idel]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.idel);
+    if(it && it.budgetId){ const i=budget.findIndex(x=>x.id===it.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    delUndo('wed-ideas',b.dataset.idel,'Видалено');
+    closeIdeaDetail();
+  });
+  panel.querySelectorAll('[data-thumbview]').forEach(im=>im.onclick=()=>{
     const it=ideas.find(x=>x.id===im.dataset.thumbview); if(it) showImgBig(im.src, it.title||'');
   });
-  listEl.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
+  panel.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
     const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
     it.price=inp.value.trim(); saveJSON('wed-ideas',ideas);
     if(it.approved && it.budgetId){ const b=budget.find(x=>x.id===it.budgetId); if(b){ b.planned=parseMoney(it.price); saveJSON('wed-budget',budget); renderBudget(); } }
+    renderIdeas();
   });
-  listEl.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.approve); if(it) approveIdea(it);
+    renderIdeaDetail();
   });
-  listEl.querySelectorAll('[data-bought]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-bought]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.bought); if(!it)return;
-    it.bought=!it.bought; saveJSON('wed-ideas',ideas); renderIdeas();
+    it.bought=!it.bought; saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
-  listEl.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.fav); if(!it)return;
     const role=b.dataset.favrole;
     it.favs=it.favs||{}; it.favs[role]=!it.favs[role];
-    saveJSON('wed-ideas',ideas); renderIdeas();
+    saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
   const cycleClothWho=(id)=>{
     const it=ideas.find(x=>x.id===id); if(!it)return;
     it.who=CLOTH_WHO_ORDER[(CLOTH_WHO_ORDER.indexOf(it.who||'me')+1)%CLOTH_WHO_ORDER.length];
-    saveJSON('wed-ideas',ideas); renderIdeas();
+    saveJSON('wed-ideas',ideas); refreshIdeaViews();
   };
-  listEl.querySelectorAll('[data-clothwho]').forEach(el=>{
+  panel.querySelectorAll('[data-clothwho]').forEach(el=>{
     el.onclick=()=>cycleClothWho(el.dataset.clothwho);
     el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); cycleClothWho(el.dataset.clothwho); } };
   });
-  listEl.querySelectorAll('[data-fabric]').forEach(inp=>inp.onchange=()=>{
+  panel.querySelectorAll('[data-fabric]').forEach(inp=>inp.onchange=()=>{
     const it=ideas.find(x=>x.id===inp.dataset.fabric); if(!it)return;
     it.fabric=inp.value.trim(); saveJSON('wed-ideas',ideas);
   });
-  listEl.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.photo); if(!it) return;
     pickImageFile(f=>{ if(!f) return;
       loadPhotoFile(f,768,data=>{
         if(!data){ showToast('Не вдалося обробити фото'); return; }
-        it.img=data; saveJSON('wed-ideas',ideas); renderIdeas();
+        it.img=data; saveJSON('wed-ideas',ideas); refreshIdeaViews();
         showToast('📷 Фото додано');
       },0.8);
     });
   });
-  listEl.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
   });
-  listEl.querySelectorAll('[data-combo]').forEach(b=>b.onclick=async()=>{
+  panel.querySelectorAll('[data-combo]').forEach(b=>b.onclick=async()=>{
     const it=ideas.find(x=>x.id===b.dataset.combo); if(!it||!it.url)return;
     const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
     const res=await screenshotAndReadInfo(it.url);
@@ -2846,54 +2946,56 @@ function renderIdeas(){
       const cut=await ensureCleanGarment(it);
       if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
     }
-    saveJSON('wed-ideas',ideas); renderIdeas();
+    saveJSON('wed-ideas',ideas); refreshIdeaViews();
     showToast('📸 Скрін і інфо додано');
   });
-  listEl.querySelectorAll('[data-vmsg]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-vmsg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.vmsg); if(!it)return;
     copyMsgAndGo(vendorMsg(it.title||hostOf(it.url)||'цей товар'), it.url);
   });
-  listEl.querySelectorAll('[data-realphoto]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-realphoto]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realphoto); if(!it) return;
     pickImageFile(f=>{ if(!f) return;
       loadPhotoFile(f,1024,data=>{
         if(!data){ showToast('Не вдалося обробити фото'); return; }
-        it.realTryon=data; saveJSON('wed-ideas',ideas); renderIdeas();
+        it.realTryon=data; saveJSON('wed-ideas',ideas); renderIdeaDetail();
         showToast('📸 Фото на мені додано');
       },0.82);
     });
   });
-  listEl.querySelectorAll('[data-realdel]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-realdel]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realdel); if(!it) return;
-    it.realTryon=''; saveJSON('wed-ideas',ideas); renderIdeas();
+    it.realTryon=''; saveJSON('wed-ideas',ideas); renderIdeaDetail();
   });
-  listEl.querySelectorAll('[data-realview]').forEach(img=>img.onclick=()=>{
+  panel.querySelectorAll('[data-realview]').forEach(img=>img.onclick=()=>{
     const it=ideas.find(x=>x.id===img.dataset.realview); if(it) showImgBig(it.realTryon, it.title?`📸 ${it.title}`:'📸 Фото на мені');
   });
-  listEl.querySelectorAll('[data-gtype]').forEach(sel=>sel.onchange=()=>{
+  panel.querySelectorAll('[data-gtype]').forEach(sel=>sel.onchange=()=>{
     const it=ideas.find(x=>x.id===sel.dataset.gtype); if(!it)return;
     // якщо річ була "вдягнена" в колаж (хоч під яким слотом) — знімаємо, бо слот належить типу, а не речі
     const who=it.cat==='his'?'his':'her';
     const oldSlot=equippedSlotFor(who, it.id);
     if(oldSlot) delete collage[who][oldSlot];
     it.gtype=sel.value; saveJSON('wed-ideas',ideas);
-    if(oldSlot){ saveJSON('wed-collage',collage); renderIdeas(); renderCouple(); }
+    renderCouple();
+    if(oldSlot) saveJSON('wed-collage',collage);
+    refreshIdeaViews();
   });
-  listEl.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
   });
-  listEl.querySelectorAll('[data-imagine]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-imagine]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.imagine); if(it) aiImagine(it);
   });
-  listEl.querySelectorAll('[data-imagineg]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-imagineg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.imagineg); if(it) aiImagineGarment(it);
   });
-  listEl.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
-    delete it.tryon; delete it.gen; saveJSON('wed-ideas',ideas); renderIdeas();
+    delete it.tryon; delete it.gen; saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
   // ручний колаж: вдягнути/зняти — займає слот за it.gtype в collage[who]
-  listEl.querySelectorAll('[data-wear]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-wear]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.wear); if(!it||!it.gtype) return;
     const who=it.cat==='his'?'his':'her';
     if(!collage[who]) collage[who]={};
@@ -2901,26 +3003,27 @@ function renderIdeas(){
     const oldSlot=equippedSlotFor(who, it.id);
     if(oldSlot) delete collage[who][oldSlot];
     collage[who][it.gtype]=it.id;
-    saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
+    saveJSON('wed-collage',collage); renderCouple(); renderIdeaDetail();
     // колаж виглядає як паперова лялька лише коли річ вирізана з чистого фото — довирізаємо разово при вдяганні
     if(it.img && !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img))){
       ensureCleanGarment(it).then(()=>renderCouple());
     }
   });
   // зняти річ із колажу — шукаємо конкретний слот, переданий кнопкою (не залежить від поточного it.gtype)
-  listEl.querySelectorAll('[data-unwear]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-unwear]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.unwearwho, slot=b.dataset.unwearslot;
     if(collage[who]) delete collage[who][slot];
-    saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
+    saveJSON('wed-collage',collage); renderCouple(); renderIdeaDetail();
   });
   // перенести річ між "Вона"/"Він" — знімаємо зі старого колаж-слоту (він належить іншій людині)
-  listEl.querySelectorAll('[data-swapcat]').forEach(b=>b.onclick=()=>{
+  panel.querySelectorAll('[data-swapcat]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.swapcat); if(!it)return;
     const oldWho=it.cat==='his'?'his':'her';
     const oldSlot=equippedSlotFor(oldWho, it.id);
     if(oldSlot) delete collage[oldWho][oldSlot];
     it.cat=it.cat==='his'?'her':'his';
-    saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderIdeas(); renderCouple();
+    saveJSON('wed-ideas',ideas); saveJSON('wed-collage',collage); renderCouple();
+    closeIdeaDetail(); renderIdeas();
   });
 }
 
@@ -3026,12 +3129,12 @@ document.getElementById('addBeautyBtn').onclick=async()=>{
 };
 document.querySelectorAll('#ideaFilters .filt-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activeIdea=btn.dataset.i; renderIdeas();
+  btn.classList.add('active'); activeIdea=btn.dataset.i; ideaGtypeFilter=''; renderIdeas();
 });
 // відкрити редактор персонажа: обрати "Вона"/"Він" одразу (клік на фото в couple-стейджі)
 function openPersonEditor(who){
   activateTab('ideas');
-  activeIdea=who;
+  activeIdea=who; ideaGtypeFilter='';
   document.querySelectorAll('#ideaFilters .filt-btn').forEach(b=>b.classList.toggle('active', b.dataset.i===who));
   renderIdeas();
 }
