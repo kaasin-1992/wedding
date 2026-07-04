@@ -6070,10 +6070,55 @@ document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(b
 function currentTab(){ const a=document.querySelector('.tab-btn.active'); return a?a.dataset.tab:TAB_ORDER[0]; }
 /* ── ХАБ-МЕНЮ (плитки всіх розділів, ДОДАТКОВО до стрічки вкладок) ── */
 // плитки будуються з тих самих .tab-btn — щоб не дублювати список розділів у двох місцях
+// прогрес по вкладці — лише там, де є природна метрика "зроблено/усього"; решта (нотатки,
+// натхнення, мудборди тощо) без чіткого "завершено" — без прогрес-бару, і це нормально
+function tabProgress(tab){
+  const pct=(done,total)=> total>0 ? Math.round(done/total*100) : null;
+  switch(tab){
+    case 'tasks':{ const total=tasks.length; if(!total) return null; const done=tasks.filter(t=>t.done).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'guests':{ const total=guests.length; if(!total) return null; const done=guests.filter(g=>g.status==='confirmed').length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'contacts':{ const total=contacts.length; if(!total) return null; const done=contacts.filter(c=>c.status==='booked').length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'decor':{ const items=decor.filter(d=>d.cat!=='cake'); const total=items.length; if(!total) return null; const done=items.filter(d=>d.taken||d.bought).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'cake':{ const items=decor.filter(d=>d.cat==='cake'); const total=items.length; if(!total) return null; const done=items.filter(d=>d.taken).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'hotel':{ const total=hotels.length; if(!total) return null; const done=hotels.filter(h=>h.booked).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'music':{ const total=music.length; if(!total) return null; const done=music.filter(m=>m.status==='booked').length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'ideas':{ const items=ideas.filter(i=>i.cat==='her'||i.cat==='his'); const total=items.length; if(!total) return null; const done=items.filter(i=>i.bought).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'script':{ const items=[...scriptSofia, ...scriptWave]; const total=items.length; if(!total) return null; const done=items.filter(i=>i.time).length; return {pct:pct(done,total), text:`${done}/${total}`}; }
+    case 'budget':{
+      const t=computeBudgetTotals(budget, budgetCap);
+      if(!t.planned) return null;
+      return {pct:Math.min(100,Math.round(t.paid/t.planned*100)), text:`${Math.round(t.paid).toLocaleString('uk-UA')}/${Math.round(t.planned).toLocaleString('uk-UA')} ₴`};
+    }
+    default: return null;
+  }
+}
+// одноразове святкове сповіщення, коли вкладка вперше досягає 100% — не повторюється
+const MILESTONE_MSG={
+  tasks:'🎉 Усі завдання зроблено!', guests:'🎉 Усі гості підтвердили!', contacts:'🎉 Усі підрядники заброньовані!',
+  decor:'🎉 Весь декор визначено!', cake:'🎉 З тортом усе вирішено!', hotel:'🎉 Усі готелі заброньовано!',
+  music:'🎉 З музикою домовлено!', ideas:'🎉 Увесь одяг куплено!', script:'🎉 Сценарій розписано похвилинно!',
+  budget:'🎉 Бюджет повністю сплачено!'
+};
+function checkMilestones(progressByTab){
+  let seen;
+  try{ seen=JSON.parse(localStorage.getItem('wed-milestones')||'{}'); }catch(e){ seen={}; }
+  let changed=false;
+  Object.keys(progressByTab).forEach(tab=>{
+    const p=progressByTab[tab];
+    if(p && p.pct>=100 && !seen[tab]){
+      seen[tab]=true; changed=true;
+      showToast(MILESTONE_MSG[tab]||'🎉 Розділ завершено!');
+    } else if(p && p.pct<100 && seen[tab]){
+      delete seen[tab]; changed=true;   // відкотили назад (напр. скасували підтвердження) — можна знову відсвяткувати
+    }
+  });
+  if(changed){ try{ localStorage.setItem('wed-milestones', JSON.stringify(seen)); }catch(e){} }
+}
 function renderMenu(){
   const grid=document.getElementById('homeGrid'); if(!grid) return;
   const cur=_lastContentTab;
   grid.innerHTML='';
+  const progressByTab={};
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     const tab=btn.dataset.tab;
     if(tab==='home') return;                         // плитка "на себе" не потрібна
@@ -6082,12 +6127,16 @@ function renderMenu(){
     const sp=txt.indexOf(' ');
     const icon=sp>0?txt.slice(0,sp):'📄';
     const lbl=sp>0?txt.slice(sp+1):txt;
+    const prog=IS_GUEST?null:tabProgress(tab);
+    if(prog) progressByTab[tab]=prog;
+    const progHTML=prog?`<span class="menu-tile-prog"><span class="menu-tile-bar"><span class="menu-tile-bar-fill" style="width:${prog.pct}%"></span></span><span class="menu-tile-prog-txt">${esc(prog.text)}</span></span>`:'';
     const tile=document.createElement('button');
-    tile.className='menu-tile'+(tab===cur?' active':'');
-    tile.innerHTML=`<span class="menu-tile-icon">${icon}</span><span class="menu-tile-lbl">${esc(lbl)}</span>`;
+    tile.className='menu-tile'+(tab===cur?' active':'')+(prog&&prog.pct>=100?' done':'');
+    tile.innerHTML=`<span class="menu-tile-icon">${icon}</span><span class="menu-tile-lbl">${esc(lbl)}</span>${progHTML}`;
     tile.onclick=()=>activateTab(tab);
     grid.appendChild(tile);
   });
+  if(!IS_GUEST) checkMilestones(progressByTab);
 }
 
 /* ── МУДБОРД: вільне перетягування карток (одяг / декор) ── */
