@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script>try{if(localStorage.getItem('wed-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<script>try{const t=localStorage.getItem('wed-theme'); if(t==='dark'||t==='nokia')document.documentElement.classList.add(t);}catch(e){}</script>
 <style>
 /* ════════ ДВІ ТЕМИ = ДВІ ПОЛОВИНИ ДНЯ: ☀️ СОФІЯ / 🌙 ХВИЛЬОВИЙ ════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -51,6 +51,40 @@
   --shadow-md:0 10px 30px rgba(0,0,0,.45);
   --glass-bg:rgba(21,23,30,.68);
 }
+/* ════ ТЕМА «КОЛЬОРОВА НОКІЯ» — екран меню поліфонічних телефонів початку 2000-х ════ */
+:root.nokia{
+  --bg:#0C2A54;--surface:#123769;--surface2:#1B4886;
+  --text:#EAF2FF;--muted:#9FB8DE;
+  --terra:#2E9BF0;--terra-dim:#163B6E;
+  --sage:#33C481;--sage-dim:#123B2C;
+  --rose:#F0529B;--rose-dim:#401A34;
+  --gold:#FFC93C;
+  --done:#33C481;--done-dim:#123B2C;
+  --warn:#FF9F3C;--warn-dim:#4A2E12;
+  --danger:#FF4B4B;--danger-dim:#4A1414;
+  --line:#2C5490;
+  --r:20px;
+  --shadow-sm:0 2px 10px rgba(0,10,30,.4);
+  --shadow-md:0 8px 22px rgba(0,10,30,.55);
+  --glass-bg:rgba(12,42,84,.75);
+}
+/* «іконки меню» — кожна плитка хаба своїм кольором, як на екрані вибору розділу старого
+   телефона, плюс глянцева діагональ, як на випуклих іконках тодішніх меню */
+:root.nokia .menu-tile{position:relative;overflow:hidden;border-width:2px;}
+:root.nokia .menu-tile::before{content:'';position:absolute;inset:0 0 55% 0;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0));pointer-events:none;}
+:root.nokia .menu-tile:nth-child(8n+1){background:#1F6FE0;border-color:#1558B8;}
+:root.nokia .menu-tile:nth-child(8n+2){background:#E0439A;border-color:#B82E7E;}
+:root.nokia .menu-tile:nth-child(8n+3){background:#2FB876;border-color:#20955E;}
+:root.nokia .menu-tile:nth-child(8n+4){background:#F0A82E;border-color:#C4871C;}
+:root.nokia .menu-tile:nth-child(8n+5){background:#8B5CF0;border-color:#6C3FCC;}
+:root.nokia .menu-tile:nth-child(8n+6){background:#E0533B;border-color:#B83E2A;}
+:root.nokia .menu-tile:nth-child(8n+7){background:#22ADC2;border-color:#1889A0;}
+:root.nokia .menu-tile:nth-child(8n+8){background:#C4A72E;border-color:#9C8420;}
+:root.nokia .menu-tile{color:#fff;}
+:root.nokia .menu-tile.active{outline:3px solid #fff;outline-offset:-3px;}
+:root.nokia .menu-tile-lbl{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);}
+:root.nokia .menu-tile-prog-txt{color:rgba(255,255,255,.85);}
+:root.nokia .menu-tile-bar{background:rgba(0,0,0,.25);}
 html{background:var(--bg);transition:background .25s;}
 body{transition:background .25s,color .25s;}
 .theme-toggle{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--terra);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;line-height:1;z-index:5;}
@@ -6853,16 +6887,26 @@ injectCmtButtons();
 // якщо гість уже залогінений (швидкий кеш) — підхопити коментарі
 if(IS_GUEST && auth && auth.currentUser && !commentsBound) startCommentsSync();
 
-/* ── ТЕМА (світла / вечірня) ── */
+/* ── ТЕМА (світла / вечірня / кольорова нокія) ── */
 const themeBtn=document.getElementById('themeBtn');
-function applyTheme(dark){
-  document.documentElement.classList.toggle('dark',dark);
-  themeBtn.textContent=dark?'☀️':'🌙';
-  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',dark?'#15171E':'#EBEBE3');
-  try{localStorage.setItem('wed-theme',dark?'dark':'light');}catch(e){}
+const THEME_ICON={light:'🌙',dark:'📱',nokia:'☀️'};   // показує, у ЯКУ тему перейде наступний тап
+const THEME_COLOR={light:'#EBEBE3',dark:'#15171E',nokia:'#0C2A54'};
+const THEME_NEXT={light:'dark',dark:'nokia',nokia:'light'};
+function applyTheme(mode){
+  document.documentElement.classList.toggle('dark',mode==='dark');
+  document.documentElement.classList.toggle('nokia',mode==='nokia');
+  themeBtn.textContent=THEME_ICON[mode];
+  themeBtn.title=mode==='nokia'?'Кольорова Нокія — тицяй для світлої':(mode==='dark'?'Вечірня — тицяй для Нокії':'Світла — тицяй для вечірньої');
+  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',THEME_COLOR[mode]);
+  try{localStorage.setItem('wed-theme',mode);}catch(e){}
 }
-themeBtn.onclick=()=>applyTheme(!document.documentElement.classList.contains('dark'));
-applyTheme(document.documentElement.classList.contains('dark'));
+function currentTheme(){
+  if(document.documentElement.classList.contains('dark')) return 'dark';
+  if(document.documentElement.classList.contains('nokia')) return 'nokia';
+  return 'light';
+}
+themeBtn.onclick=()=>applyTheme(THEME_NEXT[currentTheme()]);
+applyTheme(currentTheme());
 
 /* ── PWA: офлайн + іконка на екрані ── */
 if('serviceWorker' in navigator){
