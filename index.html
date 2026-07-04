@@ -239,6 +239,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .who-select.who-me{background-color:var(--rose-dim);color:var(--rose);}
 .who-select.who-maids{background-color:var(--sage-dim);color:var(--sage);}
 .who-select.who-vendor{background-color:var(--gold);color:#fff;}
+.who-select.who-his{background-color:var(--terra-dim);color:var(--terra);}
+.who-select.who-both{background-color:var(--surface2);color:var(--text);border-left:4px solid var(--rose);border-right:4px solid var(--terra);}
 .badge.diy-badge{background:var(--surface2);color:var(--muted);cursor:pointer;border:1px dashed var(--line);}
 .badge.diy-badge.on{background:var(--warn-dim);color:var(--warn);border-style:solid;border-color:var(--warn);}
 .badge.dtype-item{background:var(--terra-dim);color:var(--terra);cursor:pointer;}
@@ -5075,7 +5077,7 @@ async function aiVisualizeDecor(d, venue){
     },0.8);
   }catch(e){ console.warn('visualizeDecor',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
 }
-const DECOR_WHO={me:'🙋 Я',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
+const DECOR_WHO={me:'🙋 Я',his:'🤵 Дима',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
 // "хто відповідає" тепер може бути й конкретним гостем (значення 'g:<guestId>'), не лише
 // узагальненою категорією — гості беруться живцем з guests[], без окремого дубльованого списку
 function whoGuestList(){ return guests.filter(g=>g.status!=='declined').sort((a,b)=>(a.name||'').localeCompare(b.name||'','uk')); }
@@ -5086,7 +5088,7 @@ function whoLabelOf(who){
 }
 function whoSelectHTML(field,id,cur,extraClass){
   const val=cur||'me';
-  const fixed=[['me',DECOR_WHO.me],['maids',DECOR_WHO.maids],['vendor',DECOR_WHO.vendor]];
+  const fixed=[['me',DECOR_WHO.me],['his',DECOR_WHO.his],['both',DECOR_WHO.both],['maids',DECOR_WHO.maids],['vendor',DECOR_WHO.vendor]];
   const gopts=whoGuestList().map(g=>['g:'+g.id,'👤 '+g.name]);
   const opt=([v,l])=>`<option value="${esc(v)}"${v===val?' selected':''}>${esc(l)}</option>`;
   return `<select class="who-select ${whoClassOf(val)}${extraClass?' '+extraClass:''}" data-${field}="${esc(id)}" title="Хто відповідає">${fixed.map(opt).join('')}<option disabled>──────</option>${gopts.map(opt).join('')}</select>`;
