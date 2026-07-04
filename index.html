@@ -166,6 +166,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .guest-info{flex:1;min-width:0;}
 .guest-name{font-size:14.5px;font-weight:500;line-height:1.2;}
 .guest-sub{font-size:12px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.guest-contact{font-size:12px;color:var(--terra);margin-top:4px;}
+.guest-contact.empty{color:var(--muted);opacity:.6;}
+/* картки гостей раніше завжди показували весь ряд чипсів (дружка/+1/діти/алко/вега/травка тощо) —
+   тепер згорнуто за замовчуванням під "⋯ ще", щоб список гостей був компактнішим */
+.guest-more{margin-top:4px;}
+.guest-more summary{font-size:11.5px;color:var(--muted);cursor:pointer;list-style:none;display:inline-block;}
+.guest-more summary::-webkit-details-marker{display:none;}
+.guest-more[open] summary{margin-bottom:2px;}
 .badge{font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:99px;background:var(--surface2);color:var(--muted);}
 .badge.ceremony{background:var(--rose-dim);color:var(--rose);}
 .badge.party{background:var(--sage-dim);color:var(--sage);}
@@ -1444,7 +1452,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="filters" id="ideaGtypeBar" style="display:none;"></div>
   <button class="idea-photo-btn" id="ideaBulkProcessBtn" style="display:none;margin-bottom:16px;">🪄 Обробити все одразу (скрін + вирізати)</button>
   <div class="add-section" style="margin-bottom:16px;">
-    <details open>
+    <details>
       <summary>＋ Додати (посилання або текстом)</summary>
       <div class="add-form">
         <input type="url" id="iUrl" placeholder="Посилання (необовʼязково — можна лишити порожнім)" autocapitalize="none" spellcheck="false">
@@ -1529,7 +1537,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-p="his">🤵 Мальчішник</button>
   </div>
   <div class="add-section" style="margin-bottom:8px;">
-    <details open>
+    <details>
       <summary>＋ Додати людину вручну</summary>
       <div class="add-form">
         <input type="text" id="pName" placeholder="Імʼя…">
@@ -1779,7 +1787,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="panel" id="tab-inspo">
   <div class="section-hint">Дошка натхнення — як Pinterest, але все в одному місці й спільне з Дмитром. Скопіюй посилання на пін (Pinterest), пост (Instagram) чи будь-яку сторінку → встав сюди → картинка й назва підтягнуться. Признач тег, щоб легко фільтрувати.</div>
   <div class="add-section" style="margin-bottom:14px;">
-    <details open>
+    <details>
       <summary>＋ Додати ідею (встав посилання)</summary>
       <div class="add-form">
         <input type="url" id="inUrl" placeholder="Посилання (Pinterest, Instagram, сайт…)" autocapitalize="none" spellcheck="false">
@@ -2343,7 +2351,11 @@ function renderGuests(){
       <div class="guest-info">
         <div class="guest-name" data-gname="${g.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false" title="${IS_GUEST?'':'Тицяй, щоб виправити імʼя'}">${esc(g.name)}</div>
         <div class="guest-sub">${grpBadge}${evBadge}${roleBadge}${p1}</div>
-        ${attrRow}
+        ${IS_GUEST?'':`<div class="guest-contact${g.contact?'':' empty'}" data-gcontact="${g.id}" contenteditable="true" spellcheck="false" title="Телефон, Instagram чи Telegram">${esc(g.contact||'＋ контакт')}</div>`}
+        <details class="guest-more">
+          <summary>⋯ ще</summary>
+          ${attrRow}
+        </details>
       </div>
       <div class="guest-status">
         <div class="row-actions">
@@ -2402,6 +2414,16 @@ function renderGuests(){
       const v=el.textContent.replace(/\s+/g,' ').trim();
       if(!v){ el.textContent=g.name; return; }
       if(v!==g.name){ g.name=v; saveJSON('wed-guests',guests); renderGuests(); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
+  if(!IS_GUEST) listEl.querySelectorAll('[data-gcontact]').forEach(el=>{
+    el.addEventListener('focus',()=>{ if(!el.classList.contains('empty')) return; el.textContent=''; el.classList.remove('empty'); });
+    const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gcontact); if(!g)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(v!==(g.contact||'')){ g.contact=v; saveJSON('wed-guests',guests); }
+      if(!v){ el.textContent='＋ контакт'; el.classList.add('empty'); }
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
