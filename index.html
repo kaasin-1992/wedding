@@ -2852,6 +2852,23 @@ function clothNeedsProcessing(it){
   if(it.img) return !(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===garmentSig(it.img));
   return false;
 }
+// скрін+ШІ-інфо (якщо нема фото) + вирізання одягу (якщо нема чистого cleanImg) для одного
+// елемента одягу — спільна логіка і для масової обробки, і для автоматичного запуску одразу
+// при доданні нової речі без фото (щоб не змушувати натискати кнопку окремо)
+async function processClothItem(it){
+  if(it.url && !it.img){
+    const res=await screenshotAndReadInfo(it.url);
+    if(res){
+      it.img=res.img;
+      if(res.title && !it.title) it.title=res.title;
+      if(res.price && !it.price) it.price=res.price;
+    }
+  }
+  if(it.img){
+    const cut=await ensureCleanGarment(it);
+    if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
+  }
+}
 // послідовно (не паралельно, щоб не задавити ШІ-виклики) прогонити скрін+ШІ-інфо і вирізання
 // для всього одягу, доданого раніше без фото чи без чистого cleanImg
 async function bulkProcessCloth(ids){
@@ -2860,18 +2877,7 @@ async function bulkProcessCloth(ids){
   for(const id of ids){
     const it=ideas.find(x=>x.id===id); if(!it) continue;
     try{
-      if(it.url && !it.img){
-        const res=await screenshotAndReadInfo(it.url);
-        if(res){
-          it.img=res.img;
-          if(res.title && !it.title) it.title=res.title;
-          if(res.price && !it.price) it.price=res.price;
-        }
-      }
-      if(it.img){
-        const cut=await ensureCleanGarment(it);
-        if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
-      }
+      await processClothItem(it);
       saveJSON('wed-ideas',ideas);
     }catch(e){ console.warn('bulkProcessCloth',id,e); }
   }
@@ -3298,6 +3304,12 @@ document.getElementById('addIdeaBtn').onclick=async()=>{
       if((cur.cat==='her'||cur.cat==='his') && !cur.cleanImg) ensureCleanGarment(cur).then(()=>renderIdeas());
       renderIdeas();
     });
+  }else if((cur.cat==='her'||cur.cat==='his') && cur.url){
+    // fetchPreview не знайшов фото (типово для сайтів на кшталт Етнодім/Гуня) — не лишаємо
+    // річ "висіти" в очікуванні ручного натискання "Обробити все одразу", а одразу самі
+    // робимо скрін+ШІ-вирізання, як і при масовій обробці
+    cur._ai=true; renderIdeas();
+    processClothItem(cur).finally(()=>{ cur._ai=false; saveJSON('wed-ideas',ideas); renderIdeas(); });
   }
 };
 
@@ -6444,6 +6456,10 @@ async function quickAddDispatch(target,rawText){
       if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-ideas',ideas);
         if((cur.cat==='her'||cur.cat==='his') && !cur.cleanImg) ensureCleanGarment(cur).then(()=>renderIdeas());
         renderIdeas(); });
+      else if((cur.cat==='her'||cur.cat==='his') && cur.url){
+        cur._ai=true; renderIdeas();
+        processClothItem(cur).finally(()=>{ cur._ai=false; saveJSON('wed-ideas',ideas); renderIdeas(); });
+      }
     }
     showToast('✨ Додано в Одяг/Ідеї'); return;
   }
