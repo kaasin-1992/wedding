@@ -595,6 +595,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .bar-inp input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-family:var(--sans);font-size:16px;color:var(--text);width:100%;text-align:center;}
 .bar-inp input:focus{outline:none;border-color:var(--terra);}
 .bar-autonote{flex-basis:100%;font-size:11.5px;color:var(--muted);line-height:1.4;}
+.bar-grid-hint{font-size:12px;color:var(--muted);background:var(--terra-dim);border-radius:10px;padding:8px 11px;margin-bottom:8px;line-height:1.4;}
 .bar-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 .bar-card{display:flex;gap:11px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;}
 .bar-card.bar-locked{cursor:pointer;border-style:dashed;opacity:.8;}
@@ -4520,6 +4521,7 @@ function renderBar(){
       <label class="bar-inp"><span>Гостей-дітей</span><input type="number" min="0" id="barKids" value="${cfg.kids!=='' && cfg.kids!=null?cfg.kids:''}" placeholder="${auto.kids}"></label>
       <div class="bar-autonote">авто з гостей: ${auto.adults} дор. + ${auto.kids} діт. · +наречені ${COUPLE} +команда ${tc} = <b>${adults}</b> дор. · пʼють ≈ <b>${drinkers}</b></div>
     </div>
+    <div class="bar-grid-hint">👇 Це не варіанти на вибір — купити <b>ВСЕ ЦЕ РАЗОМ</b>, кожен рядок своя окрема кількість (пиво найбільше, бо головний напій, далі вино, потім міцне):</div>
     <div class="bar-grid">
       ${card('🍺','Пиво (в першу чергу!)',`${beerB} шт`,`≈ ${beerL} л · 0.5 л`)}
       ${card('🍷','Вино',`${wine} пл.`,'0.75 л')}
