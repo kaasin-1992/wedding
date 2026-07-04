@@ -583,6 +583,12 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-tile-thumb{position:relative;width:100%;height:120px;background:var(--surface2);overflow:hidden;}
 .idea-tile-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .idea-tile-thumb .idea-thumb-fallback{gap:4px;}
+/* коли є "фото на мені" — показуємо його одразу на тайлі поруч фото товару, а не ховаємо в деталях */
+.idea-tile-thumb-split{display:flex;width:100%;height:120px;background:var(--surface2);overflow:hidden;gap:2px;}
+.idea-tile-thumb-half{position:relative;flex:1;height:100%;overflow:hidden;min-width:0;}
+.idea-tile-thumb-half .idea-thumb-wrap{height:100%;}
+.idea-tile-thumb-real img{width:100%;height:100%;object-fit:cover;display:block;}
+.idea-tile-real-badge{position:absolute;bottom:2px;left:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;font-size:8.5px;text-align:center;padding:1px 3px;border-radius:4px;line-height:1.3;}
 .idea-tile-thumb .idea-fav{width:26px;height:26px;}
 .idea-tile-thumb .idea-fallback-host{font-size:9px;}
 .idea-tile-thumb .idea-ai-badge{font-size:9px;padding:1px 6px;top:4px;left:4px;}
@@ -2941,7 +2947,8 @@ function ideaFieldsHTML(it){
           ? `<button class="idea-ai-btn" data-wear="${it.id}">👕 Вдягнути (колаж)</button>`
           : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
     const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
-    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">📸 ${it.realTryon?'Замінити фото на мені':'Фото на мені (приміряла)'}</button>`;
+    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">🖼 ${it.realTryon?'Замінити фото':'Завантажити фото на мені'}</button>`
+      +`<button class="idea-photo-btn" data-realai="${it.id}" ${it._ai?'disabled':''}>🤳✨ ${it.realTryon?'Перезняти й ШІ':'Зняти й ШІ вдягнути'}</button>`;
     aiBtns=gsel
       +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
       +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
@@ -3071,18 +3078,29 @@ function renderIdeas(){
   items.forEach(it=>{
     const f=ideaFieldsHTML(it);
     const priceRow=it.price?`<div class="idea-tile-price">💰 ${esc(it.price)}</div>`:'';
+    const thumbHtml=(f.isTry&&it.realTryon)
+      ? `<div class="idea-tile-thumb-split">
+           <div class="idea-tile-thumb-half">${f.thumb}</div>
+           <div class="idea-tile-thumb-half idea-tile-thumb-real"><img src="${esc(it.realTryon)}" alt="" loading="lazy" data-realtileview="${it.id}"><span class="idea-tile-real-badge">📸 на мені</span></div>
+         </div>`
+      : `<div class="idea-tile-thumb">${f.thumb}</div>`;
     const tile=document.createElement('div');
     tile.className='idea-tile'+(it.approved?' approved':'')+(it.bought?' bought':'');
     tile.dataset.tileid=it.id;
     tile.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
-      <div class="idea-tile-thumb">${f.thumb}</div>
+      ${thumbHtml}
       <div class="idea-tile-info">
         <div class="idea-tile-title">${esc(it.title||f.host||it.url||'Ідея')}</div>
         ${priceRow}
         ${f.host?`<div class="idea-tile-host">${esc(f.host)}</div>`:''}
       </div>`;
-    tile.addEventListener('click',e=>{ if(e.target.closest('[data-idel]'))return; openIdeaDetail(it.id); });
+    tile.addEventListener('click',e=>{
+      if(e.target.closest('[data-idel]'))return;
+      const rt=e.target.closest('[data-realtileview]');
+      if(rt){ const cur=ideas.find(x=>x.id===rt.dataset.realtileview); if(cur) showImgBig(cur.realTryon, cur.title?`📸 ${cur.title}`:'📸 Фото на мені'); return; }
+      openIdeaDetail(it.id);
+    });
     listEl.appendChild(tile);
   });
   listEl.querySelectorAll('[data-idel]').forEach(b=>b.onclick=(e)=>{
@@ -3252,14 +3270,38 @@ function wireIdeaDetailHandlers(panel){
     pickImageFile(f=>{ if(!f) return;
       loadPhotoFile(f,1024,data=>{
         if(!data){ showToast('Не вдалося обробити фото'); return; }
-        it.realTryon=data; saveJSON('wed-ideas',ideas); renderIdeaDetail();
+        it.realTryon=data; saveJSON('wed-ideas',ideas); refreshIdeaViews();
         showToast('📸 Фото на мені додано');
       },0.82);
     });
   });
+  // "Зняти й ШІ вдягнути" — знімаємо СВІЖЕ фото (камера телефону, не галерея) і одразу
+  // домальовуємо саме цю річ на нього через aiRealTryOn (не чіпає базове фото/манекен)
+  panel.querySelectorAll('[data-realai]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.realai); if(!it) return;
+    if(!it.img){ showToast('Спершу додай фото товару 👆'); return; }
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,async data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        it._ai=true; refreshIdeaViews();
+        try{
+          const res=await aiRealTryOn(it, data);
+          if(res){
+            downscaleSrc(res,1024,small=>{
+              it.realTryon=small||res; it._ai=false; saveJSON('wed-ideas',ideas); refreshIdeaViews();
+              showToast('📸 ШІ вдягнув — готово');
+            },0.85);
+          }else{
+            it._ai=false; refreshIdeaViews();
+            showToast('Не вдалось згенерувати 😕 спробуй ще раз');
+          }
+        }catch(e){ console.warn('realai',e); it._ai=false; refreshIdeaViews(); showToast('Не вдалось згенерувати 😕 '+aiErr(e)); }
+      },0.9);
+    }, true);
+  });
   panel.querySelectorAll('[data-realdel]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realdel); if(!it) return;
-    it.realTryon=''; saveJSON('wed-ideas',ideas); renderIdeaDetail();
+    it.realTryon=''; saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
   panel.querySelectorAll('[data-realview]').forEach(img=>img.onclick=()=>{
     const it=ideas.find(x=>x.id===img.dataset.realview); if(it) showImgBig(it.realTryon, it.title?`📸 ${it.title}`:'📸 Фото на мені');
@@ -3609,9 +3651,10 @@ function loadPhotoFile(file, maxSide, cb, q){
 }
 /* надійний вибір файлу: на iPhone у режимі застосунку (PWA) кліки по input, який НЕ доданий
    у сторінку, часто не відкривають галерею. Тому додаємо input у DOM, клікаємо, потім прибираємо. */
-function pickImageFile(onPick){
+function pickImageFile(onPick, capture){
   const inp=document.createElement('input');
   inp.type='file'; inp.accept='image/*';
+  if(capture) inp.capture='user';   // відкриває одразу камеру телефону (селфі), а не галерею
   inp.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
   document.body.appendChild(inp);
   const cleanup=()=>{ setTimeout(()=>{ try{ inp.remove(); }catch(e){} }, 300); };
@@ -4369,6 +4412,22 @@ async function aiTryOn(it){
       renderIdeas(); renderCouple();
     },0.8);
   }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); coupleBusy[who]=false; renderCouple(); showToast('ШІ-примірка не вдалась 😕 '+aiErr(e)); }
+}
+// "Фото на мені" через ШІ: береться СВІЖЕ фото (щойно знята селфі чи завантажена світлина —
+// не базове фото/манекен), і на нього домальовується ЛИШЕ ця одна річ. На відміну від aiTryOn
+// (що працює з базовим фото/манекеном і накопиченим гардеробом), тут база щоразу нова, і
+// результат — саме для realTryon-слоту цієї речі, не для колажу примірки пари.
+async function aiRealTryOn(it, selfieDataUrl){
+  const cleanSrc=await ensureCleanGarment(it);
+  const garmentPart=await srcToPart(cleanSrc||it.img);
+  if(!garmentPart) return null;
+  const itemText=gtypeText(it);
+  const prompt=`[ФОТО] — справжнє фото людини, щойно зняте. [ТОВАР]${itemText} — фото одягу з магазину.`
+    +` Відредагуй [ФОТО]: вдягни людину з [ФОТО] у річ з [ТОВАР] — тканину, колір, візерунок, крій і довжину точно відтвори з [ТОВАР], ігноруючи модель/фон/цінники/текст на товарному фото.`
+    +` Обличчя, зачіску, тіло, позу й фон з [ФОТО] лиши АБСОЛЮТНО без змін, піксель у піксель — міняй ВИКЛЮЧНО той одяг, який заміняє ця річ. Одяг має природно облягати тіло, з реалістичними складками й тінями.`
+    +` Стиль зображення: ${TRYON_STYLE}`;
+  const img=await aiGenerate([prompt, dataUrlToPart(selfieDataUrl), garmentPart]);
+  return img;
 }
 async function aiImagine(it){
   const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
