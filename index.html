@@ -2509,7 +2509,12 @@ function renderContacts(){
       </div>
       <details class="opt-block" ${chosen?'':'open'}>
         <summary>Варіанти (${opts.length})${chosen?' · обрано ✓':' · ще не обрано'}</summary>
-        ${opts.map(o=>`
+        ${opts.map(o=>{
+          const link=contactLink(o.contact);
+          const handle=!link?contactHandle(o.contact):'';
+          const msgBtns=link?`<button class="mini-btn" data-optmsg="${c.id}|${o.id}">✉️ Написати</button>`
+            :(handle?`<button class="mini-btn" data-optmsgig="${c.id}|${o.id}">📸 IG</button><button class="mini-btn" data-optmsgtg="${c.id}|${o.id}">✈️ TG</button>`:'');
+          return `
           <div class="opt-row ${o.id===c.chosen?'chosen':''}">
             <div class="opt-info">
               <div class="opt-name">${esc(o.name||'—')}</div>
@@ -2518,9 +2523,10 @@ function renderContacts(){
             </div>
             <div class="opt-actions">
               <button class="mini-btn ${o.id===c.chosen?'on':''}" data-choose="${c.id}|${o.id}">${o.id===c.chosen?'✓ Обрано':'Обрати'}</button>
+              ${msgBtns}
               <button class="icon-btn danger" data-optdel="${c.id}|${o.id}">🗑</button>
             </div>
-          </div>`).join('')}
+          </div>`;}).join('')}
         <div class="opt-add">
           <input class="opt-in" data-f="name" placeholder="Імʼя / назва">
           <input class="opt-in" data-f="contact" placeholder="Телефон / Instagram / сайт">
@@ -2550,6 +2556,23 @@ function renderContacts(){
   listEl.querySelectorAll('[data-choose]').forEach(btn=>btn.onclick=()=>{
     const [cid,oid]=btn.dataset.choose.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
     c.chosen=(c.chosen===oid)?'':oid; syncChosen(c); saveJSON('wed-contacts',contacts); renderContacts();
+  });
+  listEl.querySelectorAll('[data-optmsg]').forEach(btn=>btn.onclick=()=>{
+    const [cid,oid]=btn.dataset.optmsg.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
+    const o=(c.options||[]).find(x=>x.id===oid); if(!o)return;
+    copyMsgAndGo(vendorMsg(o.name||c.role||'співпрацю'), contactLink(o.contact));
+  });
+  listEl.querySelectorAll('[data-optmsgig]').forEach(btn=>btn.onclick=()=>{
+    const [cid,oid]=btn.dataset.optmsgig.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
+    const o=(c.options||[]).find(x=>x.id===oid); if(!o)return;
+    const h=contactHandle(o.contact); if(!h)return;
+    copyMsgAndGo(vendorMsg(o.name||c.role||'співпрацю'), 'https://instagram.com/'+h);
+  });
+  listEl.querySelectorAll('[data-optmsgtg]').forEach(btn=>btn.onclick=()=>{
+    const [cid,oid]=btn.dataset.optmsgtg.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
+    const o=(c.options||[]).find(x=>x.id===oid); if(!o)return;
+    const h=contactHandle(o.contact); if(!h)return;
+    copyMsgAndGo(vendorMsg(o.name||c.role||'співпрацю'), 'https://t.me/'+h);
   });
   listEl.querySelectorAll('[data-optdel]').forEach(btn=>btn.onclick=()=>{
     const [cid,oid]=btn.dataset.optdel.split('|'); const c=contacts.find(x=>x.id===cid); if(!c)return;
@@ -2606,6 +2629,32 @@ let ideaSort='';
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
+// готовий текст для першого повідомлення підряднику/магазину — однаковий стиль скрізь, де є "написати"
+function vendorMsg(what){
+  return `Доброго дня! Ми готуємось до весілля і цікавимось "${what}". Підкажіть, будь ласка, умови співпраці, вартість і чи є вільна дата?`;
+}
+// довільний контакт (URL / телефон) → посилання, яке можна відкрити нативно.
+// Голий @хендл НЕ вгадуємо (може бути і Instagram, і Telegram) — для нього пропонуємо вибір окремо.
+function contactLink(raw){
+  const s=(raw||'').trim(); if(!s) return '';
+  if(/^https?:\/\//i.test(s)) return s;
+  if(/instagram\.com\//i.test(s)) return 'https://instagram.com/'+/instagram\.com\/@?([a-zA-Z0-9_.]{2,32})/i.exec(s)[1];
+  if(/t\.me\//i.test(s)) return 'https://t.me/'+/t\.me\/@?([a-zA-Z0-9_]{2,32})/i.exec(s)[1];
+  const digits=s.replace(/[^\d+]/g,'');
+  if(digits.length>=10) return 'tel:'+digits;
+  return '';
+}
+// голий хендл на кшталт "@ivan_photo" чи "ivan_photo" — без вказаної платформи
+function contactHandle(raw){
+  const s=(raw||'').trim().replace(/^@/,'');
+  return /^[a-zA-Z0-9_.]{2,32}$/.test(s) ? s : '';
+}
+// копіює шаблон повідомлення в буфер і одразу відкриває контакт/посилання підрядника
+async function copyMsgAndGo(text, url){
+  try{ await navigator.clipboard.writeText(text); showToast(url?'📋 Скопійовано — встав повідомлення в чаті, що відкрився':'📋 Повідомлення скопійовано'); }
+  catch(e){ showToast('Не вдалось скопіювати — виділи текст вручну'); }
+  if(url) window.open(url, '_blank', 'noopener');
+}
 async function microlink(url, extra, timeout){
   const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), timeout||14000);
   try{
@@ -2713,6 +2762,7 @@ function renderIdeas(){
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
     const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
     const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
+    const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
     const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'')+(it.bought?' bought':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
@@ -2727,7 +2777,7 @@ function renderIdeas(){
         ${favRow}
         ${clothWhoRow}
         ${realTryonRow}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${comboBtn}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${comboBtn}${msgBtn}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -2799,6 +2849,10 @@ function renderIdeas(){
     }
     saveJSON('wed-ideas',ideas); renderIdeas();
     showToast('📸 Скрін і інфо додано');
+  });
+  listEl.querySelectorAll('[data-vmsg]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.vmsg); if(!it)return;
+    copyMsgAndGo(vendorMsg(it.title||hostOf(it.url)||'цей товар'), it.url);
   });
   listEl.querySelectorAll('[data-realphoto]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realphoto); if(!it) return;
@@ -4714,12 +4768,16 @@ function renderHotels(){
         </div>
         <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span><span class="badge who-${h.resp||'me'}" data-hresp="${h.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[h.resp||'me']}</span>${photoBtn}</div>
         ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
-        ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+        ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-hmsg="${h.id}">✉️ Написати</button></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{
     delUndo('wed-hotels',b.dataset.hdel,'Готель видалено');
+  });
+  listEl.querySelectorAll('[data-hmsg]').forEach(b=>b.onclick=()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hmsg); if(!h)return;
+    copyMsgAndGo(vendorMsg(h.title||'бронювання номера'), h.url);
   });
   listEl.querySelectorAll('[data-hphoto]').forEach(b=>b.onclick=()=>{
     const h=hotels.find(x=>x.id===b.dataset.hphoto); if(!h)return;
@@ -4908,12 +4966,16 @@ function renderDecor(){
         <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
         <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
         <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
-        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-dmsg="${d.id}">✉️ Написати</button></div>`:''}
         ${visBtns}${visThumbs}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ddel,'Декор видалено'));
+  listEl.querySelectorAll('[data-dmsg]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dmsg); if(!d)return;
+    copyMsgAndGo(vendorMsg(d.title||'декор на весілля'), d.url);
+  });
   listEl.querySelectorAll('[data-dphoto]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dphoto); if(!d)return;
     pickImageFile(f=>{ if(!f) return;
@@ -5090,11 +5152,15 @@ function renderCake(){
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
         <div class="hotel-meta">${priceBadge}${whoBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span>${photoBtn}</div>
         <div class="idea-note" data-cknote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
-        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+        ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-ckmsg="${d.id}">✉️ Написати</button></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-ckdel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ckdel,'Ідею торта видалено'));
+  listEl.querySelectorAll('[data-ckmsg]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ckmsg); if(!d)return;
+    copyMsgAndGo(vendorMsg(d.title||'весільний торт'), d.url);
+  });
   listEl.querySelectorAll('[data-ckphoto]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.ckphoto); if(!d)return;
     pickImageFile(f=>{ if(!f) return;
@@ -5252,11 +5318,15 @@ function renderMusic(){
         <div class="idea-note" data-mterms="${m.id}" contenteditable="true" spellcheck="false" data-ph="Умови роботи (ціна, сет, апаратура…)" title="Тицяй, щоб редагувати умови">${m.terms?esc(m.terms):''}</div>
         <div class="idea-note" data-mnote="${m.id}" contenteditable="true" spellcheck="false" data-ph="Нотатка (враження, стиль…)" title="Тицяй, щоб редагувати нотатку">${m.note?esc(m.note):''}</div>
         ${embed?`<iframe class="music-embed-frame" src="${esc(embed.src)}" style="height:${embed.height}px" loading="lazy" allow="encrypted-media; autoplay" referrerpolicy="no-referrer"></iframe>`:''}
-        ${m.url?`<div class="idea-actions"><a class="idea-open" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
+        ${m.url?`<div class="idea-actions"><a class="idea-open" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-mmsg="${m.id}">✉️ Написати</button></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>delUndo('wed-music',b.dataset.mdel,'Артиста видалено'));
+  listEl.querySelectorAll('[data-mmsg]').forEach(b=>b.onclick=()=>{
+    const m=music.find(x=>x.id===b.dataset.mmsg); if(!m)return;
+    copyMsgAndGo(vendorMsg(m.name||m.role||'музику на весілля'), m.url);
+  });
   listEl.querySelectorAll('[data-mst]').forEach(b=>b.onclick=()=>{
     const m=music.find(x=>x.id===b.dataset.mst); if(!m)return;
     m.status=MUSIC_NEXT[m.status||'search']; saveJSON('wed-music',music); renderMusic();
