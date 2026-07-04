@@ -534,6 +534,16 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-detail-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,20,18,.72);display:none;align-items:flex-end;justify-content:center;}
 .idea-detail-panel{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;margin:0;border-radius:18px 18px 0 0;}
 .idea-detail-close{position:fixed;top:16px;right:16px;z-index:1501;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;}
+/* плаваючий помічник швидкого додавання — видимий на будь-якій вкладці, не всередині панелі */
+.quick-add-fab{position:fixed;right:16px;bottom:20px;z-index:900;width:52px;height:52px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,var(--terra),var(--rose));color:#fff;font-size:26px;line-height:1;cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;}
+.quick-add-panel{position:fixed;right:16px;bottom:82px;z-index:901;width:min(320px,calc(100vw - 32px));
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 32px rgba(0,0,0,.3);padding:14px;}
+.quick-add-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;font-size:14px;}
+.quick-add-x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:6px;line-height:1;}
+.quick-add-panel textarea{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);resize:vertical;margin-bottom:8px;}
+.quick-add-panel select{width:100%;box-sizing:border-box;padding:8px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);margin-bottom:9px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
 .idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
 .idea-thumb[data-thumbview]{cursor:zoom-in;}
@@ -898,6 +908,14 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastUndo" type="button">Скасувати</button></div>
 <div class="swipe-hint" id="swipeHint">👈 Гортай вліво-вправо, щоб<br>перемикати вкладки 👉</div>
+
+<button id="quickAddFab" class="quick-add-fab" aria-label="Швидко додати" title="Швидко додати">＋</button>
+<div id="quickAddPanel" class="quick-add-panel" style="display:none;">
+  <div class="quick-add-head"><b>⚡ Швидко додати</b><button id="quickAddClose" class="quick-add-x" aria-label="Закрити">✕</button></div>
+  <textarea id="quickAddText" rows="3" placeholder="Встав посилання або опиши словами…"></textarea>
+  <select id="quickAddTarget" aria-label="Куди додати"></select>
+  <button id="quickAddSubmit" class="submit-btn">Додати</button>
+</div>
 
 <div class="modal-overlay" id="modal" style="display:none">
   <div class="modal-box">
@@ -6273,6 +6291,145 @@ function maybeSwipeHint(){
   const h=document.getElementById('swipeHint');
   setTimeout(()=>h.classList.add('show'), 800);
   setTimeout(()=>h.classList.remove('show'), 4400);
+}
+
+/* ── ПЛАВАЮЧИЙ ПОМІЧНИК ШВИДКОГО ДОДАВАННЯ ── */
+// доступний на будь-якій вкладці; проста евристика вгадує розділ за ключовими словами й
+// хостом посилання (НЕ ШІ-класифікація) — завжди можна змінити вручну перед додаванням
+const QUICKADD_TARGETS=[
+  ['her','👗 Одяг — Вона'],['his','🤵 Одяг — Він'],['rings','💍 Каблучки'],['idea','✨ Ідеї весілля'],
+  ['decor','🌸 Декор'],['cake','🎂 Торт'],['music','🎵 Музика'],['hotel','🏨 Готель'],['inspo','🖼 Натхнення'],
+  ['task','✅ Завдання'],['note','📝 Нотатка'],
+];
+function guessQuickAddTarget(text){
+  const t=(text||'').trim();
+  const urlMatch=/https?:\/\/\S+/i.exec(t);
+  const host=urlMatch?hostOf(urlMatch[0]):'';
+  const hay=(t+' '+host).toLowerCase();
+  const rules=[
+    [/торт|весільний торт|\bcake\b/,'cake'],
+    [/готел|hotel|booking\.com|airbnb/,'hotel'],
+    [/музик|дідж|\bdj\b|гурт|\bband\b|spotify|soundcloud/,'music'],
+    [/декор|квіт|флорист|\bdecor\b|flower/,'decor'],
+    [/сукня|плаття|вбрання|вишиванк|костюм|сорочка|\bdress\b|vyshyt|etnodim|svarga|gunia|malvy|katrya|serpen|hrushenka|faina/,'her'],
+    [/каблучк|обручк|перстен|\bring\b/,'rings'],
+  ];
+  for(const [re,target] of rules){ if(re.test(hay)) return target; }
+  if(urlMatch) return 'idea';
+  return 'task';
+}
+async function quickAddDispatch(target,rawText){
+  const t=(rawText||'').trim();
+  if(!t){ showToast('Встав посилання або напиши щось 🙂'); return; }
+  const urlMatch=/https?:\/\/\S+/i.exec(t);
+  const url=urlMatch?urlMatch[0]:'';
+  const restText=url?t.replace(url,'').trim():t;
+  if(target==='task'){
+    tasks.push({id:'u'+Date.now(),text:t,deadline:null,done:false});
+    saveJSON('wed-tasks',tasks); renderTasks(); showToast('✅ Додано в завдання'); return;
+  }
+  if(target==='note'){
+    notes.unshift({id:'n'+Date.now(),title:'',text:t});
+    saveJSON('wed-notes',notes); renderNotes(); showToast('📝 Додано в нотатки'); return;
+  }
+  if(target==='her'||target==='his'||target==='rings'||target==='idea'){
+    const id='i'+Date.now();
+    ideas.unshift({id,cat:target,url,title:url?'':restText,desc:'',img:'',icon:'',note:url?restText:'',price:'',loading:!!url,ts:Date.now()});
+    saveJSON('wed-ideas',ideas); renderIdeas();
+    if(url){
+      const prev=await fetchPreview(url);
+      const cur=ideas.find(x=>x.id===id); if(!cur) return;
+      cur.loading=false;
+      if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; cur.icon=prev.icon; cur.imgChoices=prev.candidates;
+        if(!cur.price){ const p=extractPrice(prev.title+' '+prev.desc); if(p) cur.price=p; } }
+      saveJSON('wed-ideas',ideas); renderIdeas();
+      if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-ideas',ideas);
+        if((cur.cat==='her'||cur.cat==='his') && !cur.cleanImg) ensureCleanGarment(cur).then(()=>renderIdeas());
+        renderIdeas(); });
+    }
+    showToast('✨ Додано в Одяг/Ідеї'); return;
+  }
+  if(target==='decor'||target==='cake'){
+    const id=(target==='cake'?'ck':'d')+Date.now();
+    const extra=target==='cake'?{cat:'cake'}:{};
+    decor.unshift({id,title:url?'':restText,url,price:'',place:'',who:'me',dtype:'item',diy:false,note:url?restText:'',img:'',desc:'',taken:false,bought:false,loading:!!url,...extra,ts:Date.now()});
+    saveJSON('wed-decor',decor); renderDecor(); renderCake();
+    if(url){
+      const prev=await fetchPreview(url);
+      const cur=decor.find(x=>x.id===id); if(!cur) return;
+      cur.loading=false;
+      if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+      saveJSON('wed-decor',decor); renderDecor(); renderCake();
+      if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-decor',decor); renderDecor(); renderCake(); });
+    }
+    showToast(target==='cake'?'🎂 Додано в торт':'🌸 Додано в декор'); return;
+  }
+  if(target==='music'){
+    const id='m'+Date.now();
+    music.unshift({id,name:url?'':restText,url,role:'',terms:'',note:url?restText:'',img:'',status:'search',loading:!!url,ts:Date.now()});
+    saveJSON('wed-music',music); renderMusic();
+    if(url){
+      const prev=await fetchPreview(url);
+      const cur=music.find(x=>x.id===id); if(!cur) return;
+      cur.loading=false;
+      if(prev){ if(!cur.name) cur.name=prev.title; cur.img=prev.img; }
+      saveJSON('wed-music',music); renderMusic();
+      if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-music',music); renderMusic(); });
+    }
+    showToast('🎵 Додано в музику'); return;
+  }
+  if(target==='hotel'){
+    const id='h'+Date.now();
+    hotels.unshift({id,title:url?'':restText,url,checkin:'',checkout:'',who:'',note:url?restText:'',pricePerNight:'',surcharge:'',img:'',desc:'',booked:false,loading:!!url,ts:Date.now()});
+    saveJSON('wed-hotels',hotels); renderHotels();
+    if(url){
+      const prev=await fetchPreview(url);
+      const cur=hotels.find(x=>x.id===id); if(!cur) return;
+      cur.loading=false;
+      if(prev){ if(!cur.title) cur.title=prev.title; cur.desc=prev.desc; cur.img=prev.img; }
+      saveJSON('wed-hotels',hotels); renderHotels();
+      if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-hotels',hotels); renderHotels(); });
+    }
+    showToast('🏨 Додано в готелі'); return;
+  }
+  if(target==='inspo'){
+    if(!url){ showToast('Для натхнення потрібне посилання 🙂'); return; }
+    const id='in'+Date.now();
+    inspo.unshift({id,url,cat:'інше',note:restText,title:'',img:'',loading:true,ts:Date.now()});
+    saveJSON('wed-inspo',inspo); renderInspo();
+    const prev=await fetchPreview(url);
+    const cur=inspo.find(x=>x.id===id); if(!cur) return;
+    cur.loading=false;
+    if(prev){ cur.title=prev.title||''; cur.img=prev.img||''; }
+    saveJSON('wed-inspo',inspo); renderInspo();
+    if(cur.img) embedImgInto(cur, ()=>{ saveJSON('wed-inspo',inspo); renderInspo(); });
+    showToast('🖼 Додано в натхнення');
+  }
+}
+if(!IS_GUEST){
+  const qaFab=document.getElementById('quickAddFab'), qaPanel=document.getElementById('quickAddPanel');
+  const qaText=document.getElementById('quickAddText'), qaTarget=document.getElementById('quickAddTarget');
+  const qaSubmit=document.getElementById('quickAddSubmit');
+  qaTarget.innerHTML=QUICKADD_TARGETS.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  qaFab.onclick=()=>{
+    const opening=qaPanel.style.display==='none'||!qaPanel.style.display;
+    qaPanel.style.display=opening?'block':'none';
+    if(opening) qaText.focus();
+  };
+  document.getElementById('quickAddClose').onclick=()=>{ qaPanel.style.display='none'; };
+  qaText.addEventListener('input',()=>{ if(!qaTarget.dataset.manual) qaTarget.value=guessQuickAddTarget(qaText.value); });
+  qaTarget.addEventListener('change',()=>{ qaTarget.dataset.manual='1'; });
+  qaSubmit.onclick=async()=>{
+    const text=qaText.value, target=qaTarget.value;
+    qaSubmit.disabled=true; qaSubmit.textContent='Додаю…';
+    try{ await quickAddDispatch(target,text); }
+    catch(e){ console.warn('quickAdd',e); showToast('Не вдалось додати 😕'); }
+    qaSubmit.disabled=false; qaSubmit.textContent='Додати';
+    qaText.value=''; qaTarget.value=''; qaTarget.dataset.manual=''; qaTarget.selectedIndex=0;
+    qaPanel.style.display='none';
+  };
+}else{
+  const qaFab=document.getElementById('quickAddFab'); if(qaFab) qaFab.style.display='none';
 }
 
 /* ── INIT ── */
