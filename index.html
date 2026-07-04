@@ -319,6 +319,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .couple-stage.cs-stuck .couple-stage-title,.couple-stage.cs-stuck .couple-stage-hint{display:none;}
 /* приколота панель — компромісний розмір: достатньо великий, щоб бачити одяг, але не займає весь екран */
 .couple-stage.cs-stuck .couple-slot{aspect-ratio:auto;height:min(34vh,190px);}
+/* у приколотому стані фото/колаж має ЗМЕНШУВАТИСЬ повністю (як міні-плеєр відео), а не обрізатись
+   по краях — object-fit:cover лишає вузьке вікно в те саме фото, contain показує його ціле */
+.couple-stage.cs-stuck .couple-slot img,
+.couple-stage.cs-stuck .couple-slot .collage-base{object-fit:contain;background:var(--surface2);}
 .couple-slot.cs-clickable{cursor:pointer;}
 .couple-slot#csHer{border-color:var(--rose);}
 .couple-slot#csHis{border-color:var(--sage);}
