@@ -2770,7 +2770,9 @@ function ideaFieldsHTML(it){
   const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
   const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
   const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
-  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow};
+  const aiTipBtn=isTry?`<button class="idea-photo-btn" data-aitip="${it.id}">💭 ${it.aiTip?'Оновити пораду':'Порада ШІ'}</button>`:'';
+  const aiTipRow=(isTry&&it.aiTip)?`<div class="idea-note">💭 ${esc(it.aiTip)}</div>`:'';
+  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow};
 }
 function renderIdeas(){
   const listEl=document.getElementById('ideaList'); listEl.innerHTML='';
@@ -2870,9 +2872,10 @@ function renderIdeaDetail(){
       ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
       ${f.favRow}
       ${f.clothWhoRow}
+      ${f.aiTipRow}
       ${f.shopRoomRow}
       ${f.realTryonRow}
-      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.pickBtn}${f.photoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
+      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.aiTipBtn}${f.pickBtn}${f.photoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
     </div>`;
   wireIdeaDetailHandlers(panel);
 }
@@ -2885,6 +2888,15 @@ function wireIdeaDetailHandlers(panel){
   });
   panel.querySelectorAll('[data-thumbview]').forEach(im=>im.onclick=()=>{
     const it=ideas.find(x=>x.id===im.dataset.thumbview); if(it) showImgBig(im.src, it.title||'');
+  });
+  panel.querySelectorAll('[data-aitip]').forEach(b=>b.onclick=async()=>{
+    const it=ideas.find(x=>x.id===b.dataset.aitip); if(!it)return;
+    b.textContent='💭 ШІ думає…'; b.disabled=true;
+    try{
+      const tip=await aiClothTip(it);
+      if(tip) it.aiTip=tip; saveJSON('wed-ideas',ideas);
+    }catch(e){ console.warn('aiClothTip',e); showToast('Не вдалось отримати пораду 😕 '+aiErr(e)); }
+    renderIdeaDetail();
   });
   panel.querySelectorAll('[data-pid]').forEach(inp=>inp.onchange=()=>{
     const it=ideas.find(x=>x.id===inp.dataset.pid); if(!it)return;
@@ -4170,6 +4182,17 @@ async function aiText(parts){
   const model=getGenerativeModel(ai,{model:'gemini-2.5-flash'});
   const resp=await model.generateContent(parts);
   try{ return resp.response.text()||''; }catch(e){ return ''; }
+}
+// коротка ШІ-порада на картці одягу: чи пасує погоді дня весілля, який декор личить у тон,
+// і як зробити щось схоже своїми руками (де доречно) — кешується в it.aiTip
+async function aiClothTip(it){
+  const gt=gtypeText(it).trim();
+  const weather=weatherSummaryText();
+  const src=it.cleanImg||it.img;
+  const part=src?await srcToPart(src):null;
+  const prompt=`Це фото елемента весільного вбрання (одяг/аксесуар)${gt?', '+gt:''}. Погода в день весілля: ${weather}. Дай КОРОТКУ пораду у 2-3 реченнях суцільним текстом, без списку й вступів: 1) чи добре ця річ пасує до такої погоди і чому; 2) яка ідея декору (колір/стиль/квіти) добре поєдналася б із цією річчю; 3) якщо доречно для невеликого аксесуара чи деталі — коротка підказка як зробити щось схоже своїми руками, інакше просто пропусти цей пункт. Українською, дружньо і стисло.`;
+  const parts=part?[prompt,part]:[prompt];
+  return (await aiText(parts)).trim();
 }
 async function aiExtractGarment(it){
   const src=it.img;
@@ -6219,6 +6242,7 @@ function wxCode(c){
     95:['⛈','гроза'],96:['⛈','гроза з градом'],99:['⛈','гроза з градом']};
   return m[c]||['🌡',''];
 }
+let _wxCache=null;   // {mx,mn,lbl} — реальний прогноз, якщо вдалось отримати (кешуємо для ШІ-порад нижче)
 async function loadWeather(){
   const el=document.getElementById('heroWeather'); if(!el) return;
   const seasonal=`<span class="hw-ico">🌤</span><span>у Києві на початку вересня зазвичай <span class="hw-temp">≈ +21° вдень / +11° вночі</span></span><span class="hw-note">точний прогноз на 6 вересня зʼявиться ближче до дати ⛅</span>`;
@@ -6229,10 +6253,17 @@ async function loadWeather(){
     if(!d||!d.time||!d.time.length) throw new Error('no data');
     const [ico,lbl]=wxCode(d.weather_code[0]);
     const mx=Math.round(d.temperature_2m_max[0]), mn=Math.round(d.temperature_2m_min[0]);
+    _wxCache={mx,mn,lbl};
     el.innerHTML=`<span class="hw-ico">${ico}</span><span>Київ, 6 вересня: <span class="hw-temp">${wxFmtT(mx)} / ${wxFmtT(mn)}</span>${lbl?' · '+lbl:''}</span><span class="hw-note">прогноз погоди 🌦</span>`;
   }catch(e){ el.innerHTML=seasonal; }
 }
 loadWeather();
+// текстовий опис погоди дня весілля для ШІ-порад на картках одягу — реальний прогноз, якщо вже
+// підвантажився (loadWeather), інакше сезонна норма для Києва на початку вересня
+function weatherSummaryText(){
+  if(_wxCache) return `${wxFmtT(_wxCache.mx)} / ${wxFmtT(_wxCache.mn)}${_wxCache.lbl?', '+_wxCache.lbl:''}`;
+  return '≈ +21° вдень / +11° вночі (типова погода на початку вересня в Києві, точний прогноз ще не доступний)';
+}
 
 /* ════ SYNC + LOGIN ════ */
 let syncTimer=null;
