@@ -552,6 +552,9 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-fav-btn.on{opacity:1;background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
 .cloth-who-row{display:flex;flex-direction:column;gap:7px;margin-top:11px;align-items:flex-start;}
 .cloth-fabric-inp{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);}
+.shop-room-details{margin-top:9px;font-size:12.5px;}
+.shop-room-details summary{cursor:pointer;color:var(--terra);font-weight:600;}
+.shop-room-text{margin-top:6px;padding:8px 10px;background:var(--surface2);border-radius:9px;line-height:1.4;color:var(--text);}
 .idea-realtryon{display:flex;align-items:center;gap:9px;margin-top:11px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:7px 9px;}
 .idea-realtryon img{width:52px;height:52px;border-radius:8px;object-fit:cover;cursor:zoom-in;flex:0 0 auto;}
 .idea-realtryon-lbl{flex:1;font-size:12px;color:var(--text);font-weight:600;}
@@ -2749,6 +2752,8 @@ function renderIdeas(){
         <span class="badge who-${whoKey}" data-clothwho="${it.id}" role="button" tabindex="0" title="Тицьни, щоб змінити">${CLOTH_WHO[whoKey]}</span>
         ${whoKey==='maids'?`<input class="cloth-fabric-inp" data-fabric="${it.id}" value="${esc(it.fabric||'')}" placeholder="${fabricPlaceholder}">`:''}
       </div>`:'';
+    const shopInfo=isTry?SHOP_INFO[host]:null;
+    const shopRoomRow=shopInfo?`<details class="shop-room-details"><summary>🏬 Де поміряти — ${esc(shopInfo.name)}</summary><div class="shop-room-text">${shopInfo.room?esc(shopInfo.room):'Адреси шоуруму не знайшли — краще запитати напряму в Instagram.'}</div></details>`:'';
     const realTryonRow=(isTry&&it.realTryon)?`<div class="idea-realtryon"><img data-realview="${it.id}" src="${esc(it.realTryon)}" alt="" loading="lazy"><span class="idea-realtryon-lbl">📸 Твоє фото на мені</span><button class="idea-realtryon-x" data-realdel="${it.id}" aria-label="Видалити фото на мені">✕</button></div>`:'';
     const approveBtn=`<button class="idea-approve${it.approved?' on':''}" data-approve="${it.id}">${it.approved?'✓ Погоджено · в бюджеті':'✓ Погодити в бюджет'}</button>`;
     const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
@@ -2769,6 +2774,7 @@ function renderIdeas(){
         ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
         ${favRow}
         ${clothWhoRow}
+        ${shopRoomRow}
         ${realTryonRow}
         <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${comboBtn}${msgBtn}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
       </div>`;
@@ -3624,6 +3630,22 @@ function closeCrop(result){
 /* ── ПОГОДЖЕННЯ ОБРАЗУ → БЮДЖЕТ ── */
 const IDEA_BUDGET_CAT={her:'Вбрання',his:'Вбрання',rings:'Каблучки',idea:'Декор / Флористика',makeup:'Краса (візаж, зачіска)',hair:'Краса (візаж, зачіска)'};
 const IDEA_FALLBACK_EMOJI={rings:'💍',makeup:'💄',hair:'💇'};
+// адреси шоурумів магазинів вишиванок (з блоку "🏪 Магазини вишиванок" вище) — host сайту магазину
+// → чи можна приміряти наживо. room=null означає "адреси не знайшли", а не "немає шоуруму"
+const SHOP_INFO={
+  'svit-vyshyvanok.com.ua':{name:'Світ вишиванок',room:null,ig:'svitvyshyvanok'},
+  'vyshyta.com':{name:'Vyshyta',room:'вул. Коновальця, 229, 2 пов. (орієнтир — кафе Rebar), Київ. Лише за записом: +380 50 512 72 55 (Юлія)',ig:'vyshyta.ukraine'},
+  'specialbody21.com':{name:"Special Body 21 (SB'21)",room:null,ig:'special.body21'},
+  'malvy.store':{name:'Malvy (Мальви)',room:'вул. Ярославів Вал, 14а · вул. Жилянська, 54 · вул. Рейтарська, 21/13. Уточнюй модель заздалегідь: +380 68 858 08 97',ig:'malvy.ua'},
+  'katrya.com.ua':{name:'Katrya (Катря)',room:'Шоурум «Українські сенси»: вул. Софіївська, 6, центр Києва (95% асортименту наявно). Також вул. Костьольна, 5, кв. 3, +38 044 334 69 17',ig:'katrya.com.ua'},
+  'serpen.store':{name:'Serpen (Серпень)',room:null,ig:'serpen.brand'},
+  'faina-vishivanka.com':{name:'Файна Вишиванка',room:null,ig:'faina.vishivanka'},
+  'new.faina-vishivanka.com':{name:'Файна Вишиванка',room:null,ig:'faina.vishivanka'},
+  'hrushenka.com':{name:'Hrushenka (Грушенька)',room:null,ig:'hrushenka.ua'},
+  'etnodim.com':{name:'Etnodim (Етнодім)',room:'вул. Верхній Вал, 58 (Поділ), Київ, щодня 10:00–20:00. +380 97 888 92 92',ig:'etnodim'},
+  'svarga.ua':{name:'SVARGA (Сварга)',room:'ТРЦ Respublika Park, 2 пов. (Простір українських брендів, вхід 4) · ТРЦ Gulliver, 3 пов. (щодня 10:00–22:00)',ig:'svarga_ua'},
+  'guniaproject.com.ua':{name:'Gunia Project',room:'вул. Золотоворітська, 2А (пн–сб 10:00–20:00, нд 11:00–20:00) · вул. Антоновича, 4/6 · вул. Вірменська, 4',ig:'gunia_project'},
+};
 const FAV_ROLES=[{k:'her',ic:'👰',lbl:'Катя'},{k:'his',ic:'🤵',lbl:'Дмитро'},{k:'maid',ic:'💃',lbl:'Дружка'}];
 const CLOTH_WHO={me:'🙋 Купуємо готове',maids:'👯 Робить дружка',vendor:'🧑‍🔧 Кравець/майстер'};
 const CLOTH_WHO_ORDER=['me','maids','vendor'];
