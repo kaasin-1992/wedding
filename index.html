@@ -91,7 +91,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* неінтерактивна підпис-розділювач між логічними групами вкладок — щоб довга стрічка з 19
    розділів читалась як кілька осмислених блоків, а не суцільна стіна. Не має класу .tab-btn,
    тож TAB_ORDER/навігація автоматично її ігнорують. */
-.tabs-group-lbl{flex:0 0 auto;align-self:center;margin:6px 2px 0 8px;padding-left:8px;border-left:1px solid var(--line);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap;}
+.tabs-group-lbl{flex:0 0 auto;align-self:center;margin:6px 2px 0 8px;padding:3px 9px;border-left:2px solid var(--terra);border-radius:999px;background:var(--surface2);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text);white-space:nowrap;}
 
 /* PANEL */
 .panel{display:none;padding:24px 18px 0;}
@@ -2633,7 +2633,7 @@ async function fetchPreview(url){
   }
   // нема картинки товару/посту — пробуємо скрін самої сторінки
   if(!img){
-    const s=await microlink(url,'&screenshot=true');
+    const s=await microlink(url,'&screenshot=true&waitUntil=networkidle0&waitFor=2500');
     if(s&&s.screenshot&&s.screenshot.url){ img=s.screenshot.url; cands.push(s.screenshot.url); }
     if(s&&!title&&s.title) title=s.title;
   }
@@ -2787,11 +2787,16 @@ function renderIdeas(){
     const it=ideas.find(x=>x.id===b.dataset.combo); if(!it||!it.url)return;
     const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
     const res=await screenshotAndReadInfo(it.url);
-    b.textContent=old; b.disabled=false;
-    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    if(!res){ b.textContent=old; b.disabled=false; showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
     it.img=res.img;
     if(res.title && !it.title) it.title=res.title;
     if(res.price && !it.price) it.price=res.price;
+    // для одягу — одразу вирізаємо сам предмет зі скріна, щоб на картці не висів сирий скрін сторінки
+    if(it.cat==='her'||it.cat==='his'){
+      b.textContent='✂️ Вирізаю одяг…';
+      const cut=await ensureCleanGarment(it);
+      if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
+    }
     saveJSON('wed-ideas',ideas); renderIdeas();
     showToast('📸 Скрін і інфо додано');
   });
@@ -3041,7 +3046,7 @@ document.getElementById('imgPick').addEventListener('click',e=>{ if(e.target.id=
 document.getElementById('imgPickShot').onclick=async()=>{
   const it=ideas.find(x=>x.id===_pickId); if(!it||!it.url) return;
   const btn=document.getElementById('imgPickShot'); const old=btn.textContent; btn.textContent='📸 Роблю скрін…'; btn.disabled=true;
-  const s=await microlink(it.url,'&screenshot=true&meta=false',22000);
+  const s=await microlink(it.url,'&screenshot=true&meta=false&waitUntil=networkidle0&waitFor=2500',22000);
   const url=s&&s.screenshot&&s.screenshot.url;
   if(!url){ btn.textContent=old; btn.disabled=false; showToast('Скрін не вдався 😕 спробуй ще раз або 📁 завантаж фото товару вручну'); return; }
   // одразу вбудовуємо як data:-фото, щоб скрін не зник і ШІ зміг його прочитати
@@ -3174,7 +3179,7 @@ function renderBasePhotos(){
     const mc=document.getElementById(mid); if(!mc) return;
     const hasPhoto=photos[who]||photosFull[who];
     if(manqBusy[who]) mc.innerHTML='<span class="bp-manq-info">🧍 роблю манекен…</span>';
-    else if(mannequin[who]) mc.innerHTML=`<button class="bp-manq-btn" data-manqview="${who}">🧍 глянути манекен</button> <button class="bp-manq-btn" data-manq="${who}" title="Згенерувати заново">↻</button>`;
+    else if(mannequin[who]) mc.innerHTML=`<button class="bp-manq-btn" data-manqview="${who}">🧍 глянути манекен</button> <button class="bp-manq-btn" data-manq="${who}" title="Згенерувати заново">↻</button> <button class="bp-manq-btn" data-manqdel="${who}" title="Прибрати цей манекен">🗑</button>`;
     else if(hasPhoto) mc.innerHTML=`<button class="bp-manq-btn" data-manq="${who}">🧍 зробити манекен</button>`;
     else mc.innerHTML='';
     const fc=document.getElementById('bpFull'+(who==='her'?'Her':'His'));
@@ -3182,6 +3187,10 @@ function renderBasePhotos(){
   });
   document.querySelectorAll('[data-manq]').forEach(b=>b.onclick=()=>aiMakeMannequin(b.dataset.manq));
   document.querySelectorAll('[data-manqview]').forEach(b=>b.onclick=()=>{ const w=b.dataset.manqview; showImgBig(mannequin[w], '🧍 Манекен — основа для примірки'); });
+  document.querySelectorAll('[data-manqdel]').forEach(b=>b.onclick=()=>{
+    const who=b.dataset.manqdel; mannequin[who]=''; saveJSON('wed-mannequin',mannequin); renderBasePhotos(); renderCouple();
+    showToast('🗑 Манекен прибрано');
+  });
   document.querySelectorAll('[data-fulldel]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.fulldel; photosFull[who]=''; saveJSON('wed-photos-full',photosFull); renderBasePhotos();
   });
@@ -3714,7 +3723,7 @@ function parseReadInfo(text){
 // один готовий флоу для карток декору/торта/готелю/натхнення: скрін сторінки + ШІ читає з нього
 // назву й ціну — одна кнопка замість "додай фото" + "впиши ціну вручну" по черзі
 async function screenshotAndReadInfo(url){
-  const s=await microlink(url,'&screenshot=true&meta=false',22000);
+  const s=await microlink(url,'&screenshot=true&meta=false&waitUntil=networkidle0&waitFor=2500',22000);
   const shotUrl=s&&s.screenshot&&s.screenshot.url;
   if(!shotUrl) return null;
   let du=await srcToDataUrl(shotUrl);
@@ -5308,7 +5317,7 @@ function renderMusic(){
   listEl.querySelectorAll('[data-mshot]').forEach(b=>b.onclick=async()=>{
     const m=music.find(x=>x.id===b.dataset.mshot); if(!m||!m.url)return;
     const old=b.textContent; b.textContent='📸 Роблю скрін…'; b.disabled=true;
-    const s=await microlink(m.url,'&screenshot=true&meta=false',22000);
+    const s=await microlink(m.url,'&screenshot=true&meta=false&waitUntil=networkidle0&waitFor=2500',22000);
     const url=s&&s.screenshot&&s.screenshot.url;
     if(!url){ b.textContent=old; b.disabled=false; showToast('Скрін не вдався 😕 спробуй ще раз'); return; }
     let du=await srcToDataUrl(url);
