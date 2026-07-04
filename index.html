@@ -389,13 +389,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 /* ── IDEAS / LINKS ── */
 .couple-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;margin-bottom:14px;position:sticky;top:var(--tabsh,48px);z-index:9;transition:padding .2s,background .2s,box-shadow .2s;box-shadow:var(--shadow-sm);}
-.couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;transition:.2s;}
+.couple-stage-title{font-family:var(--serif);font-size:15px;color:var(--text);text-align:center;margin-bottom:10px;transition:.2s;cursor:pointer;list-style:none;}
+.couple-stage-title::-webkit-details-marker{display:none;}
 .couple-stage-row{display:flex;gap:10px;}
 .couple-slot{flex:1;min-width:0;aspect-ratio:3/5;border-radius:12px;overflow:hidden;background:var(--surface2);border:1.5px solid var(--line);position:relative;display:flex;align-items:center;justify-content:center;transition:height .2s;}
 /* приколота (закріплена) версія — фото лишається ПОВНОГО постійного розміру (щоб нормально бачити одяг),
-   стискаємо лише заголовок і підказку, які не несуть картинки */
+   стискаємо лише підказку, яка не несе картинки (заголовок лишається — це тепер і кнопка згортання) */
 .couple-stage.cs-stuck{padding:8px 10px 10px;box-shadow:var(--shadow-md);border-radius:0 0 14px 14px;background:var(--glass-bg);backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);}
-.couple-stage.cs-stuck .couple-stage-title,.couple-stage.cs-stuck .couple-stage-hint{display:none;}
+.couple-stage.cs-stuck .couple-stage-hint{display:none;}
 /* приколота панель — компромісний розмір: достатньо великий, щоб бачити одяг, але не займає весь екран */
 .couple-stage.cs-stuck .couple-slot{aspect-ratio:auto;height:min(34vh,190px);}
 /* у приколотому стані фото/колаж має ЗМЕНШУВАТИСЬ повністю (як міні-плеєр відео), а не обрізатись
@@ -1427,14 +1428,14 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </details>
   </div>
   <div id="csSentinel" style="height:1px"></div>
-  <div class="couple-stage" id="coupleStage">
-    <div class="couple-stage-title">🪄 Примірка пари</div>
+  <details class="couple-stage" id="coupleStage">
+    <summary class="couple-stage-title">🪄 Примірка пари</summary>
     <div class="couple-stage-row">
       <div class="couple-slot" id="csHer"></div>
       <div class="couple-slot" id="csHis"></div>
     </div>
     <div class="couple-stage-hint" id="csHint"></div>
-  </div>
+  </details>
   <div class="base-photos" id="basePhotos">
     <div class="base-photo" data-who="her">
       <div class="base-photo-frame" id="bpHerFrame"></div>
