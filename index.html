@@ -3036,9 +3036,14 @@ function downscaleSrc(src, maxSide, cb, q){
   img.onerror=()=>cb(null);
   img.src=src;
 }
-// обрізає порожні білі поля навколо предмета одягу до самого силуету (як у вирізаної паперової ляльки),
-// щоб у колажі річ займала весь відведений їй якір, а не малу частку через зайвий "запас" довкола на фото.
-function trimWhiteMargin(src, cb){
+// перетворює хромакей-зелений фон (яким ми просимо ШІ намалювати предмет) на СПРАВЖНЮ
+// прозорість (альфа-канал), а не просто обрізає прямокутник — інакше в колажі/мудборді річ
+// завжди лишається білим/кольоровим прямокутником, а не силуетом як у вирізаної паперової
+// ляльки. Обов'язково PNG, не JPEG — інакше прозорість технічно неможлива форматом файлу.
+// Зелений (а не білий) фон навмисно: білий фон незастосовний для білих/кремових весільних
+// суконь — не було б способу відрізнити "фон" від "тканина", зелений колір практично ніколи не
+// зустрічається в одязі, тож працює для будь-якого кольору речі, включно з білим.
+function cutoutOnChromaKey(src, cb){
   const img=new Image();
   img.onload=()=>{
     const w=img.naturalWidth, h=img.naturalHeight;
@@ -3046,25 +3051,28 @@ function trimWhiteMargin(src, cb){
     const c=document.createElement('canvas'); c.width=w; c.height=h;
     const ctx=c.getContext('2d'); ctx.drawImage(img,0,0);
     let data;
-    try{ data=ctx.getImageData(0,0,w,h).data; }catch(e){ cb(null); return; }
-    const isBg=(i)=>{ const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3]; return a<10 || (r>240&&g>240&&b>240); };
+    try{ data=ctx.getImageData(0,0,w,h); }catch(e){ cb(null); return; }
+    const px=data.data;
+    // зелений домінує над і червоним, і синім — толерантно до відтінків/освітлення хромакею,
+    // але не чіпає реальні кольори одягу (навіть зелений одяг рідко настільки "чисто" зелений)
+    const isGreen=(r,g,b)=> g>80 && g>r*1.22 && g>b*1.22;
     let minX=w,minY=h,maxX=-1,maxY=-1;
-    const step=2;   // пропускаємо пікселі — для швидкості на великих фото
-    for(let y=0;y<h;y+=step){
-      for(let x=0;x<w;x+=step){
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
         const i=(y*w+x)*4;
-        if(!isBg(i)){ if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }
+        if(isGreen(px[i],px[i+1],px[i+2])){ px[i+3]=0; }
+        else{ if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }
       }
     }
-    if(maxX<0 || maxX-minX<w*0.08 || maxY-minY<h*0.08){ cb(null); return; }   // нічого путнього не знайшли
-    const pad=Math.round(Math.max(w,h)*0.035);
+    if(maxX<0 || maxX-minX<w*0.05 || maxY-minY<h*0.05){ cb(null); return; }   // нічого путнього не знайшли
+    const pad=Math.round(Math.max(w,h)*0.03);
     minX=Math.max(0,minX-pad); minY=Math.max(0,minY-pad);
     maxX=Math.min(w,maxX+pad); maxY=Math.min(h,maxY+pad);
     const cw=maxX-minX, ch=maxY-minY;
-    if(cw>=w*0.97 && ch>=h*0.97){ cb(null); return; }   // майже без полів — не варто перекодовувати
+    ctx.putImageData(data,0,0);
     const c2=document.createElement('canvas'); c2.width=cw; c2.height=ch;
     c2.getContext('2d').drawImage(c,minX,minY,cw,ch,0,0,cw,ch);
-    try{ cb(c2.toDataURL('image/jpeg',0.85)); }catch(e){ cb(null); }
+    try{ cb(c2.toDataURL('image/png')); }catch(e){ cb(null); }
   };
   img.onerror=()=>cb(null);
   img.src=src;
@@ -3693,7 +3701,11 @@ async function aiAnchorFace(resultDataUrl, who){
 }
 // Виокремлює САМ предмет одягу з «брудного» скріна (модель/сайт/фон) на чистий білий фон.
 // Кешуємо в it.cleanImg, щоб робити це лише раз на річ. На невдачі — повертаємо оригінал.
-function garmentSig(s){ s=String(s||''); return s.length+':'+s.slice(0,24); }
+// v2: змінили пайплайн довирізання з "білий фон + обрізка" на справжній хромакей із прозорістю
+// (див. cutoutOnChromaKey) — префікс версії гарантує, що ВСІ старі закешовані cleanImg (зроблені
+// ще по-старому, білим прямокутником без прозорості) автоматично вважаються недійсними й
+// перегенеруються по-новому, без окремої міграції даних.
+function garmentSig(s){ s=String(s||''); return 'v2:'+s.length+':'+s.slice(0,24); }
 async function ensureCleanGarment(it){
   const sig=garmentSig(it.img);
   if(it.cleanImg && /^data:/.test(it.cleanImg) && it.cleanFor===sig) return it.cleanImg;   // кеш дійсний лише для поточного фото
@@ -3704,12 +3716,16 @@ async function ensureCleanGarment(it){
     const g=(it.gtype||'').trim();
     const gline=g&&g!=='образ цілком'?` Це саме ${g} — виокрем лише його.`:'';
     showToast('Чищу фото одягу зі скріна… ✂️');
-    const clean=await aiGenerate([`На зображенні — фото/скрін товару (одяг або аксесуар), найімовірніше на моделі, з фоном, інтерфейсом сайту, текстом і цінниками.${gline} Виокрем РІВНО сам предмет одягу і покажи його ОДИН на чистому БІЛОМУ однотонному фоні: без людини, без обличчя, без рук, без манекена, без сторонніх предметів, без тексту й цінників, без рамок інтерфейсу. Точно збережи колір, тканину, візерунок, крій, довжину й усі деталі саме цього предмета. Чисте студійне предметне фото, рівне м'яке освітлення, без тіней від інших обʼєктів.`, dataUrlToPart(du)]);
+    // просимо ЗЕЛЕНИЙ (хромакей), а не білий фон — білий незастосовний для білих/кремових
+    // весільних суконь: не було б способу відрізнити фон від тканини. Зелений практично ніколи
+    // не зустрічається в одязі, тож cutoutOnChromaKey нижче може дати СПРАВЖНЮ прозорість
+    // (силует, як у вирізаної паперової ляльки), а не просто прямокутник на білому тлі.
+    const clean=await aiGenerate([`На зображенні — фото/скрін товару (одяг або аксесуар), найімовірніше на моделі, з фоном, інтерфейсом сайту, текстом і цінниками.${gline} Виокрем РІВНО сам предмет одягу і покажи його ОДИН на суцільному яскраво-зеленому фоні (хромакей / green screen, як для відеомонтажу): без людини, без обличчя, без рук, без манекена, без сторонніх предметів, без тексту й цінників, без рамок інтерфейсу. Точно збережи колір, тканину, візерунок, крій, довжину й усі деталі саме цього предмета — НЕ роби сам предмет зеленим, зеленим має бути ЛИШЕ фон навколо нього. Чисте студійне предметне фото, рівне м'яке освітлення, без тіней від інших обʼєктів.`, dataUrlToPart(du)]);
     if(clean){
-      const small=await new Promise(ok=>downscaleSrc(clean,768,r=>ok(r||clean),0.82));
-      const trimmed=await new Promise(ok=>trimWhiteMargin(small,r=>ok(r||small)));
+      const small=await new Promise(ok=>downscaleSrc(clean,768,r=>ok(r||clean),0.92));
+      const cutout=await new Promise(ok=>cutoutOnChromaKey(small,r=>ok(r||small)));
       const cur=ideas.find(x=>x.id===it.id)||it;
-      cur.cleanImg=trimmed; cur.cleanFor=sig; saveJSON('wed-ideas',ideas);
+      cur.cleanImg=cutout; cur.cleanFor=sig; saveJSON('wed-ideas',ideas);
       return cur.cleanImg;
     }
   }catch(e){ console.warn('ensureCleanGarment',e); }
