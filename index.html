@@ -519,6 +519,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-price-inp::placeholder{color:var(--muted);font-weight:400;}
 .idea-body{padding:13px 15px;}
 .idea-loading{font-size:12.5px;color:var(--muted);font-style:italic;margin-bottom:6px;}
+.photo-missing-hint{font-size:12px;color:var(--terra);background:var(--terra-dim);border-radius:8px;padding:6px 10px;margin-bottom:6px;}
 .idea-title{font-size:14.5px;font-weight:600;line-height:1.32;word-break:break-word;}
 .idea-host{font-size:11px;color:var(--terra);margin-top:4px;letter-spacing:.02em;}
 .idea-desc{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.45;}
@@ -2666,6 +2667,7 @@ function renderIdeas(){
     const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
     const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
     const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
+    const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
     const card=document.createElement('div'); card.className='idea-card idea-row'+(it.approved?' approved':'')+(it.bought?' bought':'');
     card.innerHTML=`
       <button class="del-x" data-idel="${it.id}" aria-label="Видалити">✕</button>
@@ -2680,7 +2682,7 @@ function renderIdeas(){
         ${favRow}
         ${clothWhoRow}
         ${realTryonRow}
-        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
+        <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${comboBtn}${pickBtn}${photoBtn}${aiBtns}${approveBtn}${boughtBtn}</div>
       </div>`;
     listEl.appendChild(card);
   });
@@ -2735,6 +2737,18 @@ function renderIdeas(){
   });
   listEl.querySelectorAll('[data-pickimg]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.pickimg); if(it) openImgPicker(it);
+  });
+  listEl.querySelectorAll('[data-combo]').forEach(b=>b.onclick=async()=>{
+    const it=ideas.find(x=>x.id===b.dataset.combo); if(!it||!it.url)return;
+    const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
+    const res=await screenshotAndReadInfo(it.url);
+    b.textContent=old; b.disabled=false;
+    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    it.img=res.img;
+    if(res.title && !it.title) it.title=res.title;
+    if(res.price && !it.price) it.price=res.price;
+    saveJSON('wed-ideas',ideas); renderIdeas();
+    showToast('📸 Скрін і інфо додано');
   });
   listEl.querySelectorAll('[data-realphoto]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realphoto); if(!it) return;
@@ -3629,6 +3643,47 @@ async function aiGenerate(parts){
 function dataUrlToPart(dataUrl){
   const m=/^data:([^;]+);base64,(.*)$/s.exec(dataUrl||'');
   return m ? {inlineData:{mimeType:m[1],data:m[2]}} : null;
+}
+// читає зображення (скрін сторінки) і повертає ТЕКСТОВУ відповідь ШІ (а не картинку) — для
+// витягування назви/ціни зі скріна, коли автоматичний парсинг посилання (fetchPreview) не спрацював
+async function aiReadInfo(parts){
+  const {ai,getGenerativeModel,ResponseModality}=await aiCore();
+  let lastErr=null;
+  for(const name of AI_MODELS){
+    try{
+      const model=getGenerativeModel(ai,{model:name,generationConfig:{responseModalities:[ResponseModality.TEXT]}});
+      const resp=await model.generateContent(parts);
+      const text=resp.response.text();
+      if(text) return text.trim();
+      lastErr=new Error('Модель '+name+' не повернула текст');
+    }catch(e){ lastErr=e; console.warn('aiReadInfo model '+name+' failed',e); }
+  }
+  throw lastErr||new Error('no text');
+}
+// парсить відповідь aiReadInfo у форматі "Назва: ...\nЦіна: ..." → {title,price}
+function parseReadInfo(text){
+  const mTitle=/Назва:\s*(.+)/i.exec(text||''); const mPrice=/Ціна:\s*(.+)/i.exec(text||'');
+  const clean=s=>{ s=(s||'').trim(); return /не\s*знайдено/i.test(s)?'':s; };
+  return { title: clean(mTitle&&mTitle[1]), price: clean(mPrice&&mPrice[1]) };
+}
+// один готовий флоу для карток декору/торта/готелю/натхнення: скрін сторінки + ШІ читає з нього
+// назву й ціну — одна кнопка замість "додай фото" + "впиши ціну вручну" по черзі
+async function screenshotAndReadInfo(url){
+  const s=await microlink(url,'&screenshot=true&meta=false',22000);
+  const shotUrl=s&&s.screenshot&&s.screenshot.url;
+  if(!shotUrl) return null;
+  let du=await srcToDataUrl(shotUrl);
+  if(du) du=await new Promise(ok=>downscaleSrc(du,1024,r=>ok(r||du),0.85));
+  const img=du||shotUrl;
+  let info={title:'',price:''};
+  try{
+    const part=dataUrlToPart(du||'');
+    if(part){
+      const text=await aiReadInfo([`На цьому скріні сторінки товару знайди НАЗВУ товару і ЦІНУ (число, з валютою якщо вказана). Дай відповідь РІВНО у форматі двох рядків, без нічого зайвого:\nНазва: <назва або "не знайдено">\nЦіна: <число або "не знайдено">`, part]);
+      info=parseReadInfo(text);
+    }
+  }catch(e){ console.warn('screenshotAndReadInfo',e); }
+  return { img, title: info.title, price: info.price };
 }
 async function urlToPart(url){
   try{
@@ -4575,12 +4630,16 @@ function renderHotels(){
     const pn=parseMoney(h.pricePerNight), sur=parseMoney(h.surcharge);
     const total=(pn?pn*(nights||1):0)+(sur||0);
     const totalBadge=(pn||sur)?`<span class="badge">💰 разом ≈ ${fmtUAH(total)} грн${nights?` · ${nights} ноч.`:(pn?' / ніч':'')}</span>`:'';
+    const noImgHint=(!h.img && !h.loading)?`<div class="photo-missing-hint">📷 ${h.url?'Фото не підтягнулось автоматично':'Фото ще нема'}</div>`:'';
+    const photoBtn=(!h.img && !pn && h.url && !h.loading)
+      ? `<button class="idea-photo-btn" data-hcombo="${h.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸✨ Скрін + ШІ-інфо</button>`
+      : `<button class="idea-photo-btn" data-hphoto="${h.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${h.img?'Змінити фото':'Додати фото'}</button>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-hdel="${h.id}" aria-label="Видалити готель">✕</button>
       ${h.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
-        ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':''}
+        ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':noImgHint}
         <div class="idea-title">${esc(h.title||h.url||'Готель')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${h.desc?`<div class="idea-desc">${esc(h.desc)}</div>`:''}
@@ -4588,7 +4647,7 @@ function renderHotels(){
           <label class="hotel-pl">🛏 за ніч<input class="hotel-pinp" data-hpn="${h.id}" inputmode="numeric" value="${esc(h.pricePerNight||'')}" placeholder="грн"></label>
           <label class="hotel-pl">➕ доплата<input class="hotel-pinp" data-hsur="${h.id}" value="${esc(h.surcharge||'')}" placeholder="грн / опис"></label>
         </div>
-        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span></div>
+        <div class="hotel-meta">${dates}${who}${totalBadge}<span class="badge hotel-status ${h.booked?'booked':''}" data-hbook="${h.id}">${h.booked?'✅ Заброньовано':'🔍 Розглядаємо'}</span>${photoBtn}</div>
         ${h.note?`<div class="idea-note">${esc(h.note)}</div>`:''}
         ${h.url?`<div class="idea-actions"><a class="idea-open" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
@@ -4596,6 +4655,28 @@ function renderHotels(){
   });
   listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>{
     delUndo('wed-hotels',b.dataset.hdel,'Готель видалено');
+  });
+  listEl.querySelectorAll('[data-hphoto]').forEach(b=>b.onclick=()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hphoto); if(!h)return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        h.img=data; saveJSON('wed-hotels',hotels); renderHotels();
+        showToast('📸 Фото додано');
+      },0.85);
+    });
+  });
+  listEl.querySelectorAll('[data-hcombo]').forEach(b=>b.onclick=async()=>{
+    const h=hotels.find(x=>x.id===b.dataset.hcombo); if(!h||!h.url)return;
+    const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
+    const res=await screenshotAndReadInfo(h.url);
+    b.textContent=old; b.disabled=false;
+    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    h.img=res.img;
+    if(res.title && !h.title) h.title=res.title;
+    if(res.price && !h.pricePerNight) h.pricePerNight=res.price;
+    saveJSON('wed-hotels',hotels); renderHotels();
+    showToast('📸 Скрін і інфо додано');
   });
   listEl.querySelectorAll('[data-hbook]').forEach(b=>b.onclick=()=>{
     const h=hotels.find(x=>x.id===b.dataset.hbook); if(!h)return;
@@ -4736,17 +4817,21 @@ function renderDecor(){
         ${vis.sofia?`<div class="decor-vis-thumb" data-dvisview="${d.id}:sofia"><img src="${esc(vis.sofia)}" alt=""><span class="dv-lbl">Софі</span></div>`:''}
         ${vis.wave?`<div class="decor-vis-thumb" data-dvisview="${d.id}:wave"><img src="${esc(vis.wave)}" alt=""><span class="dv-lbl">Хвильовий</span></div>`:''}
       </div>`:'';
+    const noImgHint=(!d.img && !d.loading)?`<div class="photo-missing-hint">📷 ${d.url?'Фото не підтягнулось автоматично':'Фото ще нема'}</div>`:'';
+    const photoBtn=(!d.img && !price && d.url && !d.loading)
+      ? `<button class="idea-photo-btn" data-dcombo="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸✨ Скрін + ШІ-інфо</button>`
+      : `<button class="idea-photo-btn" data-dphoto="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${d.img?'Змінити фото':'Додати фото'}</button>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-ddel="${d.id}" aria-label="Видалити декор">✕</button>
       ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
-        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
+        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:noImgHint}
         <div class="idea-title" data-dtitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Декор')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
-        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span></div>
+        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
         <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
         ${visBtns}${visThumbs}
@@ -4754,6 +4839,28 @@ function renderDecor(){
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ddel,'Декор видалено'));
+  listEl.querySelectorAll('[data-dphoto]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.dphoto); if(!d)return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        d.img=data; saveJSON('wed-decor',decor); renderDecor();
+        showToast('📸 Фото додано');
+      },0.85);
+    });
+  });
+  listEl.querySelectorAll('[data-dcombo]').forEach(b=>b.onclick=async()=>{
+    const d=decor.find(x=>x.id===b.dataset.dcombo); if(!d||!d.url)return;
+    const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
+    const res=await screenshotAndReadInfo(d.url);
+    b.textContent=old; b.disabled=false;
+    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    d.img=res.img;
+    if(res.title && !d.title) d.title=res.title;
+    if(res.price && !d.price) d.price=res.price;
+    saveJSON('wed-decor',decor); renderDecor();
+    showToast('📸 Скрін і інфо додано');
+  });
   listEl.querySelectorAll('[data-dtake]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dtake); if(!d)return;
     d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
@@ -4893,22 +5000,48 @@ function renderCake(){
     const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
     const whoKey=d.who||'me';
     const whoBadge=`<span class="badge who-${whoKey}" data-ckwho="${d.id}" role="button" tabindex="0" title="Тицьни, щоб змінити відповідального">${DECOR_WHO[whoKey]}</span>`;
+    const noImgHint=(!d.img && !d.loading)?`<div class="photo-missing-hint">📷 ${d.url?'Фото не підтягнулось автоматично':'Фото ще нема'}</div>`:'';
+    const photoBtn=(!d.img && !price && d.url && !d.loading)
+      ? `<button class="idea-photo-btn" data-ckcombo="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸✨ Скрін + ШІ-інфо</button>`
+      : `<button class="idea-photo-btn" data-ckphoto="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${d.img?'Змінити фото':'Додати фото'}</button>`;
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-ckdel="${d.id}" aria-label="Видалити ідею торта">✕</button>
       ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
       <div class="idea-body">
-        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
+        ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:noImgHint}
         <div class="idea-title" data-cktitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Торт')}</div>
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
-        <div class="hotel-meta">${priceBadge}${whoBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span></div>
+        <div class="hotel-meta">${priceBadge}${whoBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-cktake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span>${photoBtn}</div>
         <div class="idea-note" data-cknote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a></div>`:''}
       </div>`;
     listEl.appendChild(card);
   });
   listEl.querySelectorAll('[data-ckdel]').forEach(b=>b.onclick=()=>delUndo('wed-decor',b.dataset.ckdel,'Ідею торта видалено'));
+  listEl.querySelectorAll('[data-ckphoto]').forEach(b=>b.onclick=()=>{
+    const d=decor.find(x=>x.id===b.dataset.ckphoto); if(!d)return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        d.img=data; saveJSON('wed-decor',decor); renderCake();
+        showToast('📸 Фото додано');
+      },0.85);
+    });
+  });
+  listEl.querySelectorAll('[data-ckcombo]').forEach(b=>b.onclick=async()=>{
+    const d=decor.find(x=>x.id===b.dataset.ckcombo); if(!d||!d.url)return;
+    const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
+    const res=await screenshotAndReadInfo(d.url);
+    b.textContent=old; b.disabled=false;
+    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    d.img=res.img;
+    if(res.title && !d.title) d.title=res.title;
+    if(res.price && !d.price) d.price=res.price;
+    saveJSON('wed-decor',decor); renderCake();
+    showToast('📸 Скрін і інфо додано');
+  });
   listEl.querySelectorAll('[data-cktake]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.cktake); if(!d)return;
     d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
@@ -5205,20 +5338,47 @@ function renderInspo(){
     const host=hostOf(i.url);
     const img=i.img?`<img class="inspo-img" src="${esc(i.img)}" loading="lazy" alt="" data-inbig="${i.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`
                    :`<div class="inspo-img noimg">🖼</div>`;
+    const noImgHint=(!i.img && !i.loading && i.url)?`<div class="photo-missing-hint">📷 Фото не підтягнулось автоматично</div>`:'';
+    const photoBtn=(!i.img && i.url && !i.loading)
+      ? `<button class="idea-photo-btn" data-incombo="${i.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;margin-top:6px;">📸✨ Скрін + ШІ-інфо</button>`
+      : (!i.loading?`<button class="idea-photo-btn" data-inphoto="${i.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;margin-top:6px;">📷 ${i.img?'Змінити фото':'Додати фото'}</button>`:'');
     return `<div class="inspo-card" data-pid="${i.id}">
       <button class="del-x" data-indel="${i.id}" aria-label="Видалити">✕</button>
       ${i.loading?`<div class="idea-loading" style="margin:8px;">${i._ai?'🪄 ШІ малює…':'Підтягую…'}</div>`:img}
       <div class="inspo-body">
+        ${noImgHint}
         ${i.cat?`<span class="inspo-cat">${INSPO_ICON[i.cat]||''} ${esc(i.cat)}</span>`:''}
         ${i.title?`<div class="inspo-title">${esc(i.title)}</div>`:''}
         ${host?`<div class="inspo-host">${esc(host)}</div>`:''}
         ${i.note?`<div class="inspo-note">${esc(i.note)}</div>`:''}
         ${i.url?`<a class="inspo-open" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}
+        ${photoBtn}
       </div>
     </div>`;
   }).join('');
   grid.querySelectorAll('[data-inbig]').forEach(im=>{ const i=inspo.find(x=>x.id===im.dataset.inbig); if(i&&i.img) im.onclick=()=>showImgBig(i.img,i.title||''); });
   grid.querySelectorAll('[data-indel]').forEach(b=>b.onclick=()=>delUndo('wed-inspo',b.dataset.indel,'Ідею видалено'));
+  grid.querySelectorAll('[data-inphoto]').forEach(b=>b.onclick=()=>{
+    const i=inspo.find(x=>x.id===b.dataset.inphoto); if(!i)return;
+    pickImageFile(f=>{ if(!f) return;
+      loadPhotoFile(f,1024,data=>{
+        if(!data){ showToast('Не вдалося обробити фото'); return; }
+        i.img=data; saveJSON('wed-inspo',inspo); renderInspo();
+        showToast('📸 Фото додано');
+      },0.85);
+    });
+  });
+  grid.querySelectorAll('[data-incombo]').forEach(b=>b.onclick=async()=>{
+    const i=inspo.find(x=>x.id===b.dataset.incombo); if(!i||!i.url)return;
+    const old=b.textContent; b.textContent='🪄 ШІ читає скрін…'; b.disabled=true;
+    const res=await screenshotAndReadInfo(i.url);
+    b.textContent=old; b.disabled=false;
+    if(!res){ showToast('Не вдалось зробити скрін 😕 спробуй ще раз'); return; }
+    i.img=res.img;
+    if(res.title && !i.title) i.title=res.title;
+    saveJSON('wed-inspo',inspo); renderInspo();
+    showToast('📸 Скрін і інфо додано');
+  });
 }
 document.getElementById('addInspoBtn').onclick=async()=>{
   let url=val('inUrl');
