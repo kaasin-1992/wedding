@@ -2416,6 +2416,7 @@ function openTaskDeadlineEdit(id, el){
   inp.value=task.deadline?fmtDate(task.deadline):'';
   el.replaceWith(inp);
   inp.focus();
+  inp.select();
   let done=false;
   const commit=()=>{
     if(done) return; done=true;
