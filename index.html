@@ -2087,6 +2087,21 @@ function saveJSON(key, val){
           missingFromLocal.forEach(it=>val.push(it));   // val — той самий масив, що й жива змінна виклику
           try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after merge', key, e); }
         }
+        // захист від застарілої вкладки й на РІВНІ ПОЛІВ: попередній захист (вище) рятує лише
+        // елементи, яких немає локально — але якщо стала вкладка досі має елемент з давнішим
+        // значенням поля (напр. done застарілого завдання) і зберігає щось інше — вона мовчки
+        // перезаписує свіжішу зміну з іншого пристрою. Порівнюємо updatedAt лише коли воно є в
+        // ОБОХ версіях запису — інакше поведінка не змінюється (записи без цього поля як і раніше
+        // повністю довіряють локальній версії).
+        const cloudById=new Map(cloudArr.filter(it=>it&&it.id!=null).map(it=>[it.id,it]));
+        let staleFieldFixed=false;
+        val.forEach((it,idx)=>{
+          const cloudIt=cloudById.get(it.id);
+          if(cloudIt && typeof cloudIt.updatedAt==='number' && typeof it.updatedAt==='number' && cloudIt.updatedAt>it.updatedAt){
+            val[idx]=cloudIt; staleFieldFixed=true;
+          }
+        });
+        if(staleFieldFixed){ try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after stale-field fix', key, e); } }
         DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
            .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
       }).catch(e=>{
@@ -2379,7 +2394,7 @@ function renderTasks(){
     tl.appendChild(grp);
   });
 }
-function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; saveJSON('wed-tasks',tasks); renderTasks();} }
+function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; t.updatedAt=Date.now(); saveJSON('wed-tasks',tasks); renderTasks();} }
 // розпізнає "ДД.ММ", "ДД.ММ.РРРР" чи "ДД.ММ.РР" (рік необовʼязковий — весілля все одно 2026);
 // повертає ISO-рядок YYYY-MM-DD або null, якщо не вдалось розібрати чи рік явно абсурдний
 function parseTaskDeadlineInput(str){
