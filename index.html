@@ -671,6 +671,9 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-fav-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;opacity:.6;transition:.15s;}
 .idea-fav-btn .ffi{font-size:15px;}
 .idea-fav-btn.on{opacity:1;background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.dress-vote-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:9px;}
+.dress-vote-btn.on{opacity:1;background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+.dress-vote-count{font-size:12px;font-weight:600;color:var(--terra);}
 .cloth-who-row{display:flex;flex-direction:column;gap:7px;margin-top:11px;align-items:flex-start;}
 .cloth-fabric-inp{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);}
 .shop-room-details{margin-top:9px;font-size:12.5px;}
@@ -1983,10 +1986,11 @@ const firebaseConfig = {
   messagingSenderId: "87093437583",
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
-let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
+let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, DRESSVOTES=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
 // гостьовий перегляд: ?guest у посиланні → анонімний вхід, тільки читання + коментарі
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
+let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
 const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
@@ -1998,6 +2002,7 @@ try{
   DOC = WEDCOL.doc('state');
   COMMENTS = fdb.collection('comments');
   RSVPS = fdb.collection('rsvps');
+  DRESSVOTES = fdb.collection('dressVotes');
 }catch(e){ console.warn('firebase init', e); }
 if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
 
@@ -3199,6 +3204,13 @@ function ideaFieldsHTML(it){
   }
   const favs=it.favs||{};
   const favRow=isTry?`<div class="idea-fav-row">${FAV_ROLES.map(r=>`<button class="idea-fav-btn${favs[r.k]?' on':''}" data-fav="${it.id}" data-favrole="${r.k}" title="${esc(r.lbl)} — вподобати">${favs[r.k]?'⭐':'☆'} <span class="ffi">${r.ic}</span></button>`).join('')}</div>`:'';
+  // голоси дружок за сукні (лише для "Її" одягу) — окрема хмарна колекція, гості голосують за своїм лінком
+  const isDress=it.cat==='her';
+  const voteList=isDress?votesForIdea(it.id):[];
+  const votedHere=isDress&&hasVotedLocally(it.id);
+  const voteBtnHtml=(isDress&&IS_GUEST)?`<button class="idea-photo-btn dress-vote-btn${votedHere?' on':''}" data-dressvote="${it.id}" ${votedHere?'disabled':''}>${votedHere?'✓ Проголосовано':'🗳 Голосувати за цю сукню'}</button>`:'';
+  const voteCountHtml=(isDress&&voteList.length)?`<span class="dress-vote-count">🗳 ${voteList.length} ${plVotes(voteList.length)}${voteList.some(v=>v.name)?': '+esc(voteList.map(v=>v.name).filter(Boolean).join(', ')):''}</span>`:'';
+  const voteRow=(voteBtnHtml||voteCountHtml)?`<div class="dress-vote-row">${voteBtnHtml}${voteCountHtml}</div>`:'';
   const whoKey=it.who||'me';
   const fabricPlaceholder=it.cat==='rings'?'💍 Матеріал (напр. золото, срібло)':'🧵 Тканина (напр. атлас, льон)';
   const clothWhoRow=isMakeable?`<div class="cloth-who-row">
@@ -3223,7 +3235,7 @@ function ideaFieldsHTML(it){
   const extraPhotosRow=isTry?`<div class="idea-extra-photos">${extraImgsReal.map((src,i)=>
       `<div class="idea-extra-thumb"><img src="${esc(src)}" alt="" loading="lazy" data-extraview="${it.id}:${i}"><button class="idea-extra-x" data-extradel="${it.id}:${i}" aria-label="Видалити фото">✕</button></div>`
     ).join('')}</div>`:'';
-  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow,addPhotoBtn,extraPhotosRow};
+  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,voteRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow,addPhotoBtn,extraPhotosRow};
 }
 // річ одягу ще не має ані фото, ані чистого вирізаного варіанту — кандидат на масову обробку
 function clothNeedsProcessing(it){
@@ -3389,6 +3401,7 @@ function renderIdeaDetail(){
       <div class="idea-price-row"><span class="pl">💰</span><input class="idea-price-inp" data-pid="${it.id}" value="${esc(it.price||'')}" placeholder="додати ціну" aria-label="Ціна"></div>
       ${it.note?`<div class="idea-note">${esc(it.note)}</div>`:''}
       ${f.favRow}
+      ${f.voteRow}
       ${f.clothWhoRow}
       ${f.aiTipRow}
       ${f.shopRoomRow}
@@ -3435,6 +3448,18 @@ function wireIdeaDetailHandlers(panel){
     const role=b.dataset.favrole;
     it.favs=it.favs||{}; it.favs[role]=!it.favs[role];
     saveJSON('wed-ideas',ideas); refreshIdeaViews();
+  });
+  panel.querySelectorAll('[data-dressvote]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.dressvote;
+    if(hasVotedLocally(id)) return;
+    if(!DRESSVOTES){ showToast('Немає звʼязку з базою'); return; }
+    const name=(guestName||'').trim()||'Дружка';
+    const old=b.textContent; b.disabled=true; b.textContent='Надсилаю…';
+    DRESSVOTES.add({ideaId:id, name, ts:Date.now()}).then(()=>{
+      markVotedLocally(id);
+      showToast('🗳 Твій голос зараховано!');
+      refreshIdeaViews();
+    }).catch(e=>{ console.warn('dress vote add',e); showToast('Не вдалося проголосувати'); b.disabled=false; b.textContent=old; });
   });
   const cycleClothWho=(id)=>{
     const it=ideas.find(x=>x.id===id); if(!it)return;
@@ -7490,6 +7515,7 @@ if(auth){
       maybeSwipeHint();
       if(!cloudReady) startSync();
       if(!commentsBound) startCommentsSync();
+      if(!votesBound) startVotesSync();
       if(!rsvpBound) startRsvpSync();
     }else if(IS_GUEST){
       // гість — входимо анонімно (потрібно увімкнути Anonymous auth у Firebase)
@@ -7532,6 +7558,21 @@ function startCommentsSync(){
     if(cmtTab) renderCmtList();
   }, err=>{ console.warn('comments snapshot', err); });
 }
+/* ════ ГОЛОСИ ДРУЖОК ЗА СУКНІ ════
+   Окрема колекція 'dressVotes' (той самий патерн, що 'comments') — гість (дружка) додає документ
+   {ideaId, name, ts} через свій анонімний guest-логін; пара читає й бачить живий підрахунок голосів
+   на кожній сукні (it.cat==='her') у деталях ідеї. Ніхто, крім пари, не може видалити чужий голос. */
+function startVotesSync(){
+  if(!DRESSVOTES) return; votesBound=true;
+  DRESSVOTES.onSnapshot(snap=>{
+    dressVotes=snap.docs.map(d=>({_id:d.id, ...d.data()}));
+    refreshIdeaViews();
+  }, err=>{ console.warn('dressVotes snapshot', err); });
+}
+function votesForIdea(id){ return dressVotes.filter(v=>v.ideaId===id); }
+function plVotes(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'голосів'; if(b===1)return'голос'; if(b>=2&&b<=4)return'голоси'; return'голосів'; }
+function hasVotedLocally(id){ try{ return localStorage.getItem('wed-voted-'+id)==='1'; }catch(e){ return false; } }
+function markVotedLocally(id){ try{ localStorage.setItem('wed-voted-'+id,'1'); }catch(e){} }
 /* ════ RSVP-МІСТ ДЛЯ ЗОВНІШНЬОЇ ГРИ-ЗАПРОШЕННЯ ════
    Гра (окремий застосунок) пише в окрему колекцію 'rsvps' документи виду
    {guestId, response:'yes'|'no', plus1?:bool, alco?:bool, veg?:bool}.
@@ -7626,8 +7667,9 @@ injectCmtButtons();
     catch(e){ console.log(lines); showToast('Не вдалося скопіювати, список у консолі браузера'); }
   };
 })();
-// якщо гість уже залогінений (швидкий кеш) — підхопити коментарі
+// якщо гість уже залогінений (швидкий кеш) — підхопити коментарі й голоси за сукні
 if(IS_GUEST && auth && auth.currentUser && !commentsBound) startCommentsSync();
+if(IS_GUEST && auth && auth.currentUser && !votesBound) startVotesSync();
 
 /* ── ТЕМА (світла / вечірня / кольорова нокія) ── */
 const themeBtn=document.getElementById('themeBtn');
