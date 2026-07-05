@@ -1438,15 +1438,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </div>
   </details>
   </div>
-  <div id="csSentinel" style="height:1px"></div>
-  <details class="couple-stage" id="coupleStage">
-    <summary class="couple-stage-title">🪄 Примірка пари</summary>
-    <div class="couple-stage-row">
-      <div class="couple-slot" id="csHer"></div>
-      <div class="couple-slot" id="csHis"></div>
-    </div>
-    <div class="couple-stage-hint" id="csHint"></div>
-  </details>
   <div class="base-photos" id="basePhotos">
     <div class="base-photo" data-who="her">
       <div class="base-photo-frame" id="bpHerFrame"></div>
@@ -1498,7 +1489,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <button type="button" class="cam-shot" id="camShot">📸 Зняти</button>
     </div>
   </div>
-  <div class="section-hint">Постав свої фото → ШІ одразу зробить «манекен» у сірому базовому одязі, і вже на нього приміряється одяг із сайтів. Тоді на картках одягу зʼявиться 🪄 «Приміряти». Одяг можна додати й без посилання — напиши опис (напр. «шовкова сукня кольору шампань, міді») і тисни 🪄 «Уявити річ», ШІ намалює сам предмет, далі — 🪄 «Приміряти». У «Каблучки» та «Ідеї весілля» так само 🪄 «Уявити». Спершу обери розділ.</div>
   <div class="filters" id="ideaFilters">
     <button class="filt-btn active" data-i="her">👰 Вона</button>
     <button class="filt-btn" data-i="his">🤵 Він</button>
@@ -2973,20 +2963,12 @@ function ideaFieldsHTML(it){
   let aiBtns='';
   if(it.cat==='her'||it.cat==='his'){
     const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
-    const wearWho=it.cat==='his'?'his':'her';
-    const equippedSlot=equippedSlotFor(wearWho, it.id);
-    const wearBtn=equippedSlot
-      ? `<button class="idea-ai-btn on" data-unwear="${it.id}" data-unwearwho="${wearWho}" data-unwearslot="${esc(equippedSlot)}">✕ Зняти</button>`
-      : (it.gtype
-          ? `<button class="idea-ai-btn" data-wear="${it.id}">👕 Вдягнути (колаж)</button>`
-          : `<button class="idea-ai-btn" data-wear="${it.id}" disabled title="Спершу обери тип речі вище">👕 Вдягнути (колаж)</button>`);
     const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
-    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">🖼 ${it.realTryon?'Замінити фото':'Завантажити фото на мені'}</button>`
+    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">🖼 ${it.realTryon?'Замінити фото на мені':'Завантажити фото на мені'}</button>`
       +`<button class="idea-photo-btn" data-realai="${it.id}" ${it._ai?'disabled':''}>🤳✨ ${it.realTryon?'Перезняти й ШІ':'Зняти й ШІ вдягнути'}</button>`;
     aiBtns=gsel
       +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
-      +`<button class="idea-ai-btn" data-tryon="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.tryon?'Ще раз':'Приміряти'}</button>`
-      +wearBtn+swapBtn+realBtn;
+      +swapBtn+realBtn;
   }else{
     aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
   }
