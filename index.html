@@ -6931,7 +6931,7 @@ function shiftTab(dir){
 let _sx=0,_sy=0,_st=0,_swipe=false;
 document.addEventListener('touchstart',e=>{
   // .seat-chip/.crop-frame мають власне touch-action:none перетягування — не змішуємо зі свайпом вкладок
-  if(e.touches.length!==1 || e.target.closest('.tabs-bar, input, textarea, select, .seat-chip, .crop-frame, .moodboard-tile')){ _swipe=false; return; }
+  if(e.touches.length!==1 || e.target.closest('.tabs-bar, input, textarea, select, .seat-chip, .crop-frame, .moodboard-tile, .dc-presets')){ _swipe=false; return; }
   const t=e.touches[0]; _sx=t.clientX; _sy=t.clientY; _st=Date.now(); _swipe=true;
 },{passive:true});
 document.addEventListener('touchend',e=>{
