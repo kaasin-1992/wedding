@@ -1145,7 +1145,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <summary>＋ Додати завдання</summary>
       <div class="add-form">
         <input type="text" id="newTaskText" placeholder="Назва завдання…">
-        <input type="date" id="newTaskDate">
+        <input type="text" inputmode="numeric" id="newTaskDate" placeholder="Дедлайн ДД.ММ (необовʼязково)">
         <button class="submit-btn" id="addTaskBtn">Додати</button>
       </div>
     </details>
@@ -2365,6 +2365,9 @@ function openTaskDeadlineEdit(id, el){
     if(!v){ task.deadline=''; saveJSON('wed-tasks',tasks); renderTasks(); return; }
     const parsed=parseTaskDeadlineInput(v);
     if(!parsed){ showToast('Не розпізнав дату — формат ДД.ММ, напр. 17.06 🙂'); renderTasks(); return; }
+    // минула дата блокується лише якщо її СПРАВДІ міняють — старий (уже прострочений) дедлайн,
+    // який лишили без змін, і далі спокійно показується як прострочений, без нав'язливого тосту
+    if(parsed!==task.deadline && new Date(parsed)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); renderTasks(); return; }
     task.deadline=parsed; saveJSON('wed-tasks',tasks); renderTasks();
   };
   const cancel=()=>{
@@ -2379,7 +2382,15 @@ function openTaskDeadlineEdit(id, el){
 }
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
-  tasks.push({id:'u'+Date.now(),text,deadline:document.getElementById('newTaskDate').value||null,done:false});
+  const dlRaw=val('newTaskDate');
+  let deadline=null;
+  if(dlRaw){
+    const parsed=parseTaskDeadlineInput(dlRaw);
+    if(!parsed){ showToast('Не розпізнав дедлайн — формат ДД.ММ, напр. 17.06 🙂'); return; }
+    if(new Date(parsed)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); return; }
+    deadline=parsed;
+  }
+  tasks.push({id:'u'+Date.now(),text,deadline,done:false});
   document.getElementById('newTaskText').value=''; document.getElementById('newTaskDate').value='';
   saveJSON('wed-tasks',tasks); renderTasks();
 };
