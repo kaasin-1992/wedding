@@ -2328,12 +2328,23 @@ function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done;
 // розпізнає "ДД.ММ", "ДД.ММ.РРРР" чи "ДД.ММ.РР" (рік необовʼязковий — весілля все одно 2026);
 // повертає ISO-рядок YYYY-MM-DD або null, якщо не вдалось розібрати чи рік явно абсурдний
 function parseTaskDeadlineInput(str){
-  const parts=(str||'').trim().split(/[.\/\-\s]+/).filter(Boolean);
-  if(parts.length<2) return null;
-  const d=parseInt(parts[0],10), m=parseInt(parts[1],10);
+  const raw=(str||'').trim();
+  let d,m,y;
+  if(/^\d+$/.test(raw)){
+    // цифри без роздільника — типово на телефонах цифрова клавіатура (inputmode=numeric)
+    // не показує крапку взагалі, тож "17.06" ввести неможливо, а "1706" має спрацювати так само
+    if(raw.length===4){ d=+raw.slice(0,2); m=+raw.slice(2,4); y=2026; }
+    else if(raw.length===6){ d=+raw.slice(0,2); m=+raw.slice(2,4); y=2000+ +raw.slice(4,6); }
+    else if(raw.length===8){ d=+raw.slice(0,2); m=+raw.slice(2,4); y=+raw.slice(4,8); }
+    else return null;
+  }else{
+    const parts=raw.split(/[.\/\-\s]+/).filter(Boolean);
+    if(parts.length<2) return null;
+    d=parseInt(parts[0],10); m=parseInt(parts[1],10);
+    y=parts[2]?parseInt(parts[2],10):2026;
+    if(y<100) y+=2000;
+  }
   if(!d||!m||d<1||d>31||m<1||m>12) return null;
-  let y=parts[2]?parseInt(parts[2],10):2026;
-  if(y<100) y+=2000;
   if(y<2020||y>2100) return null;   // явно абсурдний рік (напр. "0002") — краще перепитати, ніж мовчки зберегти сміття
   return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
