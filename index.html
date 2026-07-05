@@ -2099,16 +2099,18 @@ function saveJSON(key, val){
         // захист від застарілої вкладки й на РІВНІ ПОЛІВ: попередній захист (вище) рятує лише
         // елементи, яких немає локально — але якщо стала вкладка досі має елемент з давнішим
         // значенням поля (напр. done застарілого завдання) і зберігає щось інше — вона мовчки
-        // перезаписує свіжішу зміну з іншого пристрою. Порівнюємо updatedAt лише коли воно є в
-        // ОБОХ версіях запису — інакше поведінка не змінюється (записи без цього поля як і раніше
-        // повністю довіряють локальній версії).
+        // перезаписує свіжішу зміну з іншого пристрою. ВІДСУТНІЙ updatedAt трактуємо як -Infinity
+        // (а не як "нема сигналу — нічого не робимо") — інакше давні записи (що ще НІКОЛИ не
+        // перемикались у ЦІЙ вкладці й тому не мають updatedAt локально) не отримують захисту
+        // навіть коли в хмарі вже є свіжіше значення З updatedAt. Коли жодна сторона не має цього
+        // поля — обидва -Infinity, порівняння як і раніше не спрацьовує (без зміни поведінки).
         const cloudById=new Map(cloudArr.filter(it=>it&&it.id!=null).map(it=>[it.id,it]));
         let staleFieldFixed=false;
         val.forEach((it,idx)=>{
-          const cloudIt=cloudById.get(it.id);
-          if(cloudIt && typeof cloudIt.updatedAt==='number' && typeof it.updatedAt==='number' && cloudIt.updatedAt>it.updatedAt){
-            val[idx]=cloudIt; staleFieldFixed=true;
-          }
+          const cloudIt=cloudById.get(it.id); if(!cloudIt) return;
+          const localTs=typeof it.updatedAt==='number' ? it.updatedAt : -Infinity;
+          const cloudTs=typeof cloudIt.updatedAt==='number' ? cloudIt.updatedAt : -Infinity;
+          if(cloudTs>localTs){ val[idx]=cloudIt; staleFieldFixed=true; }
         });
         if(staleFieldFixed){ try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after stale-field fix', key, e); } }
         DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
