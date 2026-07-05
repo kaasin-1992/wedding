@@ -962,6 +962,19 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .mb-zoom-lbl{min-width:52px;padding:0 8px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;}
 .moodboard-canvas{position:relative;flex:1;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;touch-action:pan-x pan-y;}
 .moodboard-inner{position:relative;width:1400px;height:1100px;background:repeating-linear-gradient(45deg,var(--surface2) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,var(--surface2) 0 1px,transparent 1px 22px);background-color:var(--bg);}
+/* декор: дві дошки (Софі/Хвильовий) — на вузькому екрані видно одну (перемикач), на широкому обидві поруч */
+.mb-dual-wrap{display:flex;flex-direction:column;flex:1;min-height:0;}
+.mb-venue-toggle{display:flex;gap:6px;margin-top:8px;}
+.mb-dual-row{display:flex;flex-direction:column;flex:1;min-height:0;gap:12px;}
+.mb-venue-board{display:none;flex-direction:column;min-height:0;}
+.mb-venue-board.active{display:flex;}
+.mb-venue-board .moodboard-canvas{margin-top:6px;}
+.mb-venue-label{font-size:12px;font-weight:700;color:var(--muted);padding:2px 2px 0;}
+@media (min-width:900px){
+  .mb-venue-toggle{display:none;}
+  .mb-dual-row{flex-direction:row;}
+  .mb-venue-board{display:flex !important;flex:1;min-width:0;}
+}
 .moodboard-tile{position:absolute;width:132px;border-radius:10px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:grab;background:var(--surface);border:1px solid var(--line);touch-action:none;user-select:none;}
 .moodboard-tile:active{cursor:grabbing;z-index:50;}
 .moodboard-tile img{width:100%;height:172px;object-fit:contain;display:block;background:var(--surface);pointer-events:none;}
@@ -1053,6 +1066,22 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <button class="mb-zoom-btn" id="mbZoomIn" aria-label="Збільшити">＋</button>
     </div>
     <div class="moodboard-canvas" id="moodboardCanvas"><div class="moodboard-inner" id="moodboardInner"></div></div>
+    <div class="mb-dual-wrap" id="mbDualWrap" style="display:none">
+      <div class="mb-venue-toggle" id="mbVenueToggle">
+        <button class="filt-btn active" data-mbv="sofia">💒 Софі</button>
+        <button class="filt-btn" data-mbv="wave">🥂 Хвильовий</button>
+      </div>
+      <div class="mb-dual-row">
+        <div class="mb-venue-board active" data-venue="sofia">
+          <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
+          <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
+        </div>
+        <div class="mb-venue-board" data-venue="wave">
+          <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
+          <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2244,10 +2273,37 @@ function equippedSlotFor(who, itemId){
   const g=Object.keys(c).find(k=>slotId(c[k])===itemId);
   return g||null;
 }
-// мудборд: вільне розташування карток на дошці, {cloth:{itemId:{x,y}}, decor:{itemId:{x,y}}} — x/y у % канвасу
-let moodboard   = loadJSON('wed-moodboard', {cloth:{},decor:{}});
+// мудборд: вільне розташування карток на дошці, {cloth:{itemId:{x,y}}, decor:{sofia:{itemId:{x,y}}, wave:{...}}} — x/y у % канвасу
+// decor розділений по локаціях (Софі/Хвильовий), cloth лишається однією спільною дошкою
+let moodboard   = loadJSON('wed-moodboard', {cloth:{},decor:{sofia:{},wave:{}}});
 // вільні картинки, додані прямо на мудборд (перетягнуті файли), не привʼязані до жодної ідеї/декору
-let moodboardExtra = loadJSON('wed-mbExtra', {cloth:[],decor:[]});
+let moodboardExtra = loadJSON('wed-mbExtra', {cloth:[],decor:{sofia:[],wave:[]}});
+// одноразова міграція: старий moodboard.decor/moodboardExtra.decor був ОДНІЄЮ спільною дошкою
+// (плаский обʼєкт/масив без розділення по локаціях) — загортаємо все під 'sofia', 'wave' лишаємо
+// порожнім, і бекфілимо d.venue на елементах декору, яким його ще не проставлено
+function migrateMoodboardVenues(){
+  const dm=moodboard.decor;
+  if(dm && typeof dm==='object'){
+    const keys=Object.keys(dm);
+    const looksNew=keys.length===0 || keys.every(k=>k==='sofia'||k==='wave');
+    moodboard.decor = looksNew ? {sofia:dm.sofia||{}, wave:dm.wave||{}} : {sofia:dm, wave:{}};
+  }else{
+    moodboard.decor = {sofia:{}, wave:{}};
+  }
+  const de=moodboardExtra.decor;
+  if(Array.isArray(de)){
+    moodboardExtra.decor = {sofia:de, wave:[]};
+  }else if(de && typeof de==='object'){
+    moodboardExtra.decor = {sofia:de.sofia||[], wave:de.wave||[]};
+  }else{
+    moodboardExtra.decor = {sofia:[], wave:[]};
+  }
+  let venueBackfilled=false;
+  decor.forEach(d=>{ if(d.cat!=='cake' && !d.venue){ d.venue='sofia'; venueBackfilled=true; } });
+  if(venueBackfilled) saveJSON('wed-decor',decor);
+}
+migrateMoodboardVenues();
+let activeMbVenue='sofia';   // куди типово йде новий елемент декору / який мудборд активний на вузькому екрані
 let manqBusy    = {her:false,his:false};
 // 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
 // Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
@@ -5561,6 +5617,8 @@ function renderDecor(){
     const priceBadge=price?`<span class="badge">💰 ${fmtUAH(price)} грн</span>`:'';
     const dtypeKey=d.dtype==='idea'?'idea':'item';
     const dtypeBadge=`<span class="badge dtype-${dtypeKey}" data-ddtype="${d.id}" role="button" tabindex="0" title="Тицяй, щоб перемкнути">${dtypeKey==='idea'?'💭 Загальна ідея':'🎯 Конкретний елемент'}</span>`;
+    const venueKey=d.venue==='wave'?'wave':'sofia';
+    const venueBadge=`<span class="badge dtype-${venueKey}" data-dvenue="${d.id}" role="button" tabindex="0" title="Тицяй, щоб перенести на мудборді на іншу локацію">${venueKey==='wave'?'🥂 Хвильовий':'💒 Софі'}</span>`;
     const whoBadge=whoSelectHTML('dwho',d.id,d.who);
     const diyBadge=`<span class="badge diy-badge${d.diy?' on':''}" data-ddiy="${d.id}">${d.diy?'🔨 Своїми руками':'🔨 Можна своїми руками?'}</span>`;
     const budgetBadge=`<span class="badge diy-badge${d.budgetId?' on':''}" data-dbudget="${d.id}">${d.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>`;
@@ -5587,7 +5645,7 @@ function renderDecor(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         ${d.desc?`<div class="idea-desc">${esc(d.desc)}</div>`:''}
         <div class="idea-price-row"><span class="pl">📍</span><input class="idea-price-inp" data-dplace="${d.id}" value="${esc(d.place||'')}" placeholder="додати локацію" aria-label="Локація"></div>
-        <div class="hotel-meta">${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}${budgetBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
+        <div class="hotel-meta">${venueBadge}${dtypeBadge}${priceBadge}${whoBadge}${diyBadge}${budgetBadge}<span class="badge hotel-status ${d.taken?'booked':''}" data-dtake="${d.id}">${d.taken?'✅ Беремо':'💭 Розглядаємо'}</span><span class="badge hotel-status ${d.bought?'booked':''}" data-dbought="${d.id}">${d.bought?'🛍 Куплено':'🛒 Ще не куплено'}</span>${photoBtn}</div>
         <div class="idea-note" data-dnote="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${d.note?esc(d.note):''}</div>
         ${d.url?`<div class="idea-actions"><a class="idea-open" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a><button class="idea-photo-btn" data-dmsg="${d.id}">✉️ Написати</button></div>`:''}
         ${visBtns}${visThumbs}
@@ -5673,6 +5731,15 @@ function renderDecor(){
     el.onclick=()=>toggleDtype(el.dataset.ddtype);
     el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleDtype(el.dataset.ddtype); } };
   });
+  const toggleVenue=(id)=>{
+    const d=decor.find(x=>x.id===id); if(!d)return;
+    d.venue=(d.venue==='wave')?'sofia':'wave';
+    saveJSON('wed-decor',decor); renderDecor();
+  };
+  listEl.querySelectorAll('[data-dvenue]').forEach(el=>{
+    el.onclick=()=>toggleVenue(el.dataset.dvenue);
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleVenue(el.dataset.dvenue); } };
+  });
   listEl.querySelectorAll('[data-dplace]').forEach(inp=>inp.onchange=()=>{
     const d=decor.find(x=>x.id===inp.dataset.dplace); if(!d)return;
     d.place=inp.value.trim(); saveJSON('wed-decor',decor);
@@ -5714,7 +5781,7 @@ document.getElementById('addDecorBtn').onclick=async()=>{
   if(!name&&!url)return;
   if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
   const id='d'+Date.now();
-  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,ts:Date.now()});
+  decor.unshift({id,title:name,url,price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),img:'',desc:'',taken:false,bought:false,loading:!!url,venue:activeMbVenue,ts:Date.now()});
   ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('dWho').value='me';
   document.getElementById('dType').value='item';
@@ -5730,7 +5797,7 @@ document.getElementById('addDecorBtn').onclick=async()=>{
   }
 };
 function decorFormMeta(){
-  return {price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote')};
+  return {price:val('dPrice'),place:val('dPlace'),who:document.getElementById('dWho').value,dtype:document.getElementById('dType').value,diy:document.getElementById('dDiy').checked,note:val('dNote'),venue:activeMbVenue};
 }
 function resetDecorForm(){
   ['dName','dUrl','dPrice','dPlace','dNote'].forEach(i=>document.getElementById(i).value='');
@@ -6562,21 +6629,20 @@ function renderMenu(){
   if(!IS_GUEST) checkMilestones(progressByTab);
 }
 
-/* ── МУДБОРД: вільне перетягування карток (одяг / декор) ── */
+/* ── МУДБОРД: вільне перетягування карток (одяг / декор) ──
+   Одяг (cloth) — одна спільна дошка. Декор — дві дошки, по одній на локацію
+   (Софі/Хвильовий), бо весілля фізично відбувається у двох різних місцях. */
 let _mbType='cloth';
-function moodboardItems(type){
+function moodboardItems(type, venueKey){
   const base = type==='cloth'
     ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||''}))
-    : decor.filter(d=>d.img).map(d=>({id:d.id, img:d.img, title:d.title||''}));
-  const extra=(moodboardExtra[type]||[]).map(x=>({id:x.id, img:x.img, title:x.title||'', extra:true}));
+    : decor.filter(d=>d.img && d.cat!=='cake' && (d.venue||'sofia')===venueKey).map(d=>({id:d.id, img:d.img, title:d.title||''}));
+  const extraSrc = type==='cloth' ? (moodboardExtra.cloth||[]) : ((moodboardExtra.decor||{})[venueKey]||[]);
+  const extra=extraSrc.map(x=>({id:x.id, img:x.img, title:x.title||'', extra:true}));
   return [...base, ...extra];
 }
-function renderMoodboard(){
-  const canvas=document.getElementById('moodboardCanvas'), inner=document.getElementById('moodboardInner');
-  if(!canvas||!inner) return;
-  const items=moodboardItems(_mbType);
-  if(!moodboard[_mbType]) moodboard[_mbType]={};
-  const board=moodboard[_mbType];
+// малює один канвас (спільна логіка для одягу й для кожної локації декору окремо)
+function renderMoodboardBoardInto(canvas, inner, items, board, isCloth, onDeleteExtra){
   inner.innerHTML='';
   const oldEmpty=canvas.querySelector('.moodboard-empty'); if(oldEmpty) oldEmpty.remove();
   if(!items.length){
@@ -6599,7 +6665,7 @@ function renderMoodboard(){
     // взагалі не було жодного тригера ensureCleanGarment. Спільний _cleaningAttempted Set із
     // колажем — якщо річ уже поставлена в чергу там, тут вдруге не запускаємо.
     let cleaning=false;
-    if(_mbType==='cloth' && !it.extra){
+    if(isCloth && !it.extra){
       const srcIt=ideas.find(x=>x.id===it.id);
       if(srcIt){
         const hasCleanCutout=srcIt.cleanImg && /^data:/.test(srcIt.cleanImg) && srcIt.cleanFor===garmentSig(srcIt.img);
@@ -6611,7 +6677,7 @@ function renderMoodboard(){
       }
     }
     const tile=document.createElement('div');
-    tile.className='moodboard-tile'+(_mbType==='cloth'?' cloth':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
+    tile.className='moodboard-tile'+(isCloth?' cloth':'')+(cleaning?' cleaning':''); tile.dataset.mbid=it.id;
     if(it.extra) tile.dataset.mbextra='1';
     tile.style.left=pos.x+'%'; tile.style.top=pos.y+'%';
     if(pos.w) tile.style.width=pos.w+'px';
@@ -6619,32 +6685,73 @@ function renderMoodboard(){
     tile.innerHTML=`<img src="${esc(it.img)}" alt="" draggable="false">${cleanBadge}${it.title?`<div class="mb-cap">${esc(it.title)}</div>`:''}${it.extra?`<button class="mb-tile-x" data-mbdel="${it.id}" title="Прибрати фото">✕</button>`:''}`;
     inner.appendChild(tile);
   });
-  saveJSON('wed-moodboard',moodboard);
   inner.querySelectorAll('[data-mbdel]').forEach(b=>b.addEventListener('pointerdown',e=>e.stopPropagation()));
-  inner.querySelectorAll('[data-mbdel]').forEach(b=>b.onclick=(e)=>{
-    e.stopPropagation();
-    const id=b.dataset.mbdel;
-    moodboardExtra[_mbType]=(moodboardExtra[_mbType]||[]).filter(x=>x.id!==id);
-    delete moodboard[_mbType][id];
-    saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
-    renderMoodboard();
-  });
-  wireMoodboardDrag();
+  inner.querySelectorAll('[data-mbdel]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); onDeleteExtra(b.dataset.mbdel); });
+  wireMoodboardDrag(inner, board);
 }
-// додає файл (dataURL) як нову вільну картинку на поточну дошку мудборду
-function addMoodboardFile(file){
+function renderMbVenueLabels(){
+  const lblS=document.getElementById('mbVenueLabelSofia'); if(!lblS) return;
+  const zones=(seating.sofia && Array.isArray(seating.sofia.zones)) ? seating.sofia.zones : [];
+  const n=zones.reduce((sum,z)=>sum+(z.seats||[]).reduce((s,id)=>{ const g=guests.find(x=>x.id===id); return s+(g?headCount(g):0); },0),0);
+  lblS.textContent = zones.length ? `💒 ${n} осіб за столами (з розсадки)` : '💒 столи зʼявляться тут після розсадки гостей';
+}
+function closeMoodboard(){ document.getElementById('moodboardModal').style.display='none'; }
+function renderMoodboard(){
+  const single=document.getElementById('moodboardCanvas'), singleInner=document.getElementById('moodboardInner');
+  const dualWrap=document.getElementById('mbDualWrap');
+  if(_mbType==='cloth'){
+    if(dualWrap) dualWrap.style.display='none';
+    if(single) single.style.display='';
+    if(!single||!singleInner) return;
+    if(!moodboard.cloth) moodboard.cloth={};
+    renderMoodboardBoardInto(single, singleInner, moodboardItems('cloth'), moodboard.cloth, true, (id)=>{
+      moodboardExtra.cloth=(moodboardExtra.cloth||[]).filter(x=>x.id!==id);
+      delete moodboard.cloth[id];
+      saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
+      renderMoodboard();
+    });
+  }else{
+    if(single) single.style.display='none';
+    if(dualWrap) dualWrap.style.display='flex';
+    if(!moodboard.decor) moodboard.decor={sofia:{},wave:{}};
+    ['sofia','wave'].forEach(venue=>{
+      const canvas=document.getElementById(venue==='sofia'?'moodboardCanvasSofia':'moodboardCanvasWave');
+      const inner=document.getElementById(venue==='sofia'?'moodboardInnerSofia':'moodboardInnerWave');
+      if(!canvas||!inner) return;
+      if(!moodboard.decor[venue]) moodboard.decor[venue]={};
+      renderMoodboardBoardInto(canvas, inner, moodboardItems('decor',venue), moodboard.decor[venue], false, (id)=>{
+        if(!moodboardExtra.decor) moodboardExtra.decor={sofia:[],wave:[]};
+        moodboardExtra.decor[venue]=(moodboardExtra.decor[venue]||[]).filter(x=>x.id!==id);
+        delete moodboard.decor[venue][id];
+        saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
+        renderMoodboard();
+      });
+    });
+    renderMbVenueLabels();
+  }
+  saveJSON('wed-moodboard',moodboard);
+}
+// додає файл (dataURL) як нову вільну картинку на дошку мудборду (для decor — конкретної локації)
+function addMoodboardFile(file, venueKey){
   if(!file || !/^image\//.test(file.type)){ return; }
   loadPhotoFile(file,1024,data=>{
     if(!data){ showToast('Не вдалося обробити фото'); return; }
-    if(!moodboardExtra[_mbType]) moodboardExtra[_mbType]=[];
-    moodboardExtra[_mbType].push({id:'mbx'+Date.now()+Math.random().toString(36).slice(2,7), img:data, title:''});
+    const entry={id:'mbx'+Date.now()+Math.random().toString(36).slice(2,7), img:data, title:''};
+    if(_mbType==='cloth'){
+      if(!moodboardExtra.cloth) moodboardExtra.cloth=[];
+      moodboardExtra.cloth.push(entry);
+    }else{
+      const v=venueKey||activeMbVenue;
+      if(!moodboardExtra.decor) moodboardExtra.decor={sofia:[],wave:[]};
+      if(!moodboardExtra.decor[v]) moodboardExtra.decor[v]=[];
+      moodboardExtra.decor[v].push(entry);
+    }
     saveJSON('wed-mbExtra',moodboardExtra);
     renderMoodboard();
   },0.85);
 }
 // перетягування картки одним пальцем/мишею; два пальці НА картці — пінч-зум самої картки (зміна розміру)
-function wireMoodboardDrag(){
-  const inner=document.getElementById('moodboardInner');
+function wireMoodboardDrag(inner, board){
   inner.querySelectorAll('.moodboard-tile').forEach(tile=>{
     let mode=null;              // 'drag' | 'pinch'
     let dragOff=null;
@@ -6686,8 +6793,8 @@ function wireMoodboardDrag(){
       active.delete(e.pointerId);
       if(active.size===0){
         const id=tile.dataset.mbid;
-        const cur=moodboard[_mbType][id]||{};
-        moodboard[_mbType][id]={x:parseFloat(tile.style.left)||cur.x||0, y:parseFloat(tile.style.top)||cur.y||0, w:tile.offsetWidth};
+        const cur=board[id]||{};
+        board[id]={x:parseFloat(tile.style.left)||cur.x||0, y:parseFloat(tile.style.top)||cur.y||0, w:tile.offsetWidth};
         saveJSON('wed-moodboard',moodboard);
         mode=null;
       }else if(active.size===1){
@@ -6705,40 +6812,52 @@ function wireMoodboardDrag(){
 /* Figma-подібний зум усієї дошки: пінч на порожньому місці, Ctrl+колесо, або кнопки ± */
 let _mbZoom=1;
 function applyMbZoom(){
-  const inner=document.getElementById('moodboardInner'); if(!inner) return;
-  inner.style.zoom=_mbZoom;
+  const ids = _mbType==='cloth' ? ['moodboardInner'] : ['moodboardInnerSofia','moodboardInnerWave'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.zoom=_mbZoom; });
   const lbl=document.getElementById('mbZoomReset'); if(lbl) lbl.textContent=Math.round(_mbZoom*100)+'%';
 }
 function mbZoomBy(delta){ _mbZoom=Math.max(0.3,Math.min(2.5,_mbZoom+delta)); applyMbZoom(); }
 function mbZoomReset(){ _mbZoom=1; applyMbZoom(); }
-{
-  const zi=document.getElementById('mbZoomIn'), zo=document.getElementById('mbZoomOut'), zr=document.getElementById('mbZoomReset');
-  if(zi) zi.onclick=()=>mbZoomBy(0.15);
-  if(zo) zo.onclick=()=>mbZoomBy(-0.15);
-  if(zr) zr.onclick=mbZoomReset;
-  const canvas=document.getElementById('moodboardCanvas');
-  if(canvas){
-    let pinchStartDist=0, pinchStartZoom=1;
-    canvas.addEventListener('touchstart',e=>{
-      if(e.touches.length!==2 || e.target.closest('.moodboard-tile')){ pinchStartDist=0; return; }
-      const [a,b]=e.touches;
-      pinchStartDist=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-      pinchStartZoom=_mbZoom;
-    },{passive:true});
-    canvas.addEventListener('touchmove',e=>{
-      if(e.touches.length!==2 || !pinchStartDist) return;
-      const [a,b]=e.touches;
-      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-      _mbZoom=Math.max(0.3,Math.min(2.5, pinchStartZoom*(d/pinchStartDist)));
-      applyMbZoom();
-    },{passive:true});
-    canvas.addEventListener('touchend',()=>{ pinchStartDist=0; });
-    canvas.addEventListener('wheel',e=>{
-      if(!e.ctrlKey) return;
-      e.preventDefault();
-      mbZoomBy(e.deltaY<0?0.1:-0.1);
-    },{passive:false});
-  }
+// підключає жест "пінч/Ctrl+колесо = зум усієї дошки" до одного канвасу (викликається для кожного:
+// одиночного одягу і обох локацій декору)
+function wireCanvasZoomGestures(canvas){
+  if(!canvas) return;
+  let pinchStartDist=0, pinchStartZoom=1;
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length!==2 || e.target.closest('.moodboard-tile')){ pinchStartDist=0; return; }
+    const [a,b]=e.touches;
+    pinchStartDist=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    pinchStartZoom=_mbZoom;
+  },{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(e.touches.length!==2 || !pinchStartDist) return;
+    const [a,b]=e.touches;
+    const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    _mbZoom=Math.max(0.3,Math.min(2.5, pinchStartZoom*(d/pinchStartDist)));
+    applyMbZoom();
+  },{passive:true});
+  canvas.addEventListener('touchend',()=>{ pinchStartDist=0; });
+  canvas.addEventListener('wheel',e=>{
+    if(!e.ctrlKey) return;
+    e.preventDefault();
+    mbZoomBy(e.deltaY<0?0.1:-0.1);
+  },{passive:false});
+}
+// підключає drag&drop файлів з компʼютера на конкретний канвас (desktop-only; на телефоні для
+// цього є кнопка 📁 Фото), venueKey — куди саме падає файл (лише для decor)
+function wireCanvasFileDrop(canvas, venueKey){
+  if(!canvas) return;
+  let dragDepth=0;
+  canvas.addEventListener('dragover',e=>{ e.preventDefault(); });
+  canvas.addEventListener('dragenter',e=>{ e.preventDefault(); dragDepth++; canvas.classList.add('mb-dragover'); });
+  canvas.addEventListener('dragleave',()=>{ dragDepth=Math.max(0,dragDepth-1); if(dragDepth===0) canvas.classList.remove('mb-dragover'); });
+  canvas.addEventListener('drop',e=>{
+    e.preventDefault(); dragDepth=0; canvas.classList.remove('mb-dragover');
+    const files=[...(e.dataTransfer?.files||[])].filter(f=>/^image\//.test(f.type));
+    if(!files.length){ showToast('Це не схоже на картинку 🙂'); return; }
+    files.forEach(f=>addMoodboardFile(f, venueKey));
+    if(files.length>1) showToast(`📸 Додано фото: ${files.length}`);
+  });
 }
 function openMoodboard(type){
   _mbType=type;
@@ -6748,28 +6867,23 @@ function openMoodboard(type){
   mbZoomReset();
   renderMoodboard();
 }
-function closeMoodboard(){ document.getElementById('moodboardModal').style.display='none'; }
 document.querySelectorAll('[data-moodboard]').forEach(btn=>btn.onclick=()=>openMoodboard(btn.dataset.moodboard));
 { const mc2=document.getElementById('moodboardClose'); if(mc2) mc2.onclick=closeMoodboard; }
 {
   const addBtn=document.getElementById('mbAddFileBtn');
-  if(addBtn) addBtn.onclick=()=>pickImageFile(f=>{ if(f) addMoodboardFile(f); });
-  // перетягування файлів з компʼютера прямо на дошку — desktop drag&drop (недоступне на телефоні,
-  // там для цього є кнопка 📁 Фото вище)
-  const dropZone=document.getElementById('moodboardCanvas');
-  if(dropZone){
-    let dragDepth=0;
-    dropZone.addEventListener('dragover',e=>{ e.preventDefault(); });
-    dropZone.addEventListener('dragenter',e=>{ e.preventDefault(); dragDepth++; dropZone.classList.add('mb-dragover'); });
-    dropZone.addEventListener('dragleave',()=>{ dragDepth=Math.max(0,dragDepth-1); if(dragDepth===0) dropZone.classList.remove('mb-dragover'); });
-    dropZone.addEventListener('drop',e=>{
-      e.preventDefault(); dragDepth=0; dropZone.classList.remove('mb-dragover');
-      const files=[...(e.dataTransfer?.files||[])].filter(f=>/^image\//.test(f.type));
-      if(!files.length){ showToast('Це не схоже на картинку 🙂'); return; }
-      files.forEach(f=>addMoodboardFile(f));
-      if(files.length>1) showToast(`📸 Додано фото: ${files.length}`);
-    });
-  }
+  if(addBtn) addBtn.onclick=()=>pickImageFile(f=>{ if(f) addMoodboardFile(f, activeMbVenue); });
+  wireCanvasZoomGestures(document.getElementById('moodboardCanvas'));
+  wireCanvasZoomGestures(document.getElementById('moodboardCanvasSofia'));
+  wireCanvasZoomGestures(document.getElementById('moodboardCanvasWave'));
+  wireCanvasFileDrop(document.getElementById('moodboardCanvas'));
+  wireCanvasFileDrop(document.getElementById('moodboardCanvasSofia'),'sofia');
+  wireCanvasFileDrop(document.getElementById('moodboardCanvasWave'),'wave');
+  document.querySelectorAll('#mbVenueToggle .filt-btn').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('#mbVenueToggle .filt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeMbVenue=btn.dataset.mbv;
+    document.querySelectorAll('.mb-venue-board').forEach(b=>b.classList.toggle('active', b.dataset.venue===activeMbVenue));
+  });
 }
 function shiftTab(dir){
   const i=TAB_ORDER.indexOf(currentTab()), ni=i+dir;
@@ -6867,7 +6981,7 @@ async function quickAddDispatch(target,rawText){
   }
   if(target==='decor'||target==='cake'){
     const id=(target==='cake'?'ck':'d')+Date.now();
-    const extra=target==='cake'?{cat:'cake'}:{};
+    const extra=target==='cake'?{cat:'cake'}:{venue:activeMbVenue};
     decor.unshift({id,title:url?'':restText,url,price:'',place:'',who:'me',dtype:'item',diy:false,note:url?restText:'',img:'',desc:'',taken:false,bought:false,loading:!!url,...extra,ts:Date.now()});
     saveJSON('wed-decor',decor); renderDecor(); renderCake();
     if(url){
@@ -7058,10 +7172,11 @@ function startSync(){
     if(d.bar && typeof d.bar==='object') bar=d.bar;
     if(Array.isArray(d.team)) team=d.team;
     if(d.collage && typeof d.collage==='object') collage={her:{},his:{},...d.collage};
-    if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{},...d.moodboard};
+    if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{sofia:{},wave:{}},...d.moodboard};
     if(d.dresscode && typeof d.dresscode==='object') dresscode={colors:[],refs:[],gen:'',...d.dresscode};
     if(d.outfitLayers && typeof d.outfitLayers==='object') outfitLayers={her:{},his:{},...d.outfitLayers};
-    if(d.moodboardExtra && typeof d.moodboardExtra==='object') moodboardExtra={cloth:[],decor:[],...d.moodboardExtra};
+    if(d.moodboardExtra && typeof d.moodboardExtra==='object') moodboardExtra={cloth:[],decor:{sofia:[],wave:[]},...d.moodboardExtra};
+    migrateMoodboardVenues();   // хмарні дані могли прийти ще в старій плаский формі — перемігрувати
     // БЕЗПЕКА: гостям (?guest) ніколи не тримаємо бюджет і "травку" в пам'яті чи localStorage —
     // раніше це лише ховалось у рендері, а самі дані все одно летіли в браузер гостя й лежали в
     // localStorage. Це не замінює правила безпеки Firestore (їх треба звузити в консолі Firebase
