@@ -7044,9 +7044,10 @@ function startCommentsSync(){
 }
 /* ════ RSVP-МІСТ ДЛЯ ЗОВНІШНЬОЇ ГРИ-ЗАПРОШЕННЯ ════
    Гра (окремий застосунок) пише в окрему колекцію 'rsvps' документи виду
-   {guestId, response:'yes'|'no'}. Ми лише ЧИТАЄМО цю колекцію тут і
-   переносимо відповідь у статус гостя — гра ніколи не торкається основного
-   документа стану напряму, тож не може нічого зіпсувати в застосунку. */
+   {guestId, response:'yes'|'no', plus1?:bool, alco?:bool, veg?:bool}.
+   Ми лише ЧИТАЄМО цю колекцію тут і переносимо відповідь у поля гостя
+   (status/plus1/alco/veg) — гра ніколи не торкається основного документа
+   стану напряму, тож не може нічого зіпсувати в застосунку. */
 function applyRsvpDocs(docs){
   let changed=false;
   docs.forEach(r=>{
@@ -7054,6 +7055,9 @@ function applyRsvpDocs(docs){
     if(!g) return;
     const newStatus = r.response==='yes' ? 'confirmed' : (r.response==='no' ? 'declined' : null);
     if(newStatus && g.status!==newStatus){ g.status=newStatus; changed=true; }
+    if(typeof r.plus1==='boolean'){ const p1=r.plus1?'confirmed':'none'; if(g.plus1!==p1){ g.plus1=p1; changed=true; } }
+    if(typeof r.alco==='boolean' && g.alco!==r.alco){ g.alco=r.alco; changed=true; }
+    if(typeof r.veg==='boolean' && g.veg!==r.veg){ g.veg=r.veg; changed=true; }
   });
   return changed;
 }
