@@ -969,7 +969,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .mb-venue-board{display:none;flex-direction:column;min-height:0;}
 .mb-venue-board.active{display:flex;}
 .mb-venue-board .moodboard-canvas{margin-top:6px;}
-.mb-venue-label{font-size:12px;font-weight:700;color:var(--muted);padding:2px 2px 0;}
+.mb-venue-label-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px 0;}
+.mb-venue-label{font-size:12px;font-weight:700;color:var(--muted);}
+.mb-venue-gen-btn{flex:0 0 auto;font-size:11px;font-weight:600;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;}
+.mb-venue-gen-btn:disabled{opacity:.6;cursor:default;}
 @media (min-width:900px){
   .mb-venue-toggle{display:none;}
   .mb-dual-row{flex-direction:row;}
@@ -1073,11 +1076,17 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
       <div class="mb-dual-row">
         <div class="mb-venue-board active" data-venue="sofia">
-          <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
+            <button class="mb-venue-gen-btn" id="mbGenSofia" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
           <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
         </div>
         <div class="mb-venue-board" data-venue="wave">
-          <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
+            <button class="mb-venue-gen-btn" id="mbGenWave" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
           <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
         </div>
       </div>
@@ -5586,6 +5595,32 @@ async function aiVisualizeDecor(d, venue){
     },0.8);
   }catch(e){ console.warn('visualizeDecor',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
 }
+// уявляє весь простір локації одразу з УСІМ декором, розкладеним на її дошці мудборду (не один
+// елемент за раз, як aiVisualizeDecor) — результат лише показується (лайтбокс), не зберігається:
+// це прев'ю "як воно може виглядати", а не постійні дані, тож не потребує окремого важкого
+// медіа-документа в хмарі
+async function aiVisualizeVenueSpace(venue){
+  const venueSrc=venuePhotos[venue];
+  if(!venueSrc){ showToast('Спершу додай фото цієї локації вище 👆'); return; }
+  const items=moodboardItems('decor',venue).filter(it=>it.img);
+  if(!items.length){ showToast('Спершу розклади на цю дошку декор із фото 🌸'); return; }
+  const venueLbl=venue==='sofia'?'Софі':'Хвильовий';
+  const btn=document.getElementById(venue==='sofia'?'mbGenSofia':'mbGenWave');
+  const old=btn?btn.textContent:''; if(btn){ btn.textContent='🪄 Уявляю…'; btn.disabled=true; }
+  try{
+    const venuePart=await srcToPart(venueSrc);
+    if(!venuePart){ showToast('Не вдалось підготувати фото локації 😕'); return; }
+    const itemParts=[];
+    for(const it of items){ const p=await srcToPart(it.img); if(p) itemParts.push(p); }
+    if(!itemParts.length){ showToast('Не вдалось підготувати фото декору 😕'); return; }
+    const names=items.map(it=>it.title||'декор').join(', ');
+    const prompt=`Зображення 1 — [ЛОКАЦІЯ]: реальне фото весільної локації «${venueLbl}». Далі йдуть ${itemParts.length} зображень [ДЕКОР] (${names}). Завдання: домалюй УСІ ці елементи декору РАЗОМ у [ЛОКАЦІЮ], природно розмістивши кожен — великі речі (арка, гірлянда, пресвол) як фокальні елементи простору, дрібниці (свічки, текстиль, посуд) на столах/поверхнях. Архітектуру, стіни, вікна, меблі й освітлення локації НЕ змінюй і не вигадуй нову локацію — це має лишатись впізнавано ТА САМА локація, лише прикрашена цим декором разом. Фотореалістично, узгоджені тіні й перспектива.`;
+    const img=await aiGenerate([prompt, venuePart, ...itemParts]);
+    if(!img){ showToast('ШІ не зміг згенерувати 😕'); return; }
+    showImgBig(img, `🪄 Простір з декором — ${venueLbl}`);
+  }catch(e){ console.warn('visualizeVenueSpace',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
+  finally{ if(btn){ btn.textContent=old||'🪄 Уявити простір'; btn.disabled=false; } }
+}
 const DECOR_WHO={me:'🙋 Я',his:'🤵 Дима',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
 // "хто відповідає" тепер може бути й конкретним гостем (значення 'g:<guestId>'), не лише
 // узагальненою категорією — гості беруться живцем з guests[], без окремого дубльованого списку
@@ -6917,6 +6952,9 @@ document.querySelectorAll('[data-moodboard]').forEach(btn=>btn.onclick=()=>openM
     activeMbVenue=btn.dataset.mbv;
     document.querySelectorAll('.mb-venue-board').forEach(b=>b.classList.toggle('active', b.dataset.venue===activeMbVenue));
   });
+  const genSofia=document.getElementById('mbGenSofia'), genWave=document.getElementById('mbGenWave');
+  if(genSofia) genSofia.onclick=()=>aiVisualizeVenueSpace('sofia');
+  if(genWave) genWave.onclick=()=>aiVisualizeVenueSpace('wave');
 }
 function shiftTab(dir){
   const i=TAB_ORDER.indexOf(currentTab()), ni=i+dir;
