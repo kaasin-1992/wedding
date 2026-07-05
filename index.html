@@ -592,13 +592,13 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-tile.approved{border-color:var(--done);box-shadow:0 0 0 1px var(--done) inset;}
 .idea-tile.bought{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
 .idea-tile-thumb{position:relative;width:100%;height:120px;background:var(--surface2);overflow:hidden;}
-.idea-tile-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.idea-tile-thumb img{width:100%;height:100%;object-fit:cover;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
 .idea-tile-thumb .idea-thumb-fallback{gap:4px;}
 /* коли є "фото на мені" — показуємо його одразу на тайлі поруч фото товару, а не ховаємо в деталях */
 .idea-tile-thumb-split{display:flex;width:100%;height:120px;background:var(--surface2);overflow:hidden;gap:2px;}
 .idea-tile-thumb-half{position:relative;flex:1;height:100%;overflow:hidden;min-width:0;}
 .idea-tile-thumb-half .idea-thumb-wrap{height:100%;}
-.idea-tile-thumb-real img{width:100%;height:100%;object-fit:cover;display:block;}
+.idea-tile-thumb-real img{width:100%;height:100%;object-fit:cover;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
 .idea-tile-real-badge{position:absolute;bottom:2px;left:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;font-size:8.5px;text-align:center;padding:1px 3px;border-radius:4px;line-height:1.3;}
 .idea-tile-thumb .idea-fav{width:26px;height:26px;}
 .idea-tile-thumb .idea-fallback-host{font-size:9px;}
@@ -612,7 +612,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .idea-tile-price{font-size:12px;font-weight:700;color:var(--terra);margin-top:3px;}
 .idea-tile-host{font-size:10px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.idea-tile .del-x{z-index:5;}
+.idea-tile .del-x{z-index:5;top:5px;right:5px;opacity:.9;background:rgba(255,253,248,.85);border-radius:50%;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);backdrop-filter:blur(2px);color:#3a352c;}
 .idea-detail-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,20,18,.72);display:none;align-items:flex-end;justify-content:center;}
 .idea-detail-panel{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;margin:0;border-radius:18px 18px 0 0;}
 .idea-detail-close{position:fixed;top:16px;right:16px;z-index:1501;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;}
@@ -627,7 +627,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .quick-add-panel textarea{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);resize:vertical;margin-bottom:8px;}
 .quick-add-panel select{width:100%;box-sizing:border-box;padding:8px 9px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:var(--sans);margin-bottom:9px;}
 .idea-thumb-wrap{position:relative;width:100%;height:180px;background:var(--surface2);overflow:hidden;}
-.idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
+.idea-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
 .idea-thumb[data-thumbview]{cursor:zoom-in;}
 /* картка: велике фото зверху на всю ширину (як Pinterest), деталі під ним */
 .idea-card.idea-row{display:flex;flex-direction:column;align-items:stretch;}
