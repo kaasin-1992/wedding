@@ -1788,6 +1788,16 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-df="idea">💭 Ідеї</button>
   </div>
   <div id="decorList"></div>
+  <details class="venue-photos-wrap">
+    <summary>📦 Замовлення (Amazon → Нова Пошта)</summary>
+    <div class="add-form">
+      <input type="text" id="oTitle" placeholder="Що замовлено (напр. «вазочки для квітів»)">
+      <input type="url" id="oUrl" placeholder="Посилання (необовʼязково)" autocapitalize="none" spellcheck="false">
+      <input type="text" id="oPrice" placeholder="Ціна (напр. 900 грн)">
+      <button class="submit-btn" id="addOrderBtn">Додати замовлення</button>
+    </div>
+    <div id="ordersList"></div>
+  </details>
 </div>
 
 <!-- CAKE (винесено з Декору окремою вкладкою) -->
@@ -1915,7 +1925,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=fals
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2185,6 +2195,7 @@ let rozpysTaskSeeded  = loadJSON('wed-rozpys-seed', false); // чи вже до�
 let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже додано чернетку таймлайну по часу (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
+let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
 let music       = loadJSON('wed-music', []);
 let mustPlay    = loadJSON('wed-mustplay', []);   // обовʼязкові треки плейлиста {id,title,artist,url,ts}
 let inspo       = loadJSON('wed-inspo', []);
@@ -2611,6 +2622,7 @@ const ARR={
   'wed-ideas':{get:()=>ideas,set:v=>ideas=v,render:()=>renderIdeas()},
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
   'wed-decor':{get:()=>decor,set:v=>decor=v,render:()=>renderDecor()},
+  'wed-orders':{get:()=>orders,set:v=>orders=v,render:()=>renderOrders()},
   'wed-music':{get:()=>music,set:v=>music=v,render:()=>renderMusic()},
   'wed-mustplay':{get:()=>mustPlay,set:v=>mustPlay=v,render:()=>renderMustPlay()},
   'wed-inspo':{get:()=>inspo,set:v=>inspo=v,render:()=>renderInspo()},
@@ -5882,6 +5894,47 @@ document.getElementById('ckImagineBtn').onclick=async()=>{
   }
 };
 
+/* ════ ЗАМОВЛЕННЯ (Amazon → Нова Пошта) ════ */
+const ORDER_STATUS=['ordered','transit','warehouse','received'];
+const ORDER_STATUS_LBL={ordered:'🛒 Замовлено',transit:'🚚 В дорозі',warehouse:'📦 На складі НП',received:'✅ Отримано'};
+function renderOrders(){
+  const listEl=document.getElementById('ordersList'); if(!listEl) return; listEl.innerHTML='';
+  if(!orders.length){ listEl.innerHTML='<div class="empty-state">Поки нічого не замовлено 🌸</div>'; return; }
+  listEl.innerHTML=orders.map(o=>`
+    <div class="idea-card">
+      <button class="del-x" data-odel="${o.id}" aria-label="Видалити замовлення">✕</button>
+      <div class="idea-body">
+        <div class="idea-title">${esc(o.title||'Замовлення')}</div>
+        ${o.price?`<div class="idea-tile-price">💰 ${esc(o.price)}</div>`:''}
+        ${o.url?`<a class="idea-open" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}
+        <div class="idea-price-row"><span class="pl">📮</span><input class="idea-price-inp" data-ottn="${o.id}" value="${esc(o.ttn||'')}" placeholder="номер ТТН" aria-label="Номер ТТН"></div>
+        <div class="hotel-meta"><span class="cc-status ${o.status}" data-ostatus="${o.id}">${ORDER_STATUS_LBL[o.status]}</span></div>
+        <div class="idea-note" data-onote="${o.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб редагувати нотатку">${o.note?esc(o.note):''}</div>
+      </div>
+    </div>`).join('');
+  listEl.querySelectorAll('[data-odel]').forEach(b=>b.onclick=()=>delUndo('wed-orders',b.dataset.odel,'Замовлення видалено'));
+  listEl.querySelectorAll('[data-ostatus]').forEach(b=>b.onclick=()=>{
+    const o=orders.find(x=>x.id===b.dataset.ostatus); if(!o)return;
+    o.status=ORDER_STATUS[(ORDER_STATUS.indexOf(o.status)+1)%ORDER_STATUS.length];
+    saveJSON('wed-orders',orders); renderOrders();
+  });
+  listEl.querySelectorAll('[data-ottn]').forEach(inp=>inp.onchange=()=>{
+    const o=orders.find(x=>x.id===inp.dataset.ottn); if(!o)return;
+    o.ttn=inp.value.trim(); saveJSON('wed-orders',orders);
+  });
+  listEl.querySelectorAll('[data-onote]').forEach(el=>el.addEventListener('blur',()=>{
+    const o=orders.find(x=>x.id===el.dataset.onote); if(!o)return;
+    const v=el.textContent.trim();
+    if(v!==(o.note||'')){ o.note=v; saveJSON('wed-orders',orders); }
+  }));
+}
+document.getElementById('addOrderBtn').onclick=()=>{
+  const title=val('oTitle'); if(!title){ showToast('Напиши, що замовлено 🙂'); return; }
+  orders.unshift({id:'o'+Date.now(), title, url:val('oUrl'), price:val('oPrice'), ttn:'', status:'ordered', note:'', ts:Date.now()});
+  ['oTitle','oUrl','oPrice'].forEach(i=>document.getElementById(i).value='');
+  saveJSON('wed-orders',orders); renderOrders();
+};
+
 /* ════ МУЗИКА (артисти / діджеї) ════ */
 const MUSIC_STATUS={search:'🔍 Шукаємо',contacted:'✉️ Написали',booked:'✅ Заброньовано'};
 const MUSIC_NEXT={search:'contacted',contacted:'booked',booked:'search'};
@@ -6829,7 +6882,7 @@ if(!IS_GUEST){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderOrders(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
@@ -6908,6 +6961,7 @@ function startSync(){
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(Array.isArray(d.decor))       decor=d.decor;
+    if(Array.isArray(d.orders))      orders=d.orders;
     if(Array.isArray(d.music))       music=d.music;
     if(Array.isArray(d.mustPlay))    mustPlay=d.mustPlay;
     if(Array.isArray(d.inspo))       inspo=d.inspo;
@@ -6959,6 +7013,7 @@ function startSync(){
     DB.set('wed-scriptW',JSON.stringify(scriptWave));
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-decor',JSON.stringify(decor));
+    DB.set('wed-orders',JSON.stringify(orders));
     DB.set('wed-music',JSON.stringify(music));
     DB.set('wed-mustplay',JSON.stringify(mustPlay));
     DB.set('wed-inspo',JSON.stringify(inspo));
