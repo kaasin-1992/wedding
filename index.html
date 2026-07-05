@@ -1230,7 +1230,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </details>
   </div>
   <div class="stats-grid" id="guestStats"></div>
-  <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">📤 Список гостей для гри (копіювати)</button>
+  <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">🎮 Оновити список гостей для гри</button>
   <div class="sofia-limit-warn" id="sofiaLimitWarn"></div>
   <details class="roles-assign-wrap">
     <summary>🎬 Ролі на весіллі (ведуча, фотограф, відеограф)</summary>
@@ -1986,7 +1986,7 @@ const firebaseConfig = {
   messagingSenderId: "87093437583",
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
-let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, DRESSVOTES=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
+let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, DRESSVOTES=null, GUESTSCOL=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
 // гостьовий перегляд: ?guest у посиланні → анонімний вхід, тільки читання + коментарі
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
@@ -2003,6 +2003,7 @@ try{
   COMMENTS = fdb.collection('comments');
   RSVPS = fdb.collection('rsvps');
   DRESSVOTES = fdb.collection('dressVotes');
+  GUESTSCOL = fdb.collection('guests');
 }catch(e){ console.warn('firebase init', e); }
 if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
 
@@ -7573,6 +7574,21 @@ function votesForIdea(id){ return dressVotes.filter(v=>v.ideaId===id); }
 function plVotes(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'голосів'; if(b===1)return'голос'; if(b>=2&&b<=4)return'голоси'; return'голосів'; }
 function hasVotedLocally(id){ try{ return localStorage.getItem('wed-voted-'+id)==='1'; }catch(e){ return false; } }
 function markVotedLocally(id){ try{ localStorage.setItem('wed-voted-'+id,'1'); }catch(e){} }
+/* ════ СПИСОК ГОСТЕЙ ДЛЯ ГРИ ════
+   Окрема колекція 'guests' (публічне читання — та сама гра читає її напряму, без ручного
+   копіювання) — пишемо туди лише {id,name}, нічого чутливішого (без контактів/статусу/алко/вега),
+   бо ця колекція за задумом читається без автентифікації. Пише лише пара, за явним кліком кнопки
+   "Список гостей для гри" (не автоматично при кожній зміні — щоб не плодити зайві записи Firestore
+   на кожен дрібний правки картки гостя). */
+async function syncGuestsForGame(){
+  if(!GUESTSCOL || IS_GUEST) return false;
+  try{
+    const batch=firebase.firestore().batch();
+    guests.forEach(g=>batch.set(GUESTSCOL.doc(g.id), {id:g.id, name:g.name}));
+    await batch.commit();
+    return true;
+  }catch(e){ console.warn('sync guests for game', e); return false; }
+}
 /* ════ RSVP-МІСТ ДЛЯ ЗОВНІШНЬОЇ ГРИ-ЗАПРОШЕННЯ ════
    Гра (окремий застосунок) пише в окрему колекцію 'rsvps' документи виду
    {guestId, response:'yes'|'no', plus1?:bool, alco?:bool, veg?:bool}.
@@ -7663,8 +7679,14 @@ injectCmtButtons();
   const eb=document.getElementById('exportGuestsBtn');
   if(eb) eb.onclick=async()=>{
     const lines=guests.map(g=>`${g.id};${g.name}`).join('\n');
-    try{ await navigator.clipboard.writeText(lines); showToast(`Список (${guests.length}) скопійовано — встав у гру 📋`); }
-    catch(e){ console.log(lines); showToast('Не вдалося скопіювати, список у консолі браузера'); }
+    const synced=await syncGuestsForGame();
+    try{
+      await navigator.clipboard.writeText(lines);
+      showToast(synced?`✅ Список (${guests.length}) синхронізовано з грою і скопійовано 📋`:`Список (${guests.length}) скопійовано — синхронізація з грою не вдалась, встав вручну 📋`);
+    }catch(e){
+      console.log(lines);
+      showToast(synced?'✅ Синхронізовано з грою (копіювання в буфер не вдалось)':'Не вдалося ні скопіювати, ні синхронізувати');
+    }
   };
 })();
 // якщо гість уже залогінений (швидкий кеш) — підхопити коментарі й голоси за сукні
