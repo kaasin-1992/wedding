@@ -1071,28 +1071,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <button class="mb-zoom-btn" id="mbZoomIn" aria-label="Збільшити">＋</button>
     </div>
     <div class="moodboard-canvas" id="moodboardCanvas"><div class="moodboard-inner" id="moodboardInner"></div></div>
-    <div class="mb-dual-wrap" id="mbDualWrap" style="display:none">
-      <div class="mb-venue-toggle" id="mbVenueToggle">
-        <button class="filt-btn active" data-mbv="sofia">💒 Софі</button>
-        <button class="filt-btn" data-mbv="wave">🥂 Хвильовий</button>
-      </div>
-      <div class="mb-dual-row">
-        <div class="mb-venue-board active" data-venue="sofia">
-          <div class="mb-venue-label-row">
-            <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
-            <button class="mb-venue-gen-btn" id="mbGenSofia" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
-          </div>
-          <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
-        </div>
-        <div class="mb-venue-board" data-venue="wave">
-          <div class="mb-venue-label-row">
-            <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
-            <button class="mb-venue-gen-btn" id="mbGenWave" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
-          </div>
-          <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1783,7 +1761,34 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
-  <button class="moodboard-btn" data-moodboard="decor">🎨 Мудборд декору</button>
+  <div class="decor-mb-inline">
+    <div class="moodboard-head" style="padding:0 0 6px;">
+      <div class="imgpick-title" style="font-size:15px;">🎨 Мудборд декору — перетягни фото туди-сюди</div>
+      <button class="modal-btn ghost" id="dMbAddFileBtn" title="Додати фото з компʼютера">📁 Фото</button>
+    </div>
+    <div class="mb-dual-wrap" id="mbDualWrap">
+      <div class="mb-venue-toggle" id="mbVenueToggle">
+        <button class="filt-btn active" data-mbv="sofia">💒 Софі</button>
+        <button class="filt-btn" data-mbv="wave">🥂 Хвильовий</button>
+      </div>
+      <div class="mb-dual-row">
+        <div class="mb-venue-board active" data-venue="sofia">
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
+            <button class="mb-venue-gen-btn" id="mbGenSofia" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
+          <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
+        </div>
+        <div class="mb-venue-board" data-venue="wave">
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
+            <button class="mb-venue-gen-btn" id="mbGenWave" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
+          <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
   <details class="venue-photos-wrap">
     <summary>📍 Фото локацій (для візуалізації декору)</summary>
     <div class="venue-photos" id="venuePhotosBox"></div>
@@ -5727,7 +5732,7 @@ function renderDecor(){
   else if(decorFilter==='diy') items=items.filter(d=>d.diy);
   else if(decorFilter==='item') items=items.filter(d=>(d.dtype||'item')==='item');
   else if(decorFilter==='idea') items=items.filter(d=>d.dtype==='idea');
-  if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; renderCake(); return; }
+  if(!items.length){ listEl.innerHTML=`<div class="empty-state">${decor.length?'Нічого за цим фільтром':'Поки нічого.<br>Додай ідею декору 🌸'}</div>`; renderCake(); renderDecorMoodboard(); return; }
   listEl.className='idea-grid';
   items.forEach(d=>{
     const host=hostOf(d.url);
@@ -5759,6 +5764,7 @@ function renderDecor(){
     if(_decorDetailId===b.dataset.ddel) closeDecorDetail();
   });
   renderCake();   // торт живе в тому ж масиві decor — оновлюємо разом, щоб не забути окремого виклику
+  renderDecorMoodboard();   // пісочниця вбудована прямо у вкладку — оновлюємо разом з рештою декору
 }
 function closeDecorDetail(){
   _decorDetailId=null;
@@ -6867,7 +6873,6 @@ function renderMenu(){
 /* ── МУДБОРД: вільне перетягування карток (одяг / декор) ──
    Одяг (cloth) — одна спільна дошка. Декор — дві дошки, по одній на локацію
    (Софі/Хвильовий), бо весілля фізично відбувається у двох різних місцях. */
-let _mbType='cloth';
 function moodboardItems(type, venueKey){
   const base = type==='cloth'
     ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||'', gtype:i.gtype||''}))
@@ -6939,56 +6944,57 @@ function renderMbVenueLabels(){
 function closeMoodboard(){ document.getElementById('moodboardModal').style.display='none'; }
 function renderMoodboard(){
   const single=document.getElementById('moodboardCanvas'), singleInner=document.getElementById('moodboardInner');
-  const dualWrap=document.getElementById('mbDualWrap');
-  if(_mbType==='cloth'){
-    if(dualWrap) dualWrap.style.display='none';
-    if(single) single.style.display='';
-    if(!single||!singleInner) return;
-    if(!moodboard.cloth) moodboard.cloth={};
-    renderMoodboardBoardInto(single, singleInner, moodboardItems('cloth'), moodboard.cloth, true, (id)=>{
-      moodboardExtra.cloth=(moodboardExtra.cloth||[]).filter(x=>x.id!==id);
-      delete moodboard.cloth[id];
-      saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
-      renderMoodboard();
-    });
-  }else{
-    if(single) single.style.display='none';
-    if(dualWrap) dualWrap.style.display='flex';
-    if(!moodboard.decor) moodboard.decor={sofia:{},wave:{}};
-    ['sofia','wave'].forEach(venue=>{
-      const canvas=document.getElementById(venue==='sofia'?'moodboardCanvasSofia':'moodboardCanvasWave');
-      const inner=document.getElementById(venue==='sofia'?'moodboardInnerSofia':'moodboardInnerWave');
-      if(!canvas||!inner) return;
-      if(!moodboard.decor[venue]) moodboard.decor[venue]={};
-      renderMoodboardBoardInto(canvas, inner, moodboardItems('decor',venue), moodboard.decor[venue], false, (id)=>{
-        if(!moodboardExtra.decor) moodboardExtra.decor={sofia:[],wave:[]};
-        moodboardExtra.decor[venue]=(moodboardExtra.decor[venue]||[]).filter(x=>x.id!==id);
-        delete moodboard.decor[venue][id];
-        saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
-        renderMoodboard();
-      });
-    });
-    renderMbVenueLabels();
-  }
+  if(!single||!singleInner) return;
+  if(!moodboard.cloth) moodboard.cloth={};
+  renderMoodboardBoardInto(single, singleInner, moodboardItems('cloth'), moodboard.cloth, true, (id)=>{
+    moodboardExtra.cloth=(moodboardExtra.cloth||[]).filter(x=>x.id!==id);
+    delete moodboard.cloth[id];
+    saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
+    renderMoodboard();
+  });
   saveJSON('wed-moodboard',moodboard);
 }
-// додає файл (dataURL) як нову вільну картинку на дошку мудборду (для decor — конкретної локації)
-function addMoodboardFile(file, venueKey){
+// декор: пісочниця тепер вбудована прямо у вкладку (не модалка), тому рендериться разом
+// із рештою декору (renderDecor()), а не лише при відкритті модалки, як для одягу
+function renderDecorMoodboard(){
+  if(!moodboard.decor) moodboard.decor={sofia:{},wave:{}};
+  ['sofia','wave'].forEach(venue=>{
+    const canvas=document.getElementById(venue==='sofia'?'moodboardCanvasSofia':'moodboardCanvasWave');
+    const inner=document.getElementById(venue==='sofia'?'moodboardInnerSofia':'moodboardInnerWave');
+    if(!canvas||!inner) return;
+    if(!moodboard.decor[venue]) moodboard.decor[venue]={};
+    renderMoodboardBoardInto(canvas, inner, moodboardItems('decor',venue), moodboard.decor[venue], false, (id)=>{
+      if(!moodboardExtra.decor) moodboardExtra.decor={sofia:[],wave:[]};
+      moodboardExtra.decor[venue]=(moodboardExtra.decor[venue]||[]).filter(x=>x.id!==id);
+      delete moodboard.decor[venue][id];
+      saveJSON('wed-mbExtra',moodboardExtra); saveJSON('wed-moodboard',moodboard);
+      renderDecorMoodboard();
+    });
+  });
+  renderMbVenueLabels();
+  saveJSON('wed-moodboard',moodboard);
+}
+// додає файл (dataURL) як нову вільну картинку на дошку мудборду (для decor — конкретної локації);
+// type ('cloth'|'decor') передається явно викликом — обидві дошки тепер можуть бути на екрані
+// одночасно (одяг у модалці, декор вбудовано у вкладку), тому глобальний прапорець тут не підходить
+function addMoodboardFile(file, venueKey, type){
   if(!file || !/^image\//.test(file.type)){ return; }
   loadPhotoFile(file,1024,data=>{
     if(!data){ showToast('Не вдалося обробити фото'); return; }
     const entry={id:'mbx'+Date.now()+Math.random().toString(36).slice(2,7), img:data, title:''};
-    if(_mbType==='cloth'){
+    if(type==='cloth'){
       if(!moodboardExtra.cloth) moodboardExtra.cloth=[];
       moodboardExtra.cloth.push(entry);
+      saveJSON('wed-mbExtra',moodboardExtra);
+      renderMoodboard();
     }else{
       const v=venueKey||activeMbVenue;
       if(!moodboardExtra.decor) moodboardExtra.decor={sofia:[],wave:[]};
       if(!moodboardExtra.decor[v]) moodboardExtra.decor[v]=[];
       moodboardExtra.decor[v].push(entry);
+      saveJSON('wed-mbExtra',moodboardExtra);
+      renderDecorMoodboard();
     }
-    saveJSON('wed-mbExtra',moodboardExtra);
-    renderMoodboard();
   },0.85);
 }
 // перетягування картки одним пальцем/мишею; два пальці НА картці — пінч-зум самої картки (зміна розміру)
@@ -7050,42 +7056,47 @@ function wireMoodboardDrag(inner, board){
     tile.addEventListener('pointercancel',release);
   });
 }
-/* Figma-подібний зум усієї дошки: пінч на порожньому місці, Ctrl+колесо, або кнопки ± */
-let _mbZoom=1;
-function applyMbZoom(){
-  const ids = _mbType==='cloth' ? ['moodboardInner'] : ['moodboardInnerSofia','moodboardInnerWave'];
-  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.zoom=_mbZoom; });
-  const lbl=document.getElementById('mbZoomReset'); if(lbl) lbl.textContent=Math.round(_mbZoom*100)+'%';
+/* Figma-подібний зум дошки: пінч на порожньому місці, Ctrl+колесо. Кожен канвас має свій
+   незалежний рівень зуму (мапа за id) — одяг (у модалці) й обидві локації декору (вбудовані у
+   вкладку) тепер можуть існувати на екрані одночасно, тож єдиного спільного прапорця недостатньо. */
+const _canvasZoom={};
+function applyCanvasZoom(canvas){
+  const z=_canvasZoom[canvas.id]||1;
+  const inner=canvas.querySelector('.moodboard-inner');
+  if(inner) inner.style.zoom=z;
+  if(canvas.id==='moodboardCanvas'){ const lbl=document.getElementById('mbZoomReset'); if(lbl) lbl.textContent=Math.round(z*100)+'%'; }
 }
-function mbZoomBy(delta){ _mbZoom=Math.max(0.3,Math.min(2.5,_mbZoom+delta)); applyMbZoom(); }
-function mbZoomReset(){ _mbZoom=1; applyMbZoom(); }
-// підключає жест "пінч/Ctrl+колесо = зум усієї дошки" до одного канвасу (викликається для кожного:
-// одиночного одягу і обох локацій декору)
+function mbZoomReset(){ _canvasZoom['moodboardCanvas']=1; const c=document.getElementById('moodboardCanvas'); if(c) applyCanvasZoom(c); }
+// підключає жест "пінч/Ctrl+колесо = зум цього канвасу" (викликається для кожного:
+// одиночного одягу і обох локацій декору, незалежно один від одного)
 function wireCanvasZoomGestures(canvas){
   if(!canvas) return;
+  if(_canvasZoom[canvas.id]==null) _canvasZoom[canvas.id]=1;
   let pinchStartDist=0, pinchStartZoom=1;
   canvas.addEventListener('touchstart',e=>{
     if(e.touches.length!==2 || e.target.closest('.moodboard-tile')){ pinchStartDist=0; return; }
     const [a,b]=e.touches;
     pinchStartDist=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-    pinchStartZoom=_mbZoom;
+    pinchStartZoom=_canvasZoom[canvas.id];
   },{passive:true});
   canvas.addEventListener('touchmove',e=>{
     if(e.touches.length!==2 || !pinchStartDist) return;
     const [a,b]=e.touches;
     const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-    _mbZoom=Math.max(0.3,Math.min(2.5, pinchStartZoom*(d/pinchStartDist)));
-    applyMbZoom();
+    _canvasZoom[canvas.id]=Math.max(0.3,Math.min(2.5, pinchStartZoom*(d/pinchStartDist)));
+    applyCanvasZoom(canvas);
   },{passive:true});
   canvas.addEventListener('touchend',()=>{ pinchStartDist=0; });
   canvas.addEventListener('wheel',e=>{
     if(!e.ctrlKey) return;
     e.preventDefault();
-    mbZoomBy(e.deltaY<0?0.1:-0.1);
+    _canvasZoom[canvas.id]=Math.max(0.3,Math.min(2.5, (_canvasZoom[canvas.id]||1)+(e.deltaY<0?0.1:-0.1)));
+    applyCanvasZoom(canvas);
   },{passive:false});
 }
 // підключає drag&drop файлів з компʼютера на конкретний канвас (desktop-only; на телефоні для
-// цього є кнопка 📁 Фото), venueKey — куди саме падає файл (лише для decor)
+// цього є кнопка 📁 Фото), venueKey — куди саме падає файл (лише для decor); тип визначаємо з
+// наявності venueKey (одяг ніколи не передає venueKey)
 function wireCanvasFileDrop(canvas, venueKey){
   if(!canvas) return;
   let dragDepth=0;
@@ -7096,23 +7107,22 @@ function wireCanvasFileDrop(canvas, venueKey){
     e.preventDefault(); dragDepth=0; canvas.classList.remove('mb-dragover');
     const files=[...(e.dataTransfer?.files||[])].filter(f=>/^image\//.test(f.type));
     if(!files.length){ showToast('Це не схоже на картинку 🙂'); return; }
-    files.forEach(f=>addMoodboardFile(f, venueKey));
+    files.forEach(f=>addMoodboardFile(f, venueKey, venueKey?'decor':'cloth'));
     if(files.length>1) showToast(`📸 Додано фото: ${files.length}`);
   });
 }
-function openMoodboard(type){
-  _mbType=type;
-  const title=document.getElementById('moodboardTitle');
-  if(title) title.textContent = type==='cloth' ? '🎨 Мудборд одягу' : '🎨 Мудборд декору';
+function openMoodboard(){
   document.getElementById('moodboardModal').style.display='flex';
   mbZoomReset();
   renderMoodboard();
 }
-document.querySelectorAll('[data-moodboard]').forEach(btn=>btn.onclick=()=>openMoodboard(btn.dataset.moodboard));
+document.querySelectorAll('[data-moodboard]').forEach(btn=>btn.onclick=()=>openMoodboard());
 { const mc2=document.getElementById('moodboardClose'); if(mc2) mc2.onclick=closeMoodboard; }
 {
   const addBtn=document.getElementById('mbAddFileBtn');
-  if(addBtn) addBtn.onclick=()=>pickImageFile(f=>{ if(f) addMoodboardFile(f, activeMbVenue); });
+  if(addBtn) addBtn.onclick=()=>pickImageFile(f=>{ if(f) addMoodboardFile(f, null, 'cloth'); });
+  const dAddBtn=document.getElementById('dMbAddFileBtn');
+  if(dAddBtn) dAddBtn.onclick=()=>pickImageFile(f=>{ if(f) addMoodboardFile(f, activeMbVenue, 'decor'); });
   wireCanvasZoomGestures(document.getElementById('moodboardCanvas'));
   wireCanvasZoomGestures(document.getElementById('moodboardCanvasSofia'));
   wireCanvasZoomGestures(document.getElementById('moodboardCanvasWave'));
