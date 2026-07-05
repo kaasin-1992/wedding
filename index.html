@@ -6280,16 +6280,21 @@ const INSPO_ICON={'образ':'👗','зачіска / мейк':'💇','дек
 async function bulkProcessInspo(ids){
   if(_inspoBulkBusy) return;
   _inspoBulkBusy=true; renderInspo();
+  let success=0;
   for(const id of ids){
     const i=inspo.find(x=>x.id===id); if(!i) continue;
     try{
       const res=await screenshotAndReadInfo(i.url);
-      if(res){ i.img=res.img; if(res.title && !i.title) i.title=res.title; saveJSON('wed-inspo',inspo); }
+      if(res){ i.img=res.img; if(res.title && !i.title) i.title=res.title; saveJSON('wed-inspo',inspo); success++; }
     }catch(e){ console.warn('bulkProcessInspo',id,e); }
   }
   _inspoBulkBusy=false;
   renderInspo();
-  showToast(`✨ Оброблено ${ids.length} ідей`);
+  // чесний підсумок — деякі сайти (напр. Pinterest) блокують анонімний скрін, і screenshotAndReadInfo
+  // мовчки повертає null; попередній тост завжди казав "Оброблено N", навіть коли 0 з N вдалось
+  if(success===ids.length) showToast(`✨ Оброблено ${success} ідей`);
+  else if(success===0) showToast('Не вдалось дістати жодного фото автоматично (деякі сайти, напр. Pinterest, блокують скрін) — онови вручну 📸');
+  else showToast(`✨ Знайшов фото для ${success} з ${ids.length} — решта, ймовірно, блокує авто-скрін, онови вручну 📸`);
 }
 function renderInspo(){
   const grid=document.getElementById('inspoGrid'); if(!grid) return;
@@ -6320,8 +6325,9 @@ function renderInspo(){
   if(!list.length){ grid.innerHTML=`<div class="inspo-empty">${inspo.length?'Немає ідей у цьому тегу.':'Поки порожньо.<br>Встав посилання на пін чи будь-яку картинку 📌'}</div>`; return; }
   grid.innerHTML=list.map(i=>{
     const host=hostOf(i.url);
-    const img=i.img?`<img class="inspo-img" src="${esc(i.img)}" loading="lazy" alt="" data-inbig="${i.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`
-                   :`<div class="inspo-img noimg">🖼</div>`;
+    // без фото — НЕ показуємо велику порожню іконку-заглушку 🖼 (за прямим проханням), просто
+    // немає image-блоку взагалі; текстовий натяк nextImgHint нижче й так пояснює, що робити
+    const img=i.img?`<img class="inspo-img" src="${esc(i.img)}" loading="lazy" alt="" data-inbig="${i.id}" onerror="this.remove();">`:'';
     const noImgHint=(!i.img && !i.loading && i.url)?`<div class="photo-missing-hint">📷 Фото не підтягнулось автоматично</div>`:'';
     const photoBtn=(!i.img && i.url && !i.loading)
       ? `<button class="idea-photo-btn" data-incombo="${i.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;margin-top:6px;">📸✨ Скрін + ШІ-інфо</button>`
