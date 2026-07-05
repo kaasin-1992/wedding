@@ -6739,6 +6739,10 @@ document.getElementById('inImagineBtn').onclick=async()=>{
 };
 
 /* ── ДРЕС-КОД: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах ── */
+// кеш останнього відрендереного сирого HTML для кожного блоку дрес-коду — порівнюємо з НИМ, а не
+// з живим .innerHTML (браузер переформатовує атрибути при парсингу, тож порівняння з .innerHTML
+// після round-trip майже завжди хибне і не рятує від зайвого перемальовування/миготіння)
+const _dcCache={presets:'',colors:'',refs:'',result:''};
 function renderDressCode(){
   // не рвемо взаємодію, поки вона щось вводить чи обирає колір у нативному color-picker'і —
   // той самий захист, що й у Контактах: applyMedia() перемальовує все на КОЖЕН фоновий снапшот
@@ -6747,7 +6751,7 @@ function renderDressCode(){
   const presetsBox=document.getElementById('dcPresets');
   if(presetsBox){
     const cats=[...new Set(DRESSCODE_PRESETS.map(p=>p.cat))];
-    presetsBox.innerHTML=cats.map(cat=>`<span class="dc-preset-cat">${esc(cat)}</span>`+
+    const presetsHtml=cats.map(cat=>`<span class="dc-preset-cat">${esc(cat)}</span>`+
       DRESSCODE_PRESETS.filter(p=>p.cat===cat).map(p=>`
         <div class="dc-preset-chip${dresscode.presetId===p.id?' active':''}" data-dcpreset="${p.id}" title="${esc(p.hint)}">
           <span class="dc-preset-icon">${p.icon}</span>
@@ -6755,42 +6759,57 @@ function renderDressCode(){
           <span class="dc-preset-dots">${p.colors.map(c=>`<span style="background:${esc(c)}"></span>`).join('')}</span>
         </div>`).join('')
     ).join('');
-    presetsBox.querySelectorAll('[data-dcpreset]').forEach(chip=>chip.onclick=()=>{
-      const preset=DRESSCODE_PRESETS.find(p=>p.id===chip.dataset.dcpreset); if(!preset) return;
-      dresscode.colors=[...preset.colors]; dresscode.presetId=preset.id;
-      saveJSON('wed-dresscode',dresscode); renderDressCode();
-    });
+    // не переписуємо innerHTML, якщо вміст фактично не змінився — інакше кожен фоновий рендер
+    // (applyMedia→renderAll спрацьовує на будь-яку непов'язану зміну деінде) знищує й наново
+    // створює всі DOM-вузли, і картинки/елементи візуально "мигочуть" без жодної реальної зміни.
+    // Порівнюємо з ВЛАСНИМ кешем сирого рядка (не з живим .innerHTML — браузер переформатовує
+    // атрибути при парсингу, тож порівняння з .innerHTML після round-trip майже завжди хибне).
+    if(_dcCache.presets!==presetsHtml){
+      _dcCache.presets=presetsHtml;
+      presetsBox.innerHTML=presetsHtml;
+      presetsBox.querySelectorAll('[data-dcpreset]').forEach(chip=>chip.onclick=()=>{
+        const preset=DRESSCODE_PRESETS.find(p=>p.id===chip.dataset.dcpreset); if(!preset) return;
+        dresscode.colors=[...preset.colors]; dresscode.presetId=preset.id;
+        saveJSON('wed-dresscode',dresscode); renderDressCode();
+      });
+    }
   }
   const colorsBox=document.getElementById('dcColors'); if(!colorsBox) return;
-  colorsBox.innerHTML=`<div class="dc-swatches">
+  const colorsHtml=`<div class="dc-swatches">
       ${dresscode.colors.map((c,idx)=>`<span class="dc-swatch" style="background:${esc(c)}" data-dcrm="${idx}" title="${esc(c)} — тицяй, щоб прибрати"></span>`).join('')}
       ${dresscode.colors.length<6?`<label class="dc-add-swatch" title="Додати колір">+<input type="color" id="dcColorPick" value="#A8505F"></label>`:''}
     </div>`;
-  colorsBox.querySelectorAll('[data-dcrm]').forEach(sw=>sw.onclick=()=>{
-    dresscode.colors.splice(Number(sw.dataset.dcrm),1);
-    dresscode.presetId='';   // ручна зміна відхиляє палітру від пресету — знімаємо підсвітку активного чипа
-    saveJSON('wed-dresscode',dresscode); renderDressCode();
-  });
-  const picker=document.getElementById('dcColorPick');
-  if(picker) picker.onchange=()=>{
-    dresscode.colors.push(picker.value);
-    dresscode.presetId='';
-    picker.blur();   // нативний пікер уже закрився до onchange — знімаємо фокус, щоб isTextEntryFocused() не заблокував цей же власний рендер
-    saveJSON('wed-dresscode',dresscode); renderDressCode();
-  };
+  if(_dcCache.colors!==colorsHtml){
+    _dcCache.colors=colorsHtml;
+    colorsBox.innerHTML=colorsHtml;
+    colorsBox.querySelectorAll('[data-dcrm]').forEach(sw=>sw.onclick=()=>{
+      dresscode.colors.splice(Number(sw.dataset.dcrm),1);
+      dresscode.presetId='';   // ручна зміна відхиляє палітру від пресету — знімаємо підсвітку активного чипа
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+    });
+    const picker=document.getElementById('dcColorPick');
+    if(picker) picker.onchange=()=>{
+      dresscode.colors.push(picker.value);
+      dresscode.presetId='';
+      picker.blur();   // нативний пікер уже закрився до onchange — знімаємо фокус, щоб isTextEntryFocused() не заблокував цей же власний рендер
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+    };
+  }
   const refsGrid=document.getElementById('dcRefsGrid');
   if(refsGrid){
-    if(!dresscode.refs.length){
-      refsGrid.innerHTML='<div class="inspo-empty">Поки без референсів — встав посилання на стиль вище 📌</div>';
-    }else{
-      refsGrid.innerHTML=dresscode.refs.map(r=>{
-        const img=r.img?`<img class="inspo-img" src="${esc(r.img)}" loading="lazy" alt="" data-dcrefbig="${r.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`:`<div class="inspo-img noimg">🖼</div>`;
-        return `<div class="inspo-card">
-          <button class="del-x" data-dcrefdel="${r.id}" aria-label="Видалити">✕</button>
-          ${r.loading?`<div class="idea-loading" style="margin:8px;">${r._ai?'🪄 ШІ малює…':'Підтягую…'}</div>`:img}
-          <div class="inspo-body">${r.title?`<div class="inspo-title">${esc(r.title)}</div>`:''}</div>
-        </div>`;
-      }).join('');
+    const refsHtml=!dresscode.refs.length
+      ? '<div class="inspo-empty">Поки без референсів — встав посилання на стиль вище 📌</div>'
+      : dresscode.refs.map(r=>{
+          const img=r.img?`<img class="inspo-img" src="${esc(r.img)}" loading="lazy" alt="" data-dcrefbig="${r.id}" onerror="this.classList.add('noimg');this.removeAttribute('src');this.textContent='🖼';">`:`<div class="inspo-img noimg">🖼</div>`;
+          return `<div class="inspo-card">
+            <button class="del-x" data-dcrefdel="${r.id}" aria-label="Видалити">✕</button>
+            ${r.loading?`<div class="idea-loading" style="margin:8px;">${r._ai?'🪄 ШІ малює…':'Підтягую…'}</div>`:img}
+            <div class="inspo-body">${r.title?`<div class="inspo-title">${esc(r.title)}</div>`:''}</div>
+          </div>`;
+        }).join('');
+    if(_dcCache.refs!==refsHtml){
+      _dcCache.refs=refsHtml;
+      refsGrid.innerHTML=refsHtml;
       refsGrid.querySelectorAll('[data-dcrefbig]').forEach(im=>{
         const r=dresscode.refs.find(x=>x.id===im.dataset.dcrefbig); if(r&&r.img) im.onclick=()=>showImgBig(r.img,r.title||'');
       });
@@ -6802,9 +6821,13 @@ function renderDressCode(){
   }
   const resultBox=document.getElementById('dcGenResult');
   if(resultBox){
-    resultBox.innerHTML=dresscode.gen?`<div class="dc-gen-wrap"><img class="dc-gen-img" src="${esc(dresscode.gen)}" alt="" data-dcgenview></div>`:'';
-    const genImg=resultBox.querySelector('[data-dcgenview]');
-    if(genImg) genImg.onclick=()=>showImgBig(dresscode.gen,'Дрес-код стиль');
+    const resultHtml=dresscode.gen?`<div class="dc-gen-wrap"><img class="dc-gen-img" src="${esc(dresscode.gen)}" alt="" data-dcgenview></div>`:'';
+    if(_dcCache.result!==resultHtml){
+      _dcCache.result=resultHtml;
+      resultBox.innerHTML=resultHtml;
+      const genImg=resultBox.querySelector('[data-dcgenview]');
+      if(genImg) genImg.onclick=()=>showImgBig(dresscode.gen,'Дрес-код стиль');
+    }
   }
 }
 document.getElementById('addDcRefBtn').onclick=async()=>{
