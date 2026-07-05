@@ -229,6 +229,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* швидка дія "написати" — якщо контакт розпізнано як телефон/IG/TG-посилання (✉️), або
    голий @хендл без вказаної платформи (тоді дві кнопки — Instagram і Telegram окремо) */
 .guest-contact-go{flex:0 0 auto;font-size:14px;line-height:1;text-decoration:none;padding:2px;}
+.guest-contact-vcf{flex:0 0 auto;font-size:14px;line-height:1;padding:2px;background:none;border:none;cursor:pointer;}
 /* картки гостей раніше завжди показували весь ряд чипсів (дружка/+1/діти/алко/вега/травка тощо) —
    тепер згорнуто за замовчуванням під "⋯ ще", щоб список гостей був компактнішим */
 .guest-more{margin-top:4px;}
@@ -1326,7 +1327,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         <input type="text" id="cContact" placeholder="Телефон / Instagram / сайт (посилання t.me/… теж розпізнається)">
         <input type="text" id="cNote" placeholder="Ціна / нотатка">
         <button type="button" class="idea-photo-btn" id="cVcfBtn" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;margin-bottom:8px;">📇 Імпортувати з .vcf (контакт з телефону)</button>
-        <input type="file" id="cVcfFile" accept=".vcf,text/vcard" style="display:none">
         <button class="submit-btn" id="addContactBtn">Додати</button>
       </div>
     </details>
@@ -2630,6 +2630,7 @@ function renderGuests(){
             : (handle?`<a class="guest-contact-go" href="https://instagram.com/${esc(handle)}" target="_blank" rel="noopener noreferrer" title="Instagram">📸</a><a class="guest-contact-go" href="https://t.me/${esc(handle)}" target="_blank" rel="noopener noreferrer" title="Telegram">✈️</a>`:'');
           return `<div class="guest-contact-row">
             <div class="guest-contact${g.contact?'':' empty'}" data-gcontact="${g.id}" contenteditable="true" spellcheck="false" title="Телефон, Instagram чи Telegram">${esc(g.contact||'＋ контакт')}</div>
+            <button class="guest-contact-vcf" data-gvcf="${g.id}" title="Імпортувати контакт з .vcf (телефонна книга)" aria-label="Імпортувати контакт з .vcf">📇</button>
             ${actions}
           </div>`;
         })()}
@@ -2706,6 +2707,14 @@ function renderGuests(){
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
+  });
+  if(!IS_GUEST) listEl.querySelectorAll('[data-gvcf]').forEach(b=>b.onclick=()=>{
+    const g=guests.find(x=>x.id===b.dataset.gvcf); if(!g) return;
+    pickVcfContact(({contact})=>{
+      if(!contact){ showToast('У файлі немає телефону/email 😕'); return; }
+      g.contact=contact; saveJSON('wed-guests',guests); renderGuests();
+      showToast('📇 Контакт додано');
+    });
   });
 }
 // мультивибір: клік перемикає фільтр, "Всі" скидає до дефолту; якщо нічого не лишилось — теж дефолт
@@ -3008,20 +3017,34 @@ function parseVCard(text){
   const contact=(tel&&tel[1].trim())||(email&&email[1].trim())||'';
   return {name, contact};
 }
-document.getElementById('cVcfBtn').onclick=()=>document.getElementById('cVcfFile').click();
-document.getElementById('cVcfFile').onchange=(e)=>{
-  const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const {name,contact}=parseVCard(String(reader.result||''));
-    if(!name && !contact){ showToast('Не вдалося розпізнати контакт у файлі 😕'); return; }
-    if(name) document.getElementById('cName').value=name;
-    if(contact) document.getElementById('cContact').value=contact;
-    showToast('📇 Дані підтягнуто — перевір і натисни "Додати"');
+// спільний імпорт .vcf для БУДЬ-ЯКОГО місця, де можна додати контакт (не лише вкладка
+// Контакти) — один прихований file-input, що перевикористовується всюди, замість дублювати
+// його в кожній формі. cb отримує {name, contact} лише коли щось реально розпізналось.
+let _vcfFileInput=null;
+function pickVcfContact(cb){
+  if(!_vcfFileInput){
+    _vcfFileInput=document.createElement('input');
+    _vcfFileInput.type='file'; _vcfFileInput.accept='.vcf,text/vcard'; _vcfFileInput.style.display='none';
+    document.body.appendChild(_vcfFileInput);
+  }
+  _vcfFileInput.onchange=(e)=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const parsed=parseVCard(String(reader.result||''));
+      if(!parsed.name && !parsed.contact){ showToast('Не вдалося розпізнати контакт у файлі 😕'); return; }
+      cb(parsed);
+    };
+    reader.onerror=()=>showToast('Не вдалося прочитати файл 😕');
+    reader.readAsText(f);
   };
-  reader.onerror=()=>showToast('Не вдалося прочитати файл 😕');
-  reader.readAsText(f);
-};
+  _vcfFileInput.click();
+}
+document.getElementById('cVcfBtn').onclick=()=>pickVcfContact(({name,contact})=>{
+  if(name) document.getElementById('cName').value=name;
+  if(contact) document.getElementById('cContact').value=contact;
+  showToast('📇 Дані підтягнуто — перевір і натисни "Додати"');
+});
 document.getElementById('addContactBtn').onclick=()=>{
   const role=val('cRole')||'Контакт';
   if(!val('cRole')&&!val('cName'))return;
