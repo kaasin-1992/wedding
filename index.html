@@ -870,6 +870,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .add-section details summary{padding:13px 15px;cursor:pointer;font-size:14px;color:var(--terra);font-weight:500;list-style:none;display:flex;align-items:center;gap:8px;}
 .add-section details[open] summary{border-bottom:1px solid var(--line);}
 .add-form{padding:15px;display:flex;flex-direction:column;gap:10px;}
+.add-target-hint{font-size:12px;font-weight:600;color:var(--muted);margin-top:-4px;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .add-form input,.add-form select,.add-form textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--sans);font-size:16px;color:var(--text);width:100%;}
 .add-form textarea{resize:vertical;min-height:70px;}
@@ -1528,7 +1529,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="panel" id="tab-beauty">
   <div class="section-hint">Ідеї макіяжу й зачіски — окремо для Каті та Діми. Встав посилання (Pinterest, приклад) — підтягнеться фото й опис, або просто опиши текстом.</div>
   <details class="portrait-studio" id="portraitStudio">
-    <summary>💇 Портрети — зачіски, вінки, мейк</summary>
+    <summary>🖼 Портрет-студія — ШІ малює образ на твоєму фото</summary>
     <div class="ps-body">
       <div class="ps-who" id="psWho">
         <button type="button" class="ps-who-btn active" data-psw="her">👰 Катерина</button>
@@ -1544,10 +1545,19 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <div class="ps-grid" id="psGrid"></div>
     </div>
   </details>
+  <div class="filters" id="beautyPersonFilters">
+    <button class="filt-btn active" data-bp="her">👰 Каті</button>
+    <button class="filt-btn" data-bp="his">🤵 Діми</button>
+  </div>
+  <div class="filters" id="beautyTypeFilters">
+    <button class="filt-btn active" data-bt="makeup">💄 Мейк</button>
+    <button class="filt-btn" data-bt="hair">💇 Зачіска</button>
+  </div>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати ідею</summary>
       <div class="add-form">
+        <div class="add-target-hint" id="beAddTarget"></div>
         <input type="url" id="beUrl" placeholder="Посилання (необовʼязково)" autocapitalize="none" spellcheck="false">
         <div class="form-row">
           <input type="text" id="beName" placeholder="Назва (підтягнеться сама)">
@@ -1557,14 +1567,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         <button class="submit-btn" id="addBeautyBtn">Додати</button>
       </div>
     </details>
-  </div>
-  <div class="filters" id="beautyPersonFilters">
-    <button class="filt-btn active" data-bp="her">👰 Каті</button>
-    <button class="filt-btn" data-bp="his">🤵 Діми</button>
-  </div>
-  <div class="filters" id="beautyTypeFilters">
-    <button class="filt-btn active" data-bt="makeup">💄 Мейк</button>
-    <button class="filt-btn" data-bt="hair">💇 Зачіска</button>
   </div>
   <div id="beautyList"></div>
 </div>
@@ -3395,6 +3397,8 @@ let activeBeauty='her';
 let activeBeautyType='makeup';
 function renderBeauty(){
   const listEl=document.getElementById('beautyList'); if(!listEl) return; listEl.innerHTML='';
+  const targetEl=document.getElementById('beAddTarget');
+  if(targetEl) targetEl.textContent=`Додається до: ${activeBeauty==='her'?'👰 Каті':'🤵 Діми'} · ${activeBeautyType==='makeup'?'💄 Мейк':'💇 Зачіска'}`;
   const items=ideas.filter(i=>i.cat===activeBeautyType && i.who===activeBeauty);
   if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки порожньо.<br>Встав посилання або напиши ідею вручну 🌸</div>'; return; }
   items.forEach(it=>{
