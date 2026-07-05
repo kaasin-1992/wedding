@@ -1830,7 +1830,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         </div>
         <div class="form-row">
           <select id="dWho">
-            <option value="me">🙋 Я сама</option>
+            <option value="me">🙋 Катя</option>
             <option value="maids">👯 Дружки</option>
             <option value="vendor">🧑‍🔧 Підрядник</option>
           </select>
@@ -1899,7 +1899,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         <div class="form-row">
           <input type="text" id="ckPrice" placeholder="Ціна (напр. 3500 грн)">
           <select id="ckWho">
-            <option value="me">🙋 Я сама</option>
+            <option value="me">🙋 Катя</option>
             <option value="maids">👯 Дружки</option>
             <option value="vendor">🧑‍🔧 Кондитер</option>
           </select>
@@ -5822,7 +5822,7 @@ async function aiVisualizeVenueSpace(venue){
   }catch(e){ console.warn('visualizeVenueSpace',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
   finally{ if(btn){ btn.textContent=old||'🪄 Уявити простір'; btn.disabled=false; } }
 }
-const DECOR_WHO={me:'🙋 Я',his:'🤵 Діма',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
+const DECOR_WHO={me:'🙋 Катя',his:'🤵 Діма',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
 // "хто відповідає" тепер може бути й конкретним гостем (значення 'g:<guestId>'), не лише
 // узагальненою категорією — гості беруться живцем з guests[], без окремого дубльованого списку
 function whoGuestList(){ return guests.filter(g=>g.status!=='declined').sort((a,b)=>(a.name||'').localeCompare(b.name||'','uk')); }
