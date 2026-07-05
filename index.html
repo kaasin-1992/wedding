@@ -5648,7 +5648,7 @@ function renderHotels(){
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-hdel="${h.id}" aria-label="Видалити готель">✕</button>
-      ${h.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      ${h.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(h.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"><button class="idea-ai-x" data-himgdel="${h.id}" aria-label="Прибрати саме фото" title="Прибрати фото (запис лишиться)">✕</button></div>`:''}
       <div class="idea-body">
         ${h.loading?'<div class="idea-loading">Підтягую інфо з посилання…</div>':noImgHint}
         <div class="idea-title">${esc(h.title||h.url||'Готель')}</div>
@@ -5698,6 +5698,12 @@ function renderHotels(){
         showToast('📸 Фото додано');
       },0.85);
     });
+  });
+  listEl.querySelectorAll('[data-himgdel]').forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const h=hotels.find(x=>x.id===b.dataset.himgdel); if(!h)return;
+    h.img=''; saveJSON('wed-hotels',hotels); renderHotels();
+    showToast('Фото прибрано');
   });
   listEl.querySelectorAll('[data-hcombo]').forEach(b=>b.onclick=async()=>{
     const h=hotels.find(x=>x.id===b.dataset.hcombo); if(!h||!h.url)return;
@@ -5959,7 +5965,7 @@ function renderDecorDetail(){
     : `<button class="idea-photo-btn" data-dphoto="${d.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${d.img?'Змінити фото':'Додати фото'}</button>`;
   panel.innerHTML=`
     <button class="del-x" data-ddel="${d.id}" aria-label="Видалити декор">✕</button>
-    ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+    ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"><button class="idea-ai-x" data-dimgdel="${d.id}" aria-label="Прибрати саме фото" title="Прибрати фото (запис лишиться)">✕</button></div>`:''}
     <div class="idea-body">
       ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:noImgHint}
       <div class="idea-title" data-dtitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Декор')}</div>
@@ -6007,6 +6013,12 @@ function wireDecorDetailHandlers(panel){
         showToast('📸 Фото додано');
       },0.85);
     });
+  });
+  panel.querySelectorAll('[data-dimgdel]').forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const d=decor.find(x=>x.id===b.dataset.dimgdel); if(!d)return;
+    d.img=''; saveJSON('wed-decor',decor); renderDecorDetail(); renderDecor();
+    showToast('Фото прибрано');
   });
   panel.querySelectorAll('[data-dcombo]').forEach(b=>b.onclick=async()=>{
     const d=decor.find(x=>x.id===b.dataset.dcombo); if(!d||!d.url)return;
@@ -6179,7 +6191,7 @@ function renderCake(){
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-ckdel="${d.id}" aria-label="Видалити ідею торта">✕</button>
-      ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      ${d.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(d.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"><button class="idea-ai-x" data-ckimgdel="${d.id}" aria-label="Прибрати саме фото" title="Прибрати фото (запис лишиться)">✕</button></div>`:''}
       <div class="idea-body">
         ${d.loading?`<div class="idea-loading">${d._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:noImgHint}
         <div class="idea-title" data-cktitle="${d.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(d.title||d.url||'Торт')}</div>
@@ -6222,6 +6234,12 @@ function renderCake(){
         showToast('📸 Фото додано');
       },0.85);
     });
+  });
+  listEl.querySelectorAll('[data-ckimgdel]').forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const d=decor.find(x=>x.id===b.dataset.ckimgdel); if(!d)return;
+    d.img=''; saveJSON('wed-decor',decor); renderCake();
+    showToast('Фото прибрано');
   });
   listEl.querySelectorAll('[data-ckcombo]').forEach(b=>b.onclick=async()=>{
     const d=decor.find(x=>x.id===b.dataset.ckcombo); if(!d||!d.url)return;
@@ -6431,7 +6449,7 @@ function renderMusic(){
     const card=document.createElement('div'); card.className='idea-card';
     card.innerHTML=`
       <button class="del-x" data-mdel="${m.id}" aria-label="Видалити артиста">✕</button>
-      ${m.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(m.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"></div>`:''}
+      ${m.img?`<div class="idea-thumb-wrap hotel-thumb-wrap"><img class="idea-thumb" src="${esc(m.img)}" loading="lazy" alt="" onerror="this.parentElement.style.display='none'"><button class="idea-ai-x" data-mimgdel="${m.id}" aria-label="Прибрати саме фото" title="Прибрати фото (запис лишиться)">✕</button></div>`:''}
       <div class="idea-body">
         ${m.loading?`<div class="idea-loading">${m._ai?'🪄 ШІ малює…':'Підтягую інфо з посилання…'}</div>`:''}
         <div class="idea-title" data-mtitle="${m.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(m.name||m.url||'Артист')}</div>
@@ -6518,6 +6536,12 @@ function renderMusic(){
       if(v!==(m.note||'')){ m.note=v; saveJSON('wed-music',music); }
     };
     el.addEventListener('blur',save);
+  });
+  listEl.querySelectorAll('[data-mimgdel]').forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const m=music.find(x=>x.id===b.dataset.mimgdel); if(!m)return;
+    m.img=''; saveJSON('wed-music',music); renderMusic();
+    showToast('Фото прибрано');
   });
   listEl.querySelectorAll('[data-mphoto]').forEach(b=>b.onclick=()=>{
     const m=music.find(x=>x.id===b.dataset.mphoto); if(!m)return;
