@@ -6088,7 +6088,10 @@ function renderMusic(){
   music.forEach(m=>{
     const host=hostOf(m.url);
     const st=m.status||'search';
-    const embed=musicEmbedSrc(m.url);
+    // "посилання" (m.url) часто веде на Instagram/бронювання — скрін звідти майже завжди
+    // провалюється (Instagram блокує анонімний скрін і показує свій лого-заставку). Окреме
+    // videoUrl дає прев'ю (YouTube/Spotify), не змішуючи його з посиланням для кнопки "Написати".
+    const embed=musicEmbedSrc(m.videoUrl)||musicEmbedSrc(m.url);
     const whoBadge=whoSelectHTML('mwho',m.id,m.who||'vendor');
     const budgetBadge=`<span class="badge diy-badge${m.budgetId?' on':''}" data-mbudget="${m.id}">${m.budgetId?'✓ У бюджеті':'💰 В бюджет'}</span>`;
     const card=document.createElement('div'); card.className='idea-card';
@@ -6101,6 +6104,7 @@ function renderMusic(){
         ${host?`<div class="idea-host">${esc(host)}</div>`:''}
         <div class="idea-price-row"><span class="pl">🎚</span><input class="idea-price-inp" data-mrole="${m.id}" value="${esc(m.role||'')}" placeholder="роль (діджей/гурт…)" aria-label="Роль"></div>
         <div class="idea-price-row"><span class="pl">🔗</span><input class="idea-price-inp" data-murl="${m.id}" value="${esc(m.url||'')}" placeholder="посилання" aria-label="Посилання" autocapitalize="none" spellcheck="false"></div>
+        <div class="idea-price-row"><span class="pl">🎬</span><input class="idea-price-inp" data-mvideo="${m.id}" value="${esc(m.videoUrl||'')}" placeholder="відео (YouTube/Spotify) — необовʼязково" aria-label="Відео для прев'ю" autocapitalize="none" spellcheck="false"></div>
         <div class="hotel-meta">${whoBadge}${budgetBadge}<span class="badge hotel-status ${st==='booked'?'booked':''}" data-mst="${m.id}">${MUSIC_STATUS[st]}</span>
           <button class="idea-photo-btn" data-mphoto="${m.id}" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📷 ${m.img?'Змінити фото':'Додати фото'}</button>
           <button class="idea-photo-btn" data-mshot="${m.id}" ${m.url?'':'disabled title="Спершу встав посилання"'} style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;">📸 Скрін з посилання</button>
@@ -6160,6 +6164,12 @@ function renderMusic(){
     let v=inp.value.trim();
     if(v&&!/^https?:\/\//i.test(v)) v='https://'+v;
     m.url=v; saveJSON('wed-music',music); renderMusic();   // перерендер, бо host/embed/лінк «Відкрити» залежать від url
+  });
+  listEl.querySelectorAll('[data-mvideo]').forEach(inp=>inp.onchange=()=>{
+    const m=music.find(x=>x.id===inp.dataset.mvideo); if(!m)return;
+    let v=inp.value.trim();
+    if(v&&!/^https?:\/\//i.test(v)) v='https://'+v;
+    m.videoUrl=v; saveJSON('wed-music',music); renderMusic();   // перерендер, бо embed залежить від videoUrl
   });
   listEl.querySelectorAll('[data-mterms]').forEach(el=>{
     const save=()=>{ const m=music.find(x=>x.id===el.dataset.mterms); if(!m)return;
