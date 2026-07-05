@@ -6838,7 +6838,7 @@ function renderMenu(){
 let _mbType='cloth';
 function moodboardItems(type, venueKey){
   const base = type==='cloth'
-    ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||''}))
+    ? ideas.filter(i=>(i.cat==='her'||i.cat==='his') && (i.cleanImg||i.img)).map(i=>({id:i.id, img:i.cleanImg||i.img, title:i.title||'', gtype:i.gtype||''}))
     : decor.filter(d=>d.img && d.cat!=='cake' && (d.venue||'sofia')===venueKey).map(d=>({id:d.id, img:d.img, title:d.title||''}));
   const extraSrc = type==='cloth' ? (moodboardExtra.cloth||[]) : ((moodboardExtra.decor||{})[venueKey]||[]);
   const extra=extraSrc.map(x=>({id:x.id, img:x.img, title:x.title||'', extra:true}));
@@ -6856,9 +6856,15 @@ function renderMoodboardBoardInto(canvas, inner, items, board, isCloth, onDelete
     return;
   }
   const cols=3;
-  items.forEach((it,idx)=>{
+  // одяг: групуємо ще НЕ розташовані картки в "кучки" за типом речі (GTYPES), щоб однакові
+  // речі (сукні, взуття тощо) від початку лежали поруч — зручніше перетягувати на манекена.
+  // Уже позиційовані картки (є board[it.id]) свій порядок не міняють, лише нові підхоплюють це групування.
+  const placeOrder = isCloth
+    ? items.slice().sort((a,b)=>{ const ga=GTYPES.indexOf(a.gtype||''), gb=GTYPES.indexOf(b.gtype||''); return (ga<0?99:ga)-(gb<0?99:gb); })
+    : items;
+  placeOrder.forEach((it,idx)=>{
     let pos=board[it.id];
-    if(!pos){ // перша поява на дошці — розкладаємо приблизною сіткою, далі можна перетягнути
+    if(!pos){ // перша поява на дошці — розкладаємо приблизною сіткою (для одягу — за кучками типу), далі можна перетягнути
       const col=idx%cols, row=Math.floor(idx/cols);
       pos={x:4+col*30, y:4+row*24};
       board[it.id]=pos;
