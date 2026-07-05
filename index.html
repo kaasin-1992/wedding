@@ -1208,6 +1208,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </details>
   </div>
   <div class="stats-grid" id="guestStats"></div>
+  <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">📤 Список гостей для гри (копіювати)</button>
   <div class="sofia-limit-warn" id="sofiaLimitWarn"></div>
   <details class="roles-assign-wrap">
     <summary>🎬 Ролі на весіллі (ведуча, фотограф, відеограф)</summary>
@@ -1917,7 +1918,7 @@ const firebaseConfig = {
   messagingSenderId: "87093437583",
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
-let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, cloudReady=false, seeded=false, applyingSnapshot=false;
+let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
 // гостьовий перегляд: ?guest у посиланні → анонімний вхід, тільки читання + коментарі
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
@@ -1931,6 +1932,7 @@ try{
   WEDCOL = fdb.collection('wedding');
   DOC = WEDCOL.doc('state');
   COMMENTS = fdb.collection('comments');
+  RSVPS = fdb.collection('rsvps');
 }catch(e){ console.warn('firebase init', e); }
 if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
 
@@ -6998,6 +7000,7 @@ if(auth){
       maybeSwipeHint();
       if(!cloudReady) startSync();
       if(!commentsBound) startCommentsSync();
+      if(!rsvpBound) startRsvpSync();
     }else if(IS_GUEST){
       // гість — входимо анонімно (потрібно увімкнути Anonymous auth у Firebase)
       auth.signInAnonymously().catch(err=>{
@@ -7038,6 +7041,27 @@ function startCommentsSync(){
     updateCmtBadges();
     if(cmtTab) renderCmtList();
   }, err=>{ console.warn('comments snapshot', err); });
+}
+/* ════ RSVP-МІСТ ДЛЯ ЗОВНІШНЬОЇ ГРИ-ЗАПРОШЕННЯ ════
+   Гра (окремий застосунок) пише в окрему колекцію 'rsvps' документи виду
+   {guestId, response:'yes'|'no'}. Ми лише ЧИТАЄМО цю колекцію тут і
+   переносимо відповідь у статус гостя — гра ніколи не торкається основного
+   документа стану напряму, тож не може нічого зіпсувати в застосунку. */
+function applyRsvpDocs(docs){
+  let changed=false;
+  docs.forEach(r=>{
+    const g=guests.find(x=>x.id===r.guestId);
+    if(!g) return;
+    const newStatus = r.response==='yes' ? 'confirmed' : (r.response==='no' ? 'declined' : null);
+    if(newStatus && g.status!==newStatus){ g.status=newStatus; changed=true; }
+  });
+  return changed;
+}
+function startRsvpSync(){
+  if(!RSVPS || IS_GUEST || rsvpBound) return; rsvpBound=true;
+  RSVPS.onSnapshot(snap=>{
+    if(applyRsvpDocs(snap.docs.map(d=>d.data()))){ saveJSON('wed-guests',guests); renderGuests(); }
+  }, err=>{ console.warn('rsvp snapshot', err); });
 }
 function injectCmtButtons(){
   document.querySelectorAll('.panel').forEach(p=>{
@@ -7100,6 +7124,12 @@ injectCmtButtons();
     const url=location.origin+location.pathname.replace(/index\.html$/,'')+'?guest';
     try{ await navigator.clipboard.writeText(url); showToast('Лінк для гостей скопійовано 🔗'); }
     catch(e){ showToast(url); }
+  };
+  const eb=document.getElementById('exportGuestsBtn');
+  if(eb) eb.onclick=async()=>{
+    const lines=guests.map(g=>`${g.id};${g.name}`).join('\n');
+    try{ await navigator.clipboard.writeText(lines); showToast(`Список (${guests.length}) скопійовано — встав у гру 📋`); }
+    catch(e){ console.log(lines); showToast('Не вдалося скопіювати, список у консолі браузера'); }
   };
 })();
 // якщо гість уже залогінений (швидкий кеш) — підхопити коментарі
