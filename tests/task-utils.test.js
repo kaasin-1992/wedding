@@ -69,6 +69,10 @@ describe('stripGuestData (безпека: що гість НЕ повинен о
     const state = { tasks: [], scriptSofia: [], scriptWave: [] };
     expect(stripGuestData({ ...state, budget: [{ id: 'b1', planned: 50000 }] }).budget).toEqual([]);
   });
+  it('always empties contacts regardless of content', () => {
+    const state = { tasks: [], scriptSofia: [], scriptWave: [] };
+    expect(stripGuestData({ ...state, contacts: [{ id: 'c1', name: 'Фотограф Іван' }] }).contacts).toEqual([]);
+  });
   it('passes through tasks and scripts unchanged', () => {
     const state = {
       tasks: [{ id: 't1', text: 'забронювати зал' }],
@@ -83,6 +87,7 @@ describe('stripGuestData (безпека: що гість НЕ повинен о
   it('handles missing/undefined arrays gracefully', () => {
     const out = stripGuestData({});
     expect(out.budget).toEqual([]);
+    expect(out.contacts).toEqual([]);
     expect(out.tasks).toEqual([]);
     expect(out.scriptSofia).toEqual([]);
     expect(out.scriptWave).toEqual([]);
