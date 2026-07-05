@@ -1798,6 +1798,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     </div>
     <div id="ordersList"></div>
   </details>
+  <details class="venue-photos-wrap">
+    <summary>🧵 Що вже є вдома (для декору своїми руками)</summary>
+    <div class="add-form">
+      <input type="text" id="mText" placeholder="Напр. «глина, що сохне на повітрі»">
+      <button class="submit-btn" id="addMaterialBtn">Додати</button>
+    </div>
+    <div id="materialsList"></div>
+  </details>
+  <details class="venue-photos-wrap">
+    <summary>🤝 Хто чим готовий допомогти</summary>
+    <div class="add-form">
+      <input type="text" id="hlName" placeholder="Імʼя">
+      <input type="text" id="hlOffer" placeholder="Що пропонує (напр. «шиє, є швейна машинка»)">
+      <button class="submit-btn" id="addHelperBtn">Додати</button>
+    </div>
+    <div id="helpersList"></div>
+  </details>
 </div>
 
 <!-- CAKE (винесено з Декору окремою вкладкою) -->
@@ -1925,7 +1942,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=fals
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2196,6 +2213,8 @@ let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = loadJSON('wed-decor', []);
 let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
+let diyMaterials = loadJSON('wed-diy-materials', []); // що вже є вдома для декору-своїми-руками {id,text}
+let helpers     = loadJSON('wed-helpers', []); // хто з подружок/друзів готовий допомогти і чим {id,name,offer}
 let music       = loadJSON('wed-music', []);
 let mustPlay    = loadJSON('wed-mustplay', []);   // обовʼязкові треки плейлиста {id,title,artist,url,ts}
 let inspo       = loadJSON('wed-inspo', []);
@@ -2623,6 +2642,8 @@ const ARR={
   'wed-hotels':{get:()=>hotels,set:v=>hotels=v,render:()=>renderHotels()},
   'wed-decor':{get:()=>decor,set:v=>decor=v,render:()=>renderDecor()},
   'wed-orders':{get:()=>orders,set:v=>orders=v,render:()=>renderOrders()},
+  'wed-diy-materials':{get:()=>diyMaterials,set:v=>diyMaterials=v,render:()=>renderDiyMaterials()},
+  'wed-helpers':{get:()=>helpers,set:v=>helpers=v,render:()=>renderHelpers()},
   'wed-music':{get:()=>music,set:v=>music=v,render:()=>renderMusic()},
   'wed-mustplay':{get:()=>mustPlay,set:v=>mustPlay=v,render:()=>renderMustPlay()},
   'wed-inspo':{get:()=>inspo,set:v=>inspo=v,render:()=>renderInspo()},
@@ -5576,6 +5597,7 @@ function renderDecor(){
   listEl.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.ddel);
     if(d && d.budgetId){ const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
+    if(d && d.taskId){ const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); } }
     delUndo('wed-decor',b.dataset.ddel,'Декор видалено');
   });
   listEl.querySelectorAll('[data-dmsg]').forEach(b=>b.onclick=()=>{
@@ -5619,7 +5641,16 @@ function renderDecor(){
   });
   listEl.querySelectorAll('[data-dtake]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dtake); if(!d)return;
-    d.taken=!d.taken; saveJSON('wed-decor',decor); renderDecor();
+    d.taken=!d.taken;
+    if(d.taken && !d.taskId){
+      const tid='u'+Date.now(); d.taskId=tid;
+      tasks.push({id:tid, text:'Декор: '+(d.title||'без назви'), deadline:null, done:false});
+      saveJSON('wed-tasks',tasks); renderTasks();
+    }else if(!d.taken && d.taskId){
+      const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); }
+      delete d.taskId;
+    }
+    saveJSON('wed-decor',decor); renderDecor();
   });
   listEl.querySelectorAll('[data-dbought]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dbought); if(!d)return;
@@ -5933,6 +5964,43 @@ document.getElementById('addOrderBtn').onclick=()=>{
   orders.unshift({id:'o'+Date.now(), title, url:val('oUrl'), price:val('oPrice'), ttn:'', status:'ordered', note:'', ts:Date.now()});
   ['oTitle','oUrl','oPrice'].forEach(i=>document.getElementById(i).value='');
   saveJSON('wed-orders',orders); renderOrders();
+};
+
+/* ════ ДЕКОР СВОЇМИ РУКАМИ: матеріали вдома + хто чим допоможе ════ */
+function renderDiyMaterials(){
+  const listEl=document.getElementById('materialsList'); if(!listEl) return; listEl.innerHTML='';
+  if(!diyMaterials.length){ listEl.innerHTML='<div class="empty-state">Поки нічого не додано 🌸</div>'; return; }
+  diyMaterials.forEach(m=>{
+    const card=document.createElement('div'); card.className='note-card';
+    card.innerHTML=`<button class="del-x" data-mdel="${m.id}" aria-label="Видалити" style="opacity:.5">✕</button>
+      <div class="note-text">${esc(m.text)}</div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>delUndo('wed-diy-materials',b.dataset.mdel,'Прибрано зі списку'));
+}
+document.getElementById('addMaterialBtn').onclick=()=>{
+  const text=val('mText'); if(!text)return;
+  diyMaterials.unshift({id:'m'+Date.now(), text});
+  document.getElementById('mText').value='';
+  saveJSON('wed-diy-materials',diyMaterials); renderDiyMaterials();
+};
+function renderHelpers(){
+  const listEl=document.getElementById('helpersList'); if(!listEl) return; listEl.innerHTML='';
+  if(!helpers.length){ listEl.innerHTML='<div class="empty-state">Поки нікого не додано 🌸</div>'; return; }
+  helpers.forEach(h=>{
+    const card=document.createElement('div'); card.className='note-card';
+    card.innerHTML=`<button class="del-x" data-hdel="${h.id}" aria-label="Видалити" style="opacity:.5">✕</button>
+      <div class="note-title">${esc(h.name)}</div>
+      <div class="note-text">${esc(h.offer)}</div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll('[data-hdel]').forEach(b=>b.onclick=()=>delUndo('wed-helpers',b.dataset.hdel,'Видалено'));
+}
+document.getElementById('addHelperBtn').onclick=()=>{
+  const name=val('hlName'), offer=val('hlOffer'); if(!name||!offer){ showToast('Впиши імʼя і що пропонує 🙂'); return; }
+  helpers.unshift({id:'h'+Date.now(), name, offer});
+  document.getElementById('hlName').value=''; document.getElementById('hlOffer').value='';
+  saveJSON('wed-helpers',helpers); renderHelpers();
 };
 
 /* ════ МУЗИКА (артисти / діджеї) ════ */
@@ -6882,7 +6950,7 @@ if(!IS_GUEST){
 
 /* ── INIT ── */
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderOrders(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
+  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderOrders(); renderDiyMaterials(); renderHelpers(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu();
   document.getElementById('capInput').value = budgetCap||'';
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
@@ -6962,6 +7030,8 @@ function startSync(){
     if(Array.isArray(d.hotels))      hotels=d.hotels;
     if(Array.isArray(d.decor))       decor=d.decor;
     if(Array.isArray(d.orders))      orders=d.orders;
+    if(Array.isArray(d.diyMaterials)) diyMaterials=d.diyMaterials;
+    if(Array.isArray(d.helpers))      helpers=d.helpers;
     if(Array.isArray(d.music))       music=d.music;
     if(Array.isArray(d.mustPlay))    mustPlay=d.mustPlay;
     if(Array.isArray(d.inspo))       inspo=d.inspo;
@@ -7014,6 +7084,8 @@ function startSync(){
     DB.set('wed-hotels',JSON.stringify(hotels));
     DB.set('wed-decor',JSON.stringify(decor));
     DB.set('wed-orders',JSON.stringify(orders));
+    DB.set('wed-diy-materials',JSON.stringify(diyMaterials));
+    DB.set('wed-helpers',JSON.stringify(helpers));
     DB.set('wed-music',JSON.stringify(music));
     DB.set('wed-mustplay',JSON.stringify(mustPlay));
     DB.set('wed-inspo',JSON.stringify(inspo));
