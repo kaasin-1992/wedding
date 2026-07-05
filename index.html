@@ -2057,6 +2057,20 @@ function saveJSON(key, val){
     mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
     return;
   }
+  if(key==='wed-dresscode'){
+    // dresscode.gen (ШІ-візуалізація стилю, base64) — важка картинка прямо в основному
+    // state-документі: разом з рештою даних (завдання/гості/бюджет/декор тощо) це ризикує
+    // пробити ліміт Firestore 1 MiB — і ТОДІ запис МОВЧКИ не проходить. Локально (DB.set вище)
+    // усе виглядає збереженим, але після перезавантаження onSnapshot підмінює dresscode
+    // застарілою (без gen) версією з хмари — звідси "картинка з'являється, але зникає після
+    // оновлення". Той самий підхід, що вже для фото пари/ідей: важку картинку — в окремий
+    // документ, у стані лишаємо маркер '@m'.
+    const light={...val};
+    if(isDataUrl(val.gen)){ mediaSet('m_dresscode', {gen: val.gen}); light.gen='@m'; }
+    DOC.set({dresscode: light, _updated: Date.now()}, {merge:true})
+       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save dresscode', e); flashSync(false); });
+    return;
+  }
   if(key==='wed-ideas'){
     // ідеї: легке в state, картинки — окремо. ПЕРЕД записом підтягуємо актуальний масив із
     // хмари й домішуємо елементи, яких немає в цій вкладці (за id) — інакше вкладка/пристрій,
@@ -2130,8 +2144,9 @@ function saveJSON(key, val){
        .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
   }
 }
-// кеш важких картинок з хмари: base = {photos,photosFull,outfit}; idea = {ideaId:{img,gen,tryon}}
-const mediaCache = {base:{}, idea:{}};
+// кеш важких картинок з хмари: base = {photos,photosFull,outfit}; idea = {ideaId:{img,gen,tryon}};
+// dresscodeGen = ШІ-візуалізація стилю дрес-коду (окремий документ, той самий підхід)
+const mediaCache = {base:{}, idea:{}, dresscodeGen:undefined};
 const legacyMedia = {};   // старі картинки, що могли лишитись у самому state (для сумісності)
 // зібрати повні дані з легких (state) + важких (окремі документи) і перемалювати
 function applyMedia(){
@@ -2174,6 +2189,15 @@ function applyMedia(){
       else if(Array.isArray(fb.extraImgs)) it.extraImgs=fb.extraImgs;
     }
   });
+  // дрес-код: той самий маркер '@m' → реальна картинка з окремого документа m_dresscode.
+  // Той самий захист від гонки завантаження — не затираємо '@m' порожнечею, поки медіа-документ
+  // ще не прилетів; лишаємо останнє відоме з локального кешу.
+  if(dresscode && dresscode.gen==='@m'){
+    if(isDataUrl(mediaCache.dresscodeGen)) dresscode.gen=mediaCache.dresscodeGen;
+    else{
+      try{ const cachedDc=JSON.parse(DB.get('wed-dresscode')||'null'); if(cachedDc&&isDataUrl(cachedDc.gen)) dresscode.gen=cachedDc.gen; }catch(e){}
+    }
+  }
   // оновлюємо локальний кеш повними даними
   applyingSnapshot=true;
   DB.set('wed-photos',JSON.stringify(photos));
@@ -2181,6 +2205,7 @@ function applyMedia(){
   DB.set('wed-outfit',JSON.stringify(outfit));
   DB.set('wed-venues',JSON.stringify(venuePhotos));
   DB.set('wed-ideas',JSON.stringify(ideas));
+  if(dresscode) DB.set('wed-dresscode',JSON.stringify(dresscode));
   applyingSnapshot=false;
   if(typeof renderAll==='function') renderAll();
 }
@@ -2195,6 +2220,7 @@ function startMediaSync(){
       else if(id==='m_photosFull') mediaCache.base.photosFull=data.d;
       else if(id==='m_outfit') mediaCache.base.outfit=data.d;
       else if(id==='m_venuePhotos') mediaCache.base.venuePhotos=data.d;
+      else if(id==='m_dresscode') mediaCache.dresscodeGen=data.gen;
       else if(id.indexOf('m_idea_')===0){
         const iid=id.slice(7);
         if(ch.type==='removed') delete mediaCache.idea[iid];
