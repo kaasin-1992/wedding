@@ -3070,7 +3070,12 @@ function ideaFieldsHTML(it){
   // у СПИСКУ для одягу лишаємо фото ТОВАРУ; примірка з людиною показується лише зверху (couple stage).
   // для каблучок/ідей (без верхнього стейджу) показуємо згенероване зображення.
   const aiImg=isTry?null:it.gen;
-  const showImg=aiImg||it.img;
+  // одяг: якщо вже є валідний ШІ-вирізаний кадр (cleanImg — тільно обрізаний навколо самої речі,
+  // без випадкового зміщення сирого скріна сторінки) для ПОТОЧНОГО фото — показуємо саме його.
+  // cleanFor звіряємо з garmentSig(it.img), той самий freshness-чек, що й ensureCleanGarment(),
+  // щоб не показати застарілий вирізаний кадр після заміни фото товару.
+  const cleanShow=(isTry && it.cleanImg && it.cleanFor===garmentSig(it.img)) ? it.cleanImg : null;
+  const showImg=aiImg||cleanShow||it.img;
   const fallback=`<div class="idea-thumb-fallback">
       ${fav?`<img class="idea-fav" src="${esc(fav)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;idea-fav-emoji&quot;>🔗</div>'">`:`<div class="idea-fav-emoji">${IDEA_FALLBACK_EMOJI[it.cat]||'💡'}</div>`}
       <div class="idea-fallback-host">${esc(host||'ідея')}</div>
