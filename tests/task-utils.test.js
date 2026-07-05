@@ -1,28 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { hashStr, isWeed, getStatus, plDays, timeMask, timeNorm, daysUntilWedding, stripGuestData } from '../lib/task-utils.js';
-
-describe('hashStr (smoke test — validates the dual-export pattern)', () => {
-  it('returns a stable hash string', () => {
-    expect(hashStr('привіт')).toBe(hashStr('привіт'));
-    expect(typeof hashStr('a')).toBe('string');
-  });
-});
-
-describe('isWeed', () => {
-  it('detects weed-related text in Ukrainian and English', () => {
-    expect(isWeed('косяк на вечірці')).toBe(true);
-    expect(isWeed('weed')).toBe(true);
-    expect(isWeed('🌿')).toBe(true);
-  });
-  it('does not false-positive on unrelated words containing "трав"', () => {
-    expect(isWeed('травень')).toBe(false);
-    expect(isWeed('квіти і трави для декору')).toBe(true); // "трави" саме має спрацювати
-  });
-  it('ignores empty/undefined input', () => {
-    expect(isWeed('')).toBe(false);
-    expect(isWeed(undefined)).toBe(false);
-  });
-});
+import { getStatus, plDays, timeMask, timeNorm, daysUntilWedding, stripGuestData } from '../lib/task-utils.js';
 
 describe('getStatus', () => {
   it('returns done when task is done regardless of deadline', () => {
@@ -92,26 +69,16 @@ describe('stripGuestData (безпека: що гість НЕ повинен о
     const state = { tasks: [], scriptSofia: [], scriptWave: [] };
     expect(stripGuestData({ ...state, budget: [{ id: 'b1', planned: 50000 }] }).budget).toEqual([]);
   });
-  it('strips weed-tagged tasks but keeps the rest', () => {
+  it('passes through tasks and scripts unchanged', () => {
     const state = {
-      tasks: [{ id: 't1', text: 'забронювати зал' }, { id: 't2', text: 'купити травку на вечірку' }],
-      scriptSofia: [], scriptWave: [],
+      tasks: [{ id: 't1', text: 'забронювати зал' }],
+      scriptSofia: [{ id: 's1', text: 'вихід молодят' }],
+      scriptWave: [{ id: 's3', text: 'перший танець' }],
     };
     const out = stripGuestData(state);
     expect(out.tasks.map(t => t.id)).toEqual(['t1']);
-  });
-  it('strips weed-tagged script items in both scripts', () => {
-    const state = {
-      tasks: [],
-      scriptSofia: [{ id: 's1', text: 'вихід молодят' }, { id: 's2', text: '🌿 перерва для диму' }],
-      scriptWave: [{ id: 's3', text: 'перший танець' }, { id: 's4', text: 'косяк на балконі' }],
-    };
-    const out = stripGuestData(state);
     expect(out.scriptSofia.map(m => m.id)).toEqual(['s1']);
     expect(out.scriptWave.map(m => m.id)).toEqual(['s3']);
-  });
-  it('always clears the weed password hash', () => {
-    expect(stripGuestData({ tasks: [], scriptSofia: [], scriptWave: [] }).weedPassHash).toBe('');
   });
   it('handles missing/undefined arrays gracefully', () => {
     const out = stripGuestData({});
