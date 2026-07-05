@@ -1992,7 +1992,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2316,6 +2316,7 @@ let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже дода
 let rozpysTaskSeeded  = loadJSON('wed-rozpys-seed', false); // чи вже додано нагадування про розпис 24.08 (раз)
 let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже додано чернетку таймлайну по часу (раз)
 let sofiaFixSeeded = loadJSON('wed-sofia-fix-seed', false); // чи вже прибрано "легкий обід" і додано повний таймінг Софі (раз)
+let decorDiySeeded = loadJSON('wed-decor-diy-seed', false); // чи вже додано фінальний список декору DIY (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = pruneNoId(loadJSON('wed-decor', []), 'wed-decor');
 let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
@@ -5042,6 +5043,74 @@ function seedSofiaScheduleFix(){
   renderScripts();
 }
 
+// одноразовий seed фінального списку декору DIY (наївне мистецтво/вибійка/апсайклінг, 6 вересня
+// 2026) — 21 елемент декору по локаціях (Софі/Хвильовий), топер торта окремо в Торт, дві довідкові
+// нотатки (вибійка-техніка з посиланнями, технічні нотатки глина/скло) і чеклист "зібрати заздалегідь"
+// у Завданнях. Кожен елемент — просто стартова картка, яку можна вільно редагувати/видаляти потім.
+const DECOR_DIY_ITEMS=[
+  {v:'sofia', title:'Арка / зона церемонії', note:'Китиці й помпони з ниток, стрічки з довгими хвостами (рухаються на вітрі)'},
+  {v:'sofia', title:'Стільці (Софі)', note:'Банти зі стрічок або помпони на спинки → після церемонії переїжджають на Хвильовий'},
+  {v:'sofia', title:'Акцент (опційно)', note:'Паперові розетки-віяла'},
+  {v:'wave', title:'Завіса зі стрічок (фотозона/бекдроп)', note:'Стрічки + смуги рваної бавовни на мотузці/карнизі. На 2×2 м треба ~40–60 стрічок по 2 м. ⚠️ Узгодити з баром точку кріплення заздалегідь'},
+  {v:'wave', title:'Стрічки-хвости у гірляндах бару', note:'Вплести у наявні гірлянди бару — рух і наш колір поверх готового'},
+  {v:'wave', title:'Банти на стільцях (перенесені з церемонії)', note:'Переїхали з церемонії Софі'},
+  {v:'wave', title:'Глиняні підвіски-«пряники»', note:'Самозастигайка: сонця, коти, квіти. Дірочка зубочисткою до висихання, на нитку'},
+  {v:'wave', title:'Помпонні гірлянди', note:'Нитки, нижній ярус над столами'},
+  {v:'wave', title:'Банки-ліхтарики', note:'Банки + свічки, розпис або обмотка стрічкою, підвісити на шпагаті'},
+  {v:'wave', title:'Центральні вази', note:'Пляшка + глина зверху + наївний розпис = «кераміка ручної роботи» (головний прийом)'},
+  {v:'wave', title:'Ще вази', note:'Пляшки з наївними личками (очі-крапки, квіточки); обмотані нитками/шпагатом; зелене/коричневе скло можна не фарбувати, тільки розписати'},
+  {v:'wave', title:'Свічки', note:'Власного виробництва: товсті, нерівні, візерунок продряпати зубочисткою'},
+  {v:'wave', title:'Свічники', note:'Глиняні «личка»-чашечки; підставки з відбитком мережива/листка'},
+  {v:'wave', title:'Кільця для серветок', note:'Глина: ковбаска в кільце + продряпаний візерунок'},
+  {v:'wave', title:'Стаканчики для приборів', note:'Пофарбовані консервні бляшанки'},
+  {v:'wave', title:'🍇 Виноград (опція)', note:'Якщо захочеться: грона на дошках/у вазах — їстівний центр столу. Купувати за 1–2 дні'},
+  {v:'wave', title:'План розсадки', note:'Картонна «мапа» столів у наївному стилі, гуаш'},
+  {v:'wave', title:'Картки гостей', note:'Тримач: кулька глини з прорізом або винний корок з прорізом'},
+  {v:'wave', title:'Таблички столів', note:'Не номери, а звірі: «стіл Кота», «стіл Лева з квітами» — картон + гуаш'},
+  {v:'wave', title:'Зона побажань', note:'String art на дошці (серце/ініціали) + картки для побажань'},
+  {v:'wave', title:'Компліменти гостям', note:'Глиняні медальйони на шпагаті + крафт-пакетики з вибійкою'},
+];
+const DECOR_DIY_NOTES=[
+  {title:'🎨 Стиль декору DIY (6 вересня 2026)', text:'Стиль: наївне/примітивне мистецтво (Примаченко / вирізанки Матісса), вибійка, апсайклінг, стрічки. Палітра: 4–5 кольорів max (напр. червоний, синій, жовтий, зелений + білий). Є в наявності: нитки, канцелярія, тканина, стрічки, папір, самозастигаюча глина, віск/свічки.'},
+  {title:'🖨 Вибійка — наскрізний елемент', text:'Штампи своїми руками: вирізати з гумок (простий спосіб) або лінолеуму на дощечці. Гайд: https://yak.koshachek.com/articles/jak-zrobiti-shtamp-svoimi-rukami-de-mozhna.html — Набір для різьблення: Essdee Stamp Carving Kit / набори для ліногравюри: https://azur.com.ua/nabory-dlya-linogravyury-ua — Виноградне гроно — класика, штамп з картоплі. Куди штампувати: запрошення й конверти, тканинні серветки, крафт-пакети, стрічки завіси (перед нарізкою); по тканині — текстильними фарбами, закріпити праскою. Майстер-клас наживо (Київ): Арт-студія «Ліхтарик» https://lihtaryk.com.ua/vibijka/ або Craftoroom https://craftoroom.ua/product/majster-klas-z-vybijky/ — QR-код на гру: вручну різаний штамп QR НЕ сканується, тільки лазерне кліше. Генерувати QR з корекцією помилок рівня H, розмір відбитка від 3×3 см (https://www.qrcode-monkey.com). Лазерне гумове кліше (Київ, за день з готового макета): Archi Wood https://awood.com.ua/lazernaja-gravirovka/lazerna-gravirovka-shtampov-i-pechatej/ або Штемпельна майстерня (Оболонь) https://gravirovka-klaviatur.com/blog/vigotovlennya-pechatok/ — кліше від ~250 грн. Тестувати відбиток телефоном перед тиражем! План Б: QR друкований + вибійкова рамка-орнамент навколо вручну.'},
+  {title:'🔧 Технічні нотатки — глина/скло', text:'Самозастигайка боїться води → тільки декор, не вази для води. Товщина до 1–1,5 см, сохне 24–72 год, тріщини замазати свіжою глиною + вода. Фарбувати після висихання (акрил/гуаш) + матовий акриловий лак. Скло перед фарбуванням протерти спиртом, інакше акрил злазить. Етикетки з пляшок: тепла вода + сода на ніч; залишки клею — олія або спирт.'},
+];
+const DECOR_DIY_TASKS=[
+  '🍾 Зібрати: скляні пляшки (однакові = серія, різні = колекція)',
+  '🫙 Зібрати: банки з кришками',
+  '🥫 Зібрати: консервні бляшанки',
+  '🍷 Зібрати: винні корки',
+  '📦 Зібрати: картон від коробок',
+  '🧽 Зібрати: гумки/лінолеум для штампів',
+  '🎗 Порахувати метраж і зібрати стрічки/бавовну на завісу',
+  '🖌 Купити текстильні фарби для вибійки',
+  '🪵 Дошки під виноград — тільки якщо виноград буде (опція)',
+  '🔲 Замовити лазерне гумове кліше QR-коду для вибійки (Archi Wood / Штемпельна майстерня)',
+];
+function seedDecorDiy(){
+  if(decorDiySeeded || IS_GUEST) return;
+  decorDiySeeded=true;
+  const base=Date.now();
+  DECOR_DIY_ITEMS.forEach((it,i)=>decor.push({
+    id:'ddiy'+base+'_'+i, title:it.title, url:'', img:'', desc:'', note:it.note,
+    price:'', place:'', who:'me', dtype:'item', diy:true, taken:false, bought:false,
+    venue:it.v, ts:base-i,
+  }));
+  decor.push({
+    id:'ddiycake'+base, title:'Топер на торт', url:'', img:'', desc:'',
+    note:'Глиняні фігурки: пара котів / наївні звірі',
+    price:'', place:'', who:'me', dtype:'item', diy:true, taken:false, bought:false,
+    cat:'cake', ts:base+1,
+  });
+  DECOR_DIY_NOTES.forEach((n,i)=>notes.push({id:'ddiyn'+base+'_'+i, title:n.title, text:n.text}));
+  DECOR_DIY_TASKS.forEach((text,i)=>tasks.push({id:'ddiyt'+base+'_'+i, text, deadline:null, done:false}));
+  saveJSON('wed-decor',decor);
+  saveJSON('wed-notes',notes);
+  saveJSON('wed-tasks',tasks);
+  saveJSON('wed-decor-diy-seed',true);
+  renderDecor(); renderCake(); renderNotes(); renderTasks();
+}
+
 /* ════ РОЗСАДКА ════ */
 let activeSeat='sofia';
 function seatRef(){ if(!seating[activeSeat]) seating[activeSeat]={tip:'',zones:[]}; if(!Array.isArray(seating[activeSeat].zones)) seating[activeSeat].zones=[]; return seating[activeSeat]; }
@@ -7436,6 +7505,7 @@ function startSync(){
     if(typeof d.rozpysTaskSeeded==='boolean') rozpysTaskSeeded=d.rozpysTaskSeeded;
     if(typeof d.scriptDraftSeeded==='boolean') scriptDraftSeeded=d.scriptDraftSeeded;
     if(typeof d.sofiaFixSeeded==='boolean') sofiaFixSeeded=d.sofiaFixSeeded;
+    if(typeof d.decorDiySeeded==='boolean') decorDiySeeded=d.decorDiySeeded;
     // одноразова міграція старих картинок зі state в окремі документи
     if(!IS_GUEST) ['photos','photosFull','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
@@ -7504,6 +7574,7 @@ function startSync(){
     seedRozpysTask();   // один раз додаємо нагадування про розпис 24.08 в Завдання
     seedScriptDraft();  // один раз додаємо чернетку таймлайну по часу в Сценарій
     seedSofiaScheduleFix(); // один раз прибираємо "легкий обід" і докладаємо повний таймінг Софі
+    seedDecorDiy(); // один раз додаємо фінальний список декору DIY
   }, err=>{ console.warn('snapshot', err); });
   startMediaSync();
 }
@@ -7547,7 +7618,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
