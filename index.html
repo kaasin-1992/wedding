@@ -595,11 +595,16 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .idea-tile.bought{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
 .idea-tile-thumb{position:relative;width:100%;height:120px;background:var(--surface2);overflow:hidden;}
 .idea-tile-thumb img{width:100%;height:100%;object-fit:cover;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
+/* одяг (вирізаний cleanImg) — показуємо ВЕСЬ силует по центру (contain), а не обрізаний "cover" —
+   інакше висока сукня втрачає верх/низ у короткій 120px плитці й виглядає "зміщеною". Той самий
+   підхід, що вже в деталях (.idea-card.idea-row .idea-thumb), тепер і на самій плитці. */
+.idea-tile-thumb.cloth img{object-fit:contain;background:#fff;}
 .idea-tile-thumb .idea-thumb-fallback{gap:4px;}
 /* коли є "фото на мені" — показуємо його одразу на тайлі поруч фото товару, а не ховаємо в деталях */
 .idea-tile-thumb-split{display:flex;width:100%;height:120px;background:var(--surface2);overflow:hidden;gap:2px;}
 .idea-tile-thumb-half{position:relative;flex:1;height:100%;overflow:hidden;min-width:0;}
 .idea-tile-thumb-half .idea-thumb-wrap{height:100%;}
+.idea-tile-thumb-half:not(.idea-tile-thumb-real) .idea-thumb{object-fit:contain;background:#fff;}
 .idea-tile-thumb-real img{width:100%;height:100%;object-fit:cover;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
 .idea-tile-real-badge{position:absolute;bottom:2px;left:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;font-size:8.5px;text-align:center;padding:1px 3px;border-radius:4px;line-height:1.3;}
 .idea-tile-thumb .idea-fav{width:26px;height:26px;}
@@ -966,6 +971,19 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .mb-zoom-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .mb-zoom-lbl{min-width:52px;padding:0 8px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;}
 .moodboard-canvas{position:relative;flex:1;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:60vh;touch-action:pan-x pan-y;}
+/* декор: пісочниця вбудована прямо у вкладку (не повноекранна модалка, як в одязі) — 60vh тут
+   забагато займає екрана й заважає дістатись кнопок нижче (додати декор/фільтри/список), тож
+   висота значно скромніша; сам блок ще й згортається (<details>), якщо зовсім заважає */
+.decor-mb-inline{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px;}
+.decor-mb-inline>summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:14px;color:var(--terra);}
+.decor-mb-inline>summary::-webkit-details-marker{display:none;}
+.decor-mb-inline>.moodboard-head,.decor-mb-inline>.mb-dual-wrap{padding:0 15px;}
+.decor-mb-inline>.mb-dual-wrap{padding-bottom:15px;}
+.decor-mb-inline .moodboard-canvas{min-height:280px;}
+/* .mb-dual-wrap/.moodboard-head мають власний явний display:flex (успадкований від модалки одягу),
+   який інакше переможе стандартну поведінку <details> "ховати вміст, коли закрито" — CSS-каскад
+   віддає перевагу авторському display над стилем user-agent незалежно від специфічності */
+.decor-mb-inline:not([open]) .mb-dual-wrap,.decor-mb-inline:not([open]) .moodboard-head{display:none;}
 .moodboard-inner{position:relative;width:1400px;height:1100px;background:repeating-linear-gradient(45deg,var(--surface2) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,var(--surface2) 0 1px,transparent 1px 22px);background-color:var(--bg);}
 /* декор: дві дошки (Софі/Хвильовий) — на вузькому екрані видно одну (перемикач), на широкому обидві поруч */
 .mb-dual-wrap{display:flex;flex-direction:column;flex:1;min-height:0;}
@@ -1764,9 +1782,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
-  <div class="decor-mb-inline">
+  <details class="decor-mb-inline" open>
+    <summary>🎨 Мудборд декору — перетягни фото туди-сюди (тицьни, щоб згорнути)</summary>
     <div class="moodboard-head" style="padding:0 0 6px;">
-      <div class="imgpick-title" style="font-size:15px;">🎨 Мудборд декору — перетягни фото туди-сюди</div>
       <button class="modal-btn ghost" id="dMbAddFileBtn" title="Додати фото з компʼютера">📁 Фото</button>
     </div>
     <div class="mb-dual-wrap" id="mbDualWrap">
@@ -1791,7 +1809,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
         </div>
       </div>
     </div>
-  </div>
+  </details>
   <details class="venue-photos-wrap">
     <summary>📍 Фото локацій (для візуалізації декору)</summary>
     <div class="venue-photos" id="venuePhotosBox"></div>
@@ -2923,7 +2941,13 @@ function syncChosen(c){
   c.name=o?o.name:''; c.contact=o?o.contact:''; c.note=o?o.note:'';
 }
 function renderContacts(){
-  const listEl=document.getElementById('contactList'); listEl.innerHTML='';
+  const listEl=document.getElementById('contactList');
+  // не рвемо фокус/клавіатуру, поки вона вводить дані в поле нового варіанту — applyMedia()
+  // викликає renderAll() на КОЖЕН фоновий снапшот (навіть медіа-документ деінде в застосунку),
+  // а повне innerHTML='' знищує саме той інпут, у який вона щойно почала друкувати. Кнопки/select
+  // (видалити/обрати/статус) НЕ блокуємо — їхнє значення вже закомічене до виклику рендера.
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   let migrated=false; contacts.forEach(c=>{ if(migrateContact(c)) migrated=true; });
   if(migrated) saveJSON('wed-contacts',contacts);
   if(!contacts.length){ listEl.innerHTML='<div class="empty-state">Контактів ще немає</div>'; return; }
@@ -3338,7 +3362,7 @@ function renderIdeas(){
            <div class="idea-tile-thumb-half">${f.thumb}</div>
            <div class="idea-tile-thumb-half idea-tile-thumb-real"><img src="${esc(it.realTryon)}" alt="" loading="lazy" data-realtileview="${it.id}"><span class="idea-tile-real-badge">📸 на мені</span></div>
          </div>`
-      : `<div class="idea-tile-thumb">${f.thumb}</div>`;
+      : `<div class="idea-tile-thumb${f.isTry?' cloth':''}">${f.thumb}</div>`;
     const tile=document.createElement('div');
     tile.className='idea-tile'+(it.approved?' approved':'')+(it.bought?' bought':'');
     tile.dataset.tileid=it.id;
@@ -5798,7 +5822,7 @@ async function aiVisualizeVenueSpace(venue){
   }catch(e){ console.warn('visualizeVenueSpace',e); showToast('ШІ-візуалізація не вдалась 😕 '+aiErr(e)); }
   finally{ if(btn){ btn.textContent=old||'🪄 Уявити простір'; btn.disabled=false; } }
 }
-const DECOR_WHO={me:'🙋 Я',his:'🤵 Дима',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
+const DECOR_WHO={me:'🙋 Я',his:'🤵 Діма',both:'💞 Обоє',maids:'👯 Дружки',vendor:'🧑‍🔧 Підрядник'};
 // "хто відповідає" тепер може бути й конкретним гостем (значення 'g:<guestId>'), не лише
 // узагальненою категорією — гості беруться живцем з guests[], без окремого дубльованого списку
 function whoGuestList(){ return guests.filter(g=>g.status!=='declined').sort((a,b)=>(a.name||'').localeCompare(b.name||'','uk')); }
@@ -6716,6 +6740,10 @@ document.getElementById('inImagineBtn').onclick=async()=>{
 
 /* ── ДРЕС-КОД: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах ── */
 function renderDressCode(){
+  // не рвемо взаємодію, поки вона щось вводить чи обирає колір у нативному color-picker'і —
+  // той самий захист, що й у Контактах: applyMedia() перемальовує все на КОЖЕН фоновий снапшот
+  const dcRoot=document.getElementById('tab-dresscode');
+  if(isTextEntryFocused(dcRoot)) return;
   const presetsBox=document.getElementById('dcPresets');
   if(presetsBox){
     const cats=[...new Set(DRESSCODE_PRESETS.map(p=>p.cat))];
@@ -6747,6 +6775,7 @@ function renderDressCode(){
   if(picker) picker.onchange=()=>{
     dresscode.colors.push(picker.value);
     dresscode.presetId='';
+    picker.blur();   // нативний пікер уже закрився до onchange — знімаємо фокус, щоб isTextEntryFocused() не заблокував цей же власний рендер
     saveJSON('wed-dresscode',dresscode); renderDressCode();
   };
   const refsGrid=document.getElementById('dcRefsGrid');
@@ -6851,6 +6880,23 @@ document.getElementById('dcGenBtn').onclick=async()=>{
 /* ── UTILS ── */
 function val(id){ return document.getElementById(id).value.trim(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+// чи зараз активно вводить дані (текст/контент-едитабл/колір-пікер) всередині цього контейнера —
+// щоб renderX()-функції НЕ знищували innerHTML і не рвали фокус/клавіатуру посеред набору тексту,
+// коли фоновий снапшот (applyMedia→renderAll спрацьовує на КОЖЕН, навіть непов'язаний, документ)
+// перемальовує список саме в цей момент. НЕ блокує кнопки/select/чекбокси — їхнє значення вже
+// закомічене до виклику рендера, тож перемалювати безпечно навіть якщо клік лишив на них фокус.
+function isTextEntryFocused(container){
+  const el=document.activeElement;
+  if(!el || !container || !container.contains(el)) return false;
+  const tag=(el.tagName||'').toUpperCase();
+  if(tag==='TEXTAREA') return true;
+  if(el.isContentEditable) return true;
+  if(tag==='INPUT'){
+    const t=(el.type||'text').toLowerCase();
+    return ['text','url','tel','email','search','number','password','color'].includes(t);
+  }
+  return false;
+}
 
 /* ── TABS (+ свайп між вкладками) ── */
 const TAB_ORDER=[...document.querySelectorAll('.tab-btn')].map(b=>b.dataset.tab);
