@@ -432,6 +432,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .inspo-grid{column-count:2;column-gap:10px;}
 @media(min-width:560px){.inspo-grid{column-count:3;}}
 /* дрес-код: палітра кольорів + ШІ-візуалізація */
+.dc-presets{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;-webkit-overflow-scrolling:touch;}
+.dc-preset-cat{flex:0 0 auto;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);align-self:center;padding:0 2px;}
+.dc-preset-chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;padding:10px 6px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;text-align:center;}
+.dc-preset-chip.active{border-color:var(--terra);box-shadow:0 0 0 1.5px var(--terra);background:var(--terra-dim);}
+.dc-preset-chip .dc-preset-icon{font-size:20px;}
+.dc-preset-chip .dc-preset-label{font-size:11px;line-height:1.25;color:var(--text);}
+.dc-preset-chip .dc-preset-dots{display:flex;gap:3px;}
+.dc-preset-chip .dc-preset-dots span{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px var(--line);}
 .dc-colors{margin-bottom:16px;}
 .dc-swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
 .dc-swatch{width:44px;height:44px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1.5px var(--line);cursor:pointer;position:relative;}
@@ -1603,6 +1611,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- ДРЕС-КОД (палітра кольорів + муд-референси + ШІ-візуалізація) -->
 <div class="panel" id="tab-dresscode">
   <div class="section-hint">Дрес-код весілля: закидай сюди муд-референси стилю (посилання на фото), обери палітру кольорів — і ШІ намалює візуалізацію стилю саме в цих кольорах.</div>
+  <div class="dc-presets" id="dcPresets"></div>
   <div class="dc-colors" id="dcColors"></div>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
@@ -2262,6 +2271,25 @@ let music       = loadJSON('wed-music', []);
 let mustPlay    = loadJSON('wed-mustplay', []);   // обовʼязкові треки плейлиста {id,title,artist,url,ts}
 let inspo       = loadJSON('wed-inspo', []);
 let dresscode   = loadJSON('wed-dresscode', {colors:[], refs:[], gen:''}); // дрес-код: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах
+// Готові пресети дрес-кодів — лише палітра+підказка, нічого не мутують напряму. Обраний пресет
+// заповнює dresscode.colors стартовими кольорами, які потім можна довільно редагувати вручну.
+const DRESSCODE_PRESETS=[
+  {id:'blacktie', cat:'Класичний', icon:'🎩', label:'Чорна краватка (Black Tie)', hint:'Смокінг/фрак, довга вечірня сукня', colors:['#0B0B0C','#FFFFFF','#C9A227','#4B4B4B']},
+  {id:'whitetie', cat:'Класичний', icon:'🤵', label:'Біла краватка (White Tie)', hint:'Найофіційніший рівень: фрак, рукавички, бальна сукня', colors:['#000000','#FFFFFF','#D4AF37']},
+  {id:'cocktail', cat:'Класичний', icon:'🍸', label:'Коктейльний', hint:'Костюм або сукня довжини міді, елегантно, без надмірностей', colors:['#2B2B3A','#8A0F2B','#C8C2B6','#FFFFFF']},
+  {id:'semiformal', cat:'Класичний', icon:'👔', label:'Напівофіційний (Semi-formal)', hint:'Костюм без краватки, сукня коктейльної довжини', colors:['#294B5F','#E8D9C5','#7A7A7A']},
+  {id:'garden', cat:'Креативний', icon:'🌿', label:'Садова вечірка (Garden Party)', hint:'Легкі тканини, капелюшки, пастель на природі', colors:['#DDE7C7','#F4E9DA','#B7C9A8','#E7B8B0']},
+  {id:'boho', cat:'Креативний', icon:'🌾', label:'Бохо-шик (Boho Chic)', hint:'Мереliving, сухоцвіти, теракота й пісочні відтінки', colors:['#B5713C','#E4C9A8','#7C5A44','#D9A566']},
+  {id:'hollywood', cat:'Креативний', icon:'🎬', label:'Старий Голлівуд (Old Hollywood Glam)', hint:'Атлас, глибокі кольори, ретро-гламур 1930-х', colors:['#7C1F2E','#D4AF37','#1A1A2E','#F5F0E6']},
+  {id:'mono', cat:'Креативний', icon:'⚫', label:'Монохром', hint:'Один колір (чи його відтінки) для всіх гостей', colors:['#1C1C1C','#4A4A4A','#8C8C8C','#E5E5E5']},
+  {id:'vyshyvanka', cat:'Український', icon:'🪡', label:'Вишиванка-formal', hint:'Вишита сорочка/блуза поєднана з класичним низом', colors:['#FFFFFF','#C8102E','#000000','#D4AF37']},
+  {id:'sorochka', cat:'Український', icon:'👕', label:'Сорочка + класика', hint:'Вишита сорочка як єдиний етно-акцент до звичайного костюма/сукні', colors:['#F5F0E6','#8A0F2B','#1B1B1B']},
+  {id:'redwhite', cat:'Український', icon:'❤️', label:'Червоно-білий народний', hint:'Народні мотиви, білий верх — червоні акценти', colors:['#FFFFFF','#C8102E','#2B2B2B']},
+  {id:'disco', cat:'Смішний', icon:'🕺', label:'Диско 70-х', hint:'Блискітки, яскраві кольори, кльош — гості в образі', colors:['#F2C230','#E8542E','#4B2E83','#1A1A1A']},
+  {id:'denim', cat:'Смішний', icon:'👖', label:'Тільки джинс', hint:'Джинс у будь-якому вигляді — від сукні до костюма', colors:['#2C4A6E','#7FA6C9','#0F2233']},
+  {id:'favcolor', cat:'Смішний', icon:'🎨', label:'Улюблений колір гостя', hint:'Кожен обирає свій улюблений колір — палітра тут лише орієнтовна', colors:['#E85D75','#4FA3A3','#F2C230','#7C5A9B']},
+  {id:'hats', cat:'Смішний', icon:'🎩', label:'Капелюхи обовʼязкові', hint:'Будь-який стиль одягу, але з капелюхом', colors:['#3A2E28','#C9A227','#E8D9C5']},
+];
 let inspoCat    = 'all';
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
@@ -6374,6 +6402,23 @@ document.getElementById('inImagineBtn').onclick=async()=>{
 
 /* ── ДРЕС-КОД: палітра кольорів + муд-референси + ШІ-візуалізація стилю в цих кольорах ── */
 function renderDressCode(){
+  const presetsBox=document.getElementById('dcPresets');
+  if(presetsBox){
+    const cats=[...new Set(DRESSCODE_PRESETS.map(p=>p.cat))];
+    presetsBox.innerHTML=cats.map(cat=>`<span class="dc-preset-cat">${esc(cat)}</span>`+
+      DRESSCODE_PRESETS.filter(p=>p.cat===cat).map(p=>`
+        <div class="dc-preset-chip${dresscode.presetId===p.id?' active':''}" data-dcpreset="${p.id}" title="${esc(p.hint)}">
+          <span class="dc-preset-icon">${p.icon}</span>
+          <span class="dc-preset-label">${esc(p.label)}</span>
+          <span class="dc-preset-dots">${p.colors.map(c=>`<span style="background:${esc(c)}"></span>`).join('')}</span>
+        </div>`).join('')
+    ).join('');
+    presetsBox.querySelectorAll('[data-dcpreset]').forEach(chip=>chip.onclick=()=>{
+      const preset=DRESSCODE_PRESETS.find(p=>p.id===chip.dataset.dcpreset); if(!preset) return;
+      dresscode.colors=[...preset.colors]; dresscode.presetId=preset.id;
+      saveJSON('wed-dresscode',dresscode); renderDressCode();
+    });
+  }
   const colorsBox=document.getElementById('dcColors'); if(!colorsBox) return;
   colorsBox.innerHTML=`<div class="dc-swatches">
       ${dresscode.colors.map((c,idx)=>`<span class="dc-swatch" style="background:${esc(c)}" data-dcrm="${idx}" title="${esc(c)} — тицяй, щоб прибрати"></span>`).join('')}
@@ -6381,11 +6426,13 @@ function renderDressCode(){
     </div>`;
   colorsBox.querySelectorAll('[data-dcrm]').forEach(sw=>sw.onclick=()=>{
     dresscode.colors.splice(Number(sw.dataset.dcrm),1);
+    dresscode.presetId='';   // ручна зміна відхиляє палітру від пресету — знімаємо підсвітку активного чипа
     saveJSON('wed-dresscode',dresscode); renderDressCode();
   });
   const picker=document.getElementById('dcColorPick');
   if(picker) picker.onchange=()=>{
     dresscode.colors.push(picker.value);
+    dresscode.presetId='';
     saveJSON('wed-dresscode',dresscode); renderDressCode();
   };
   const refsGrid=document.getElementById('dcRefsGrid');
