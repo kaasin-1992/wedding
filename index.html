@@ -1323,8 +1323,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
           <input type="text" id="cRole" placeholder="Роль (напр. Фотограф)">
           <input type="text" id="cName" placeholder="Перший варіант — імʼя / назва (необовʼязково)">
         </div>
-        <input type="text" id="cContact" placeholder="Телефон / Instagram / сайт">
+        <input type="text" id="cContact" placeholder="Телефон / Instagram / сайт (посилання t.me/… теж розпізнається)">
         <input type="text" id="cNote" placeholder="Ціна / нотатка">
+        <button type="button" class="idea-photo-btn" id="cVcfBtn" style="width:auto;display:inline-block;padding:5px 11px;font-size:12px;margin-bottom:8px;">📇 Імпортувати з .vcf (контакт з телефону)</button>
+        <input type="file" id="cVcfFile" accept=".vcf,text/vcard" style="display:none">
         <button class="submit-btn" id="addContactBtn">Додати</button>
       </div>
     </details>
@@ -2958,6 +2960,32 @@ function renderContacts(){
     saveJSON('wed-contacts',contacts); renderContacts();
   });
 }
+// імпорт контакту з .vcf (vCard) — iOS Контакти вміють "Поділитись контактом" саме таким файлом;
+// Contact Picker API (navigator.contacts.select) недоступний на iPhone/Safari взагалі, тож це
+// єдиний реалістичний спосіб "додати з телефонної книги" на цій платформі. Лише заповнює форму —
+// саме додавання лишається за кнопкою "Додати", щоб можна було перевірити/виправити перед збереженням.
+function parseVCard(text){
+  const fn=/^FN[^:]*:(.+)$/im.exec(text);
+  const tel=/^TEL[^:]*:(.+)$/im.exec(text);
+  const email=/^EMAIL[^:]*:(.+)$/im.exec(text);
+  const name=fn?fn[1].trim():'';
+  const contact=(tel&&tel[1].trim())||(email&&email[1].trim())||'';
+  return {name, contact};
+}
+document.getElementById('cVcfBtn').onclick=()=>document.getElementById('cVcfFile').click();
+document.getElementById('cVcfFile').onchange=(e)=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const {name,contact}=parseVCard(String(reader.result||''));
+    if(!name && !contact){ showToast('Не вдалося розпізнати контакт у файлі 😕'); return; }
+    if(name) document.getElementById('cName').value=name;
+    if(contact) document.getElementById('cContact').value=contact;
+    showToast('📇 Дані підтягнуто — перевір і натисни "Додати"');
+  };
+  reader.onerror=()=>showToast('Не вдалося прочитати файл 😕');
+  reader.readAsText(f);
+};
 document.getElementById('addContactBtn').onclick=()=>{
   const role=val('cRole')||'Контакт';
   if(!val('cRole')&&!val('cName'))return;
@@ -7239,7 +7267,7 @@ function startSync(){
     // окремо), але закриває найпростіший шлях витоку — консоль розробника / Application-таб.
     if(IS_GUEST){
       const stripped=stripGuestData({tasks,scriptSofia,scriptWave});
-      budget=stripped.budget; tasks=stripped.tasks;
+      budget=stripped.budget; contacts=stripped.contacts; tasks=stripped.tasks;
       scriptSofia=stripped.scriptSofia; scriptWave=stripped.scriptWave;
     }
     // оновлюємо локальний кеш
