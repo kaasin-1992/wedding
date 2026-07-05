@@ -1944,6 +1944,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       </div>
     </details>
   </div>
+  <button class="idea-photo-btn" id="inspoBulkProcessBtn" style="display:none;margin-bottom:16px;">🪄 Обробити все одразу (скрін + ШІ-інфо)</button>
   <div class="filters inspo-filters" id="inspoFilters"></div>
   <div class="inspo-grid" id="inspoGrid"></div>
 </div>
@@ -2978,6 +2979,7 @@ let ideaSort='';
 let ideaGtypeFilter='';   // фільтр плитки одягу по типу речі (gtype), скидається при зміні вкладки
 let _ideaDetailId=null;   // яка ідея зараз відкрита в overlay "деталі/дії" плитки
 let _bulkBusy=false;      // масова обробка (скрін+вирізати) вже доданого одягу — в процесі
+let _inspoBulkBusy=false; // масова обробка (скрін+ШІ-інфо) ідей натхнення без фото — в процесі
 let psWho='her', _psRef='', _psBusy=false;   // портрет-студія: активна людина, реф-картинка, стан генерації
 function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
 function faviconOf(host){ return host?`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`:''; }
@@ -6289,8 +6291,39 @@ document.getElementById('mImagineBtn').onclick=async()=>{
 /* ════ НАТХНЕННЯ (дошка ідей із Pinterest / інтернету) ════ */
 const INSPO_CATS=['образ','зачіска / мейк','декор','флористика','торт','локація','фотоідея','запрошення','інше'];
 const INSPO_ICON={'образ':'👗','зачіска / мейк':'💇','декор':'🌸','флористика':'💐','торт':'🎂','локація':'📍','фотоідея':'📸','запрошення':'💌','інше':'✨'};
+// послідовно (не паралельно) прогонити скрін+ШІ-інфо для ідей натхнення без фото — Pinterest
+// часто блокує звичайний скрейпінг, тож накопичується купа карток без фото; замість клікати
+// по одній "📸✨ Скрін + ШІ-інфо" — одна кнопка на всі одразу
+async function bulkProcessInspo(ids){
+  if(_inspoBulkBusy) return;
+  _inspoBulkBusy=true; renderInspo();
+  for(const id of ids){
+    const i=inspo.find(x=>x.id===id); if(!i) continue;
+    try{
+      const res=await screenshotAndReadInfo(i.url);
+      if(res){ i.img=res.img; if(res.title && !i.title) i.title=res.title; saveJSON('wed-inspo',inspo); }
+    }catch(e){ console.warn('bulkProcessInspo',id,e); }
+  }
+  _inspoBulkBusy=false;
+  renderInspo();
+  showToast(`✨ Оброблено ${ids.length} ідей`);
+}
 function renderInspo(){
   const grid=document.getElementById('inspoGrid'); if(!grid) return;
+  const bulkBtn=document.getElementById('inspoBulkProcessBtn');
+  if(bulkBtn){
+    const needsWork=inspo.filter(i=>i.url && !i.img && !i.loading);
+    if(!needsWork.length && !_inspoBulkBusy){ bulkBtn.style.display='none'; }
+    else{
+      bulkBtn.style.display='block';
+      if(_inspoBulkBusy){ bulkBtn.textContent='🪄 Обробляю…'; bulkBtn.disabled=true; }
+      else{
+        bulkBtn.textContent=`🪄 Обробити все одразу (${needsWork.length})`;
+        bulkBtn.disabled=false;
+        bulkBtn.onclick=()=>bulkProcessInspo(needsWork.map(i=>i.id));
+      }
+    }
+  }
   // фільтри за тегами (лише ті, що реально є)
   const fb=document.getElementById('inspoFilters');
   if(fb){
