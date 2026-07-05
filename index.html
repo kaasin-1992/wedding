@@ -2063,7 +2063,8 @@ function saveJSON(key, val){
     DOC.get().then(snap=>{
       const cloudIdeas=(snap.exists && Array.isArray(snap.data().ideas)) ? snap.data().ideas : [];
       const localIds=new Set(val.map(it=>it.id));
-      const missingFromLocal=cloudIdeas.filter(it=>it && it.id && !localIds.has(it.id));
+      const skipIdeas=_skipResurrect['wed-ideas'];
+      const missingFromLocal=cloudIdeas.filter(it=>it && it.id && !localIds.has(it.id) && !(skipIdeas&&skipIdeas.has(it.id)));
       const merged=missingFromLocal.length ? [...val, ...missingFromLocal] : val;
       if(missingFromLocal.length){
         missingFromLocal.forEach(it=>ideas.push(it));
@@ -2091,7 +2092,8 @@ function saveJSON(key, val){
       DOC.get().then(snap=>{
         const cloudArr=(snap.exists && Array.isArray(snap.data()[field])) ? snap.data()[field] : [];
         const localIds=new Set(val.map(it=>it.id));
-        const missingFromLocal=cloudArr.filter(it=>it && it.id!=null && !localIds.has(it.id));
+        const skip=_skipResurrect[key];
+        const missingFromLocal=cloudArr.filter(it=>it && it.id!=null && !localIds.has(it.id) && !(skip&&skip.has(it.id)));
         if(missingFromLocal.length){
           missingFromLocal.forEach(it=>val.push(it));   // val — той самий масив, що й жива змінна виклику
           try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after merge', key, e); }
@@ -2718,12 +2720,21 @@ const ARR={
   'wed-team':{get:()=>team,set:v=>team=v,render:()=>renderBar()},
   'wed-invites':{get:()=>invites,set:v=>invites=v,render:()=>renderInvites()}
 };
+// id-и, які ЩОЙНО видалені локально й ще не встигли підтвердитись у хмарі — saveJSON() читає
+// хмару ПЕРЕД записом (щоб домішати елементи, додані деінде), і хмара в цей момент ЩЕ показує
+// старий стан (сам запис на сервер іще не пішов) — тобто щойно видалений елемент завжди потрапляв
+// у "відсутній локально" і мовчки повертався назад (у кінець масиву, бо merge робить push).
+// Це не рідкісна гонка кількох вкладок — це стається на КОЖНОМУ видаленні. Поки id тут — saveJSON
+// свідомо не воскрешає його.
+const _skipResurrect={};
 function delUndo(key,id,label){
   const a=ARR[key], list=a.get(), idx=list.findIndex(x=>x.id===id);
   if(idx<0) return;
   const removed=list[idx];
+  (_skipResurrect[key]||=new Set()).add(id);
   a.set(list.filter(x=>x.id!==id)); saveJSON(key,a.get()); a.render();
   showToast(label||'Видалено', ()=>{
+    _skipResurrect[key]?.delete(id);   // повернули вручну — далі це вже звичайний елемент
     const cur=a.get().slice(); cur.splice(Math.min(idx,cur.length),0,removed);
     a.set(cur); saveJSON(key,a.get()); a.render();
   });
