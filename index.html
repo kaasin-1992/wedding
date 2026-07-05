@@ -322,6 +322,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .status-dot.confirmed{background:var(--done);}
 .status-dot.declined{background:var(--danger);}
 .row-actions{display:flex;gap:6px;}
+/* видалити гостя (🗑) стоїть одразу біля відмови (✕) — обидві "danger"-кольору, легко сплутати
+   пальцем на телефоні; відсуваємо саме видалення трохи далі від пари підтвердити/відмовити */
+.row-actions [data-a="del"]{margin-left:10px;}
 .icon-btn{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;min-width:36px;min-height:34px;color:var(--muted);cursor:pointer;font-size:13px;transition:.15s;}
 .icon-btn:hover{color:var(--text);border-color:var(--terra);}
 .icon-btn:active{transform:scale(.92);}
@@ -790,7 +793,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .team-loc{display:flex;gap:5px;}
 .team-loc button{font-size:10.5px;padding:3px 7px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;}
 .team-loc button.on{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
-.team-row .del-x{position:static;opacity:.5;}
+.team-row .del-x{position:static;opacity:.5;margin-left:10px;padding:10px 12px;}
 .team-add{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
 .team-add input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--sans);font-size:16px;color:var(--text);}
 .team-add input.ta-name{flex:2;min-width:120px;} .team-add input.ta-role{flex:1.5;min-width:90px;} .team-add input.ta-cnt{width:64px;text-align:center;}
