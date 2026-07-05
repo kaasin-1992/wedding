@@ -534,13 +534,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bp-full{min-height:14px;}
 .bp-full-info{font-size:10px;color:var(--terra);display:inline-flex;align-items:center;gap:4px;}
 .bp-full-x{font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0 2px;}
-.base-photo-frame.busy{opacity:.55;animation:bpPulse 1.1s ease-in-out infinite;}
-@keyframes bpPulse{50%{opacity:.85;}}
-.bp-manq{display:flex;align-items:center;gap:6px;min-height:18px;flex-wrap:wrap;justify-content:center;}
-.bp-manq-info{font-size:10px;color:var(--muted);}
-.bp-manq-info.ok{color:var(--sage);}
-.bp-manq-btn{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:2px 8px;cursor:pointer;}
-.bp-manq-btn:hover{filter:brightness(.94);}
 .img-lightbox{position:fixed;inset:0;z-index:2000;background:rgba(20,20,18,.92);display:none;align-items:center;justify-content:center;flex-direction:column;padding:24px;cursor:zoom-out;}
 .img-lightbox img{max-width:100%;max-height:84vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
 .img-lightbox-cap{color:#fff;margin-top:14px;font-size:14px;opacity:.9;}
@@ -1481,7 +1474,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <div class="base-photo" data-who="her">
       <div class="base-photo-frame" id="bpHerFrame"></div>
       <div class="base-photo-cap">Катерина</div>
-      <div class="bp-manq" id="bpManqHer"></div>
       <div class="bp-btns">
         <button type="button" class="base-photo-btn cam" data-cam="her">📷 Камера</button>
         <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHer" hidden></label>
@@ -1500,7 +1492,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <div class="base-photo" data-who="his">
       <div class="base-photo-frame" id="bpHisFrame"></div>
       <div class="base-photo-cap">Дмитро</div>
-      <div class="bp-manq" id="bpManqHis"></div>
       <div class="bp-btns">
         <button type="button" class="base-photo-btn cam" data-cam="his">📷 Камера</button>
         <label class="base-photo-btn">Портрет<input type="file" accept="image/*" id="bpHis" hidden></label>
@@ -1981,7 +1972,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=fals
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-weed-pass':'weedPass','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2011,8 +2002,8 @@ function loadJSON(key, fallback){
    він переростає ліміт, і ТОДІ ВЗАГАЛІ НІЧОГО не зберігається (мовчазна помилка).
    Тому важкі картинки кладемо в окремі документи тієї ж колекції `wedding`,
    а в state лишаємо тільки легкі дані (для ідей — маркер '@m' замість base64). */
-const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-mannequin':'mannequin','wed-outfit':'outfit','wed-venues':'venuePhotos'};
-const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', mannequin:'m_mannequin', outfit:'m_outfit', venuePhotos:'m_venuePhotos'};
+const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-outfit':'outfit','wed-venues':'venuePhotos'};
+const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', outfit:'m_outfit', venuePhotos:'m_venuePhotos'};
 const isDataUrl = s => /^data:/.test(s||'');
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
 function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
@@ -2109,16 +2100,16 @@ function saveJSON(key, val){
        .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
   }
 }
-// кеш важких картинок з хмари: base = {photos,photosFull,mannequin,outfit}; idea = {ideaId:{img,gen,tryon}}
+// кеш важких картинок з хмари: base = {photos,photosFull,outfit}; idea = {ideaId:{img,gen,tryon}}
 const mediaCache = {base:{}, idea:{}};
 const legacyMedia = {};   // старі картинки, що могли лишитись у самому state (для сумісності)
 // зібрати повні дані з легких (state) + важких (окремі документи) і перемалювати
 function applyMedia(){
-  ['photos','photosFull','mannequin','outfit','venuePhotos'].forEach(name=>{
+  ['photos','photosFull','outfit','venuePhotos'].forEach(name=>{
     const m = mediaCache.base[name] || legacyMedia[name];
     if(m && typeof m==='object'){
       if(name==='photos') photos=m; else if(name==='photosFull') photosFull=m;
-      else if(name==='mannequin') mannequin=m; else if(name==='outfit') outfit=m;
+      else if(name==='outfit') outfit=m;
       else venuePhotos=m;
     }
   });
@@ -2157,7 +2148,6 @@ function applyMedia(){
   applyingSnapshot=true;
   DB.set('wed-photos',JSON.stringify(photos));
   DB.set('wed-photos-full',JSON.stringify(photosFull));
-  DB.set('wed-mannequin',JSON.stringify(mannequin));
   DB.set('wed-outfit',JSON.stringify(outfit));
   DB.set('wed-venues',JSON.stringify(venuePhotos));
   DB.set('wed-ideas',JSON.stringify(ideas));
@@ -2173,7 +2163,6 @@ function startMediaSync(){
       const data=ch.doc.data()||{};
       if(id==='m_photos') mediaCache.base.photos=data.d;
       else if(id==='m_photosFull') mediaCache.base.photosFull=data.d;
-      else if(id==='m_mannequin') mediaCache.base.mannequin=data.d;
       else if(id==='m_outfit') mediaCache.base.outfit=data.d;
       else if(id==='m_venuePhotos') mediaCache.base.venuePhotos=data.d;
       else if(id.indexOf('m_idea_')===0){
@@ -2261,7 +2250,6 @@ let dresscode   = loadJSON('wed-dresscode', {colors:[], refs:[], gen:''}); // д
 let inspoCat    = 'all';
 let photos      = loadJSON('wed-photos', {her:'',his:''});
 let photosFull  = loadJSON('wed-photos-full', {her:'',his:''}); // додаткове фото в повний зріст (необовʼязкове) {her,his}
-let mannequin   = loadJSON('wed-mannequin', {her:'',his:''}); // ШІ-«манекен» з фото: людина в сірому базовому одязі на повний зріст {her,his}
 let outfit      = loadJSON('wed-outfit', {her:'',his:''}); // готові ШІ-примірки на повний зріст {her,his} (dataURL)
 // які саме речі (за типом) зараз "зібрані" в ШІ-образі: {her:{gtype: ideaId}, his:{gtype: ideaId}} — та сама
 // ідея, що й у ручному колажі, потрібна, щоб при заміні речі того самого типу явно сказати ШІ "це заміна
@@ -2314,7 +2302,6 @@ function migrateMoodboardVenues(){
 }
 migrateMoodboardVenues();
 let activeMbVenue='sofia';   // куди типово йде новий елемент декору / який мудборд активний на вузькому екрані
-let manqBusy    = {her:false,his:false};
 // 🌿 інфа про травку — лише за паролем, який знають ЛИШЕ Катя і Дмитро.
 // Пароль НЕ зашитий у код: придумується в апці, зберігається (хешем) у вашій базі й синхронізується між вашими пристроями.
 let weedPassHash = loadJSON('wed-weed-pass', '');   // хеш пароля (синхронізується), не сам пароль
@@ -3794,32 +3781,18 @@ function pickImageFile(onPick, capture){
   inp.click();
 }
 function renderBasePhotos(){
-  [['her','bpHerFrame','bpManqHer','👰','Катерини'],['his','bpHisFrame','bpManqHis','🤵','Дмитра']].forEach(([who,fid,mid,emoji,nameG])=>{
+  [['her','bpHerFrame','👰'],['his','bpHisFrame','🤵']].forEach(([who,fid,emoji])=>{
     const fr=document.getElementById(fid);
     if(fr){
-      // показуємо манекен якщо є, інакше сире фото, інакше емодзі
-      const img=mannequin[who]||photos[who];
+      const img=photos[who];
       fr.style.cssText = img ? `background-image:url('${img}')` : '';
       fr.textContent = img ? '' : emoji;
-      fr.classList.toggle('busy', !!manqBusy[who]);
       fr.style.cursor = img ? 'zoom-in' : '';
-      fr.title = mannequin[who] ? 'Манекен — тицяй, щоб збільшити' : (img ? 'Тицяй, щоб збільшити' : '');
-      fr.onclick = img ? ()=>showImgBig(mannequin[who]||photos[who], mannequin[who]?'🧍 Манекен — основа для примірки':'') : null;
+      fr.title = img ? 'Тицяй, щоб збільшити' : '';
+      fr.onclick = img ? ()=>showImgBig(img,'') : null;
     }
-    const mc=document.getElementById(mid); if(!mc) return;
-    const hasPhoto=photos[who]||photosFull[who];
-    if(manqBusy[who]) mc.innerHTML='<span class="bp-manq-info">🧍 роблю манекен…</span>';
-    else if(mannequin[who]) mc.innerHTML=`<button class="bp-manq-btn" data-manqview="${who}">🧍 глянути манекен</button> <button class="bp-manq-btn" data-manq="${who}" title="Згенерувати заново">↻</button> <button class="bp-manq-btn" data-manqdel="${who}" title="Прибрати цей манекен">🗑</button>`;
-    else if(hasPhoto) mc.innerHTML=`<button class="bp-manq-btn" data-manq="${who}">🧍 зробити манекен</button>`;
-    else mc.innerHTML='';
     const fc=document.getElementById('bpFull'+(who==='her'?'Her':'His'));
     if(fc) fc.innerHTML = photosFull[who] ? `<span class="bp-full-info">📏 фото в зріст є <button class="bp-full-x" data-fulldel="${who}" title="Прибрати">✕</button></span>` : '';
-  });
-  document.querySelectorAll('[data-manq]').forEach(b=>b.onclick=()=>aiMakeMannequin(b.dataset.manq));
-  document.querySelectorAll('[data-manqview]').forEach(b=>b.onclick=()=>{ const w=b.dataset.manqview; showImgBig(mannequin[w], '🧍 Манекен — основа для примірки'); });
-  document.querySelectorAll('[data-manqdel]').forEach(b=>b.onclick=()=>{
-    const who=b.dataset.manqdel; mannequin[who]=''; saveJSON('wed-mannequin',mannequin); renderBasePhotos(); renderCouple();
-    showToast('🗑 Манекен прибрано');
   });
   document.querySelectorAll('[data-fulldel]').forEach(b=>b.onclick=()=>{
     const who=b.dataset.fulldel; photosFull[who]=''; saveJSON('wed-photos-full',photosFull); renderBasePhotos();
@@ -3840,7 +3813,7 @@ let coupleMode={her:'collage',his:'collage'};   // 'ai' | 'collage' — кола
 // cleanImg і одразу пробує знову — і так по колу назавжди).
 let _cleaningAttempted=new Set();
 function renderCollageHTML(who){
-  const base=mannequin[who]||photosFull[who]||photos[who];
+  const base=photosFull[who]||photos[who];
   if(!base) return `<div class="cs-ph"><div class="cs-emoji">${who==='her'?'👰':'🤵'}</div><div>Спершу постав фото нижче</div></div>`;
   const slots=collage[who]||{};
   const layers=GTYPE_ZORDER.filter(g=>slots[g]).map(g=>{
@@ -3948,7 +3921,7 @@ function renderCouple(){
       el.innerHTML=modeSwitch+renderCollageHTML(s.who)+`<div class="cs-cap"><span>${s.name} · колаж</span><div style="display:flex;gap:4px;">${resetBtn}${expandBtn}</div></div>`;
       wireCollageDrag(s.who, el);
     }else{
-      const dressed=outfit[s.who], base=mannequin[s.who]||photos[s.who];
+      const dressed=outfit[s.who], base=photos[s.who];
       if(dressed){
         el.innerHTML=modeSwitch+`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap"><span>${s.name}</span>${expandBtn}</div>`;
       }else if(base){
@@ -4007,9 +3980,7 @@ function renderCouple(){
       if(!data){ return; }
       const who=W==='Her'?'her':'his';
       photos[who]=data; saveJSON('wed-photos',photos);
-      mannequin[who]=''; saveJSON('wed-mannequin',mannequin);   // старий манекен більше не актуальний
       renderBasePhotos(); renderCouple();
-      aiMakeMannequin(who);                                      // одразу робимо манекен у сірому базовому одязі
     });
     inp.value='';
   };
@@ -4021,9 +3992,7 @@ function renderCouple(){
     loadPhotoFile(f,1024,data=>{
       if(!data){ showToast('Не вдалось завантажити фото'); return; }
       photosFull[who]=data; saveJSON('wed-photos-full',photosFull);
-      mannequin[who]=''; saveJSON('wed-mannequin',mannequin);   // тіло змінилось — манекен оновимо
       renderBasePhotos(); renderCouple();
-      aiMakeMannequin(who);
     });
     finp.value='';
   };
@@ -4070,9 +4039,7 @@ function shootCamera(){
   downscaleSrc(raw,896,data=>{
     const d=data||raw;
     photos[who]=d; saveJSON('wed-photos',photos);
-    mannequin[who]=''; saveJSON('wed-mannequin',mannequin);
     renderBasePhotos(); renderCouple();
-    aiMakeMannequin(who);
     showToast('📷 Селфі збережено');
   },0.9);
 }
@@ -4107,9 +4074,7 @@ function renderPortraits(){
   grid.querySelectorAll('[data-psuse]').forEach(b=>b.onclick=()=>{
     const p=ideas.find(x=>x.id===b.dataset.psuse); if(!p) return;
     photos[p.who]=p.img; saveJSON('wed-photos',photos);
-    mannequin[p.who]=''; saveJSON('wed-mannequin',mannequin);   // лице змінилось — манекен оновимо
     renderBasePhotos(); renderCouple();
-    aiMakeMannequin(p.who);
     showToast('⭐ Зроблено основним портретом');
   });
 }
@@ -4400,33 +4365,6 @@ function aiBusy(id,on){
   const it=ideas.find(x=>x.id===id); if(!it) return;
   it._ai=on; renderIdeas();
 }
-// базове фото-основа для примірки: спершу манекен (сірий базовий одяг), інакше сире фото
-function personBase(who){ return mannequin[who] || photos[who] || photosFull[who] || ''; }
-// робить «манекен»: людина в сірому базовому одязі на повний зріст (основа для примірок)
-async function aiMakeMannequin(who){
-  const faceSrc=photos[who];          // портрет (обличчя)
-  const bodySrc=photosFull[who];      // повний зріст (тіло/пропорції), необовʼязково
-  if(!faceSrc && !bodySrc){ showToast(`Спершу додай фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
-  if(manqBusy[who]) return;
-  manqBusy[who]=true; renderBasePhotos(); renderCouple();
-  try{
-    let parts;
-    if(bodySrc){
-      // Є справжнє фото в повний зріст → РЕДАГУЄМО його: лишаємо людину 1:1, міняємо ЛИШЕ одяг.
-      // (синтез тіла з портрета давав велику голову й «чуже» обличчя — тому редагуємо реальне фото)
-      parts=[`Відредагуй це фото людини: заміни ЛИШЕ її одяг на простий базовий СІРИЙ — однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу. КРИТИЧНО: НЕ перемальовуй саму людину — збережи ТОЧНО як на фото обличчя, зачіску, голову та її розмір, пропорції тіла, зріст, статуру й позу. Міняй виключно тканину/одяг, більше нічого. Не збільшуй голову, не «прикрашай», не змінюй риси. Покажи людину на повний зріст.${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(bodySrc)];
-    }else{
-      // тільки портрет → доводиться домалювати тіло; суворо тримаємо обличчя й реалістичну голову
-      parts=[`[ПОРТРЕТ] — справжнє фото людини. Зроби зображення ЦІЄЇ САМОЇ людини на повний зріст у простому базовому СІРОМУ одязі: однотонна сіра футболка/топ і сірі легінси (без візерунків, без логотипів). Це манекен-основа для віртуальної примірки одягу.${faceRule(true)} ${heightLine(who)}${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`, dataUrlToPart(faceSrc)];
-    }
-    const img=await aiGenerate(parts);
-    downscaleSrc(img,768,small=>{
-      mannequin[who]=small||img; saveJSON('wed-mannequin',mannequin);
-      manqBusy[who]=false; renderBasePhotos(); renderCouple();
-      showToast(`🧍 Манекен ${who==='her'?'Катерини':'Дмитра'} готовий`);
-    },0.8);
-  }catch(e){ console.warn('mannequin',e); manqBusy[who]=false; renderBasePhotos(); renderCouple(); showToast('Не вдалось зробити манекен 😕 '+aiErr(e)); }
-}
 // КРОК Б — окремий прохід «закріплення обличчя»: на готовому фото лишаємо одяг/тіло 1:1,
 // виправляємо ЛИШЕ обличчя під реальний портрет і м'яко вписуємо в світло сцени.
 async function aiAnchorFace(resultDataUrl, who){
@@ -4483,13 +4421,12 @@ async function aiTryOn(it){
   const who=it.cat==='his'?'his':'her';
   const facePhoto=photos[who];            // справжній портрет — головний якір обличчя
   const bodyPhoto=photosFull[who];        // справжній повний зріст (необовʼязково)
-  const manq=mannequin[who];              // манекен (стабільне обличчя — основа)
   // база ЗАВЖДИ реальне фото людини, НІКОЛИ попередній ШІ-результат (outfit[who]) — раніше кожна
   // наступна річ редагувала попередній згенерований образ, і генеративна модель трохи "пливе"
   // обличчям на КОЖНОМУ проході навіть з інструкцією його не чіпати; похибка накопичувалась з
   // кожною вдягненою річчю. Тут джерело обличчя завжди одне й те саме реальне фото — усі вдягнені
   // речі (з outfitLayers) подаються РАЗОМ в один виклик, а не ланцюжком послідовних редагувань.
-  const baseSrc=manq||bodyPhoto||facePhoto;
+  const baseSrc=bodyPhoto||facePhoto;
   if(!baseSrc){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
   if(!it.img){ showToast('У цієї речі нема фото товару. Натисни 🖼 «Обрати картинку» і вибери саме той одяг із посилання.'); return; }
   aiBusy(it.id,true);
@@ -4645,7 +4582,7 @@ function showCoupleBig(who){
   if(coupleMode[who]==='collage'){
     stageHTML=`<div class="cs-lightbox-stage">${renderCollageHTML(who)}</div>`;
   }else{
-    const src=outfit[who]||mannequin[who]||photos[who];
+    const src=outfit[who]||photos[who];
     if(!src) return;
     stageHTML=`<img src="${esc(src)}" alt="">`;
   }
@@ -7196,7 +7133,6 @@ function startSync(){
         // важкі картинки — окремими документами
         if(photos&&(photos.her||photos.his)) mediaSet(MEDIA_DOC.photos,{d:photos});
         if(photosFull&&(photosFull.her||photosFull.his)) mediaSet(MEDIA_DOC.photosFull,{d:photosFull});
-        if(mannequin&&(mannequin.her||mannequin.his)) mediaSet(MEDIA_DOC.mannequin,{d:mannequin});
         if(outfit&&(outfit.her||outfit.his)) mediaSet(MEDIA_DOC.outfit,{d:outfit});
       }
       return;
@@ -7223,14 +7159,13 @@ function startSync(){
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
     if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
-    if(d.mannequin && typeof d.mannequin==='object') legacyMedia.mannequin=d.mannequin;
     if(d.outfit && typeof d.outfit==='object') legacyMedia.outfit=d.outfit;
     if(typeof d.weedPass==='string') weedPassHash=d.weedPass;
     if(typeof d.traditionsSeeded==='boolean') traditionsSeeded=d.traditionsSeeded;
     if(typeof d.rozpysTaskSeeded==='boolean') rozpysTaskSeeded=d.rozpysTaskSeeded;
     if(typeof d.scriptDraftSeeded==='boolean') scriptDraftSeeded=d.scriptDraftSeeded;
     // одноразова міграція старих картинок зі state в окремі документи
-    if(!IS_GUEST) ['photos','photosFull','mannequin','outfit'].forEach(name=>{
+    if(!IS_GUEST) ['photos','photosFull','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
     });
     if(d.bodyMetrics && typeof d.bodyMetrics==='object') bodyMetrics={her:{...bodyMetrics.her,...(d.bodyMetrics.her||{})},his:{...bodyMetrics.his,...(d.bodyMetrics.his||{})}};
