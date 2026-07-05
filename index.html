@@ -1983,7 +1983,7 @@ let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, cloudReady=fals
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2304,6 +2304,7 @@ let scriptWave  = loadJSON('wed-scriptW', []);
 let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже додані українські традиції в беклог (раз)
 let rozpysTaskSeeded  = loadJSON('wed-rozpys-seed', false); // чи вже додано нагадування про розпис 24.08 (раз)
 let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже додано чернетку таймлайну по часу (раз)
+let sofiaFixSeeded = loadJSON('wed-sofia-fix-seed', false); // чи вже прибрано "легкий обід" і додано повний таймінг Софі (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = pruneNoId(loadJSON('wed-decor', []), 'wed-decor');
 let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
@@ -4984,6 +4985,31 @@ function seedScriptDraft(){
   saveJSON('wed-script-draft-seed',true);
   renderScripts();
 }
+// одноразовий фікс: у Софі не може бути "легкого обіду" через депозит 4500 грн/гостя — прибираємо
+// той пункт-чернетку (якщо він і досі там, недоторканий) і докладаємо повний таймінг, який вона
+// продиктувала: обід → танці → ігри/"кучки" → танці, і фотосет із Льошею Кучмою по дорозі до
+// Хвильового; на Хвильовому — зустріч гостей із зерном і задача, щоб усе було готове заздалегідь.
+const SOFIA_FIX_ITEMS=[
+  {time:'14:00', text:'🍽 Повноцінний обід у Софі (за умовами депозиту)', loc:'Бути Софі'},
+  {time:'14:45', text:'💃 Танці', loc:'Бути Софі'},
+  {time:'15:15', text:'🎉 Ігри та конкурси («кучки»)', loc:'Бути Софі'},
+  {time:'15:40', text:'💃 Танці', loc:'Бути Софі'},
+  {time:'16:05', text:'📸 Фотосет із Льошею Кучмою по дорозі до Хвильового', loc:'Дорога / трансфер'},
+];
+function seedSofiaScheduleFix(){
+  if(sofiaFixSeeded || IS_GUEST) return;
+  sofiaFixSeeded=true;
+  const oldIdx=scriptSofia.findIndex(m=>m && m.draft && m.text==='Фуршет / легкий обід у Софі');
+  if(oldIdx>-1) scriptSofia.splice(oldIdx,1);
+  const base=Date.now();
+  SOFIA_FIX_ITEMS.forEach((s,i)=>scriptSofia.push({id:'sfix'+base+'_'+i, time:s.time, text:s.text, loc:s.loc, resp:'', draft:true}));
+  scriptWave.push({id:'sfixw'+base, time:'17:00', text:'🌾 Гості зустрічають молодих, посипають зерном', loc:'Бар «Хвильовий»', resp:'', draft:true});
+  scriptWave.push({id:'sfixw'+base+'_2', time:'16:30', text:'✅ Усе готове до зустрічі молодих (декор/зустріч/техніка) — поки пара фотографується', loc:'Бар «Хвильовий»', resp:'', draft:true});
+  saveJSON('wed-scriptS',scriptSofia);
+  saveJSON('wed-scriptW',scriptWave);
+  saveJSON('wed-sofia-fix-seed',true);
+  renderScripts();
+}
 
 /* ════ РОЗСАДКА ════ */
 let activeSeat='sofia';
@@ -7373,6 +7399,7 @@ function startSync(){
     if(typeof d.traditionsSeeded==='boolean') traditionsSeeded=d.traditionsSeeded;
     if(typeof d.rozpysTaskSeeded==='boolean') rozpysTaskSeeded=d.rozpysTaskSeeded;
     if(typeof d.scriptDraftSeeded==='boolean') scriptDraftSeeded=d.scriptDraftSeeded;
+    if(typeof d.sofiaFixSeeded==='boolean') sofiaFixSeeded=d.sofiaFixSeeded;
     // одноразова міграція старих картинок зі state в окремі документи
     if(!IS_GUEST) ['photos','photosFull','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
@@ -7440,6 +7467,7 @@ function startSync(){
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
     seedRozpysTask();   // один раз додаємо нагадування про розпис 24.08 в Завдання
     seedScriptDraft();  // один раз додаємо чернетку таймлайну по часу в Сценарій
+    seedSofiaScheduleFix(); // один раз прибираємо "легкий обід" і докладаємо повний таймінг Софі
   }, err=>{ console.warn('snapshot', err); });
   startMediaSync();
 }
@@ -7482,7 +7510,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
