@@ -2288,14 +2288,24 @@ let budget   = loadJSON('wed-budget', DEFAULT_BUDGET);
 let contacts = loadJSON('wed-contacts', DEFAULT_CONTACTS);
 let notes    = loadJSON('wed-notes', []);
 let budgetCap= loadJSON('wed-cap', 0);
-let ideas       = loadJSON('wed-ideas', []);
+// захисна очистка: записи без id взагалі неможливо видалити звичайним способом — усі
+// data-*del кнопки й будь-яке редагування шукають елемент за id (`arr.find(x=>x.id===...)`),
+// і для id-less запису це завжди null-пошук, тобто клік по "✕" мовчки нічого не робить.
+// Такі записи — залишки давніших версій застосунку; прибираємо їх раз при завантаженні й
+// одразу зберігаємо очищений масив, щоб фікс був постійним, а не лише візуальним на цю сесію.
+function pruneNoId(arr, key){
+  const clean=arr.filter(it=>it && it.id!=null);
+  if(clean.length!==arr.length) saveJSON(key, clean);
+  return clean;
+}
+let ideas       = pruneNoId(loadJSON('wed-ideas', []), 'wed-ideas');
 let scriptSofia = loadJSON('wed-scriptS', []);
 let scriptWave  = loadJSON('wed-scriptW', []);
 let traditionsSeeded = loadJSON('wed-trad-seed', false); // чи вже додані українські традиції в беклог (раз)
 let rozpysTaskSeeded  = loadJSON('wed-rozpys-seed', false); // чи вже додано нагадування про розпис 24.08 (раз)
 let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже додано чернетку таймлайну по часу (раз)
 let hotels      = loadJSON('wed-hotels', []);
-let decor       = loadJSON('wed-decor', []);
+let decor       = pruneNoId(loadJSON('wed-decor', []), 'wed-decor');
 let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
 let diyMaterials = loadJSON('wed-diy-materials', []); // що вже є вдома для декору-своїми-руками {id,text}
 let helpers     = loadJSON('wed-helpers', []); // хто з подружок/друзів готовий допомогти і чим {id,name,offer}
@@ -7250,11 +7260,11 @@ function startSync(){
     if(Array.isArray(d.contacts)) contacts=d.contacts;
     if(Array.isArray(d.notes))    notes=d.notes;
     if(typeof d.cap==='number')   budgetCap=d.cap;
-    if(Array.isArray(d.ideas))       ideas=d.ideas;
+    if(Array.isArray(d.ideas))       ideas=d.ideas.filter(it=>it && it.id!=null);
     if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
     if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
     if(Array.isArray(d.hotels))      hotels=d.hotels;
-    if(Array.isArray(d.decor))       decor=d.decor;
+    if(Array.isArray(d.decor))       decor=d.decor.filter(it=>it && it.id!=null);
     if(Array.isArray(d.orders))      orders=d.orders;
     if(Array.isArray(d.diyMaterials)) diyMaterials=d.diyMaterials;
     if(Array.isArray(d.helpers))      helpers=d.helpers;
