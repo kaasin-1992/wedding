@@ -6161,7 +6161,9 @@ document.getElementById('dImagineBtn').onclick=async()=>{
 
 /* ════ ТОРТ (винесено з Декору, живе в тому ж масиві decor, cat==='cake') ════ */
 function renderCake(){
-  const listEl=document.getElementById('cakeList'); if(!listEl) return; listEl.innerHTML='';
+  const listEl=document.getElementById('cakeList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   const items=decor.filter(d=>d.cat==='cake');
   if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай ідею торта 🎂</div>'; return; }
   items.forEach(d=>{
