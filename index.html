@@ -7763,6 +7763,33 @@ function flashSync(ok){
   pill.classList.add('show');
   clearTimeout(syncTimer); syncTimer=setTimeout(()=>pill.classList.remove('show'),1800);
 }
+// onSnapshot фонового прослуховування спрацьовує на КОЖНУ зміну спільного документа wedding/state,
+// навіть якщо змінилось зовсім інше поле (напр. хтось редагував нотатку, поки ти саме тиснула
+// чекбокс завдання) — і раніше (нижче) відповідні масиви просто БЕЗУМОВНО перезаписувались тим,
+// що прийшло у знімку. Якщо власний щойно надісланий запис (напр. toggleTask → saveJSON) ще не
+// встиг дійти до сервера, а якийсь ІНШИЙ, не пов'язаний запис — уже встиг і спричинив цей знімок,
+// у ньому "своє" поле все ще старе (без щойно зробленого локально виправлення) — і локальний стан
+// відкочується назад, а рендер одразу покаже застарілу картинку. Це і є справжня причина "клацається
+// і одразу розклацується" в Завданнях: захист від застарілих даних раніше був лише на ЗАПИСІ
+// (generic FIELD-гілка saveJSON), симетричного захисту на ЧИТАННІ (тут) не було. Той самий принцип
+// порівняння updatedAt (відсутнє трактуємо як -Infinity), що вже рятує saveJSON — тепер і тут:
+// для кожного елемента з локальним updatedAt новішим за хмарний — лишаємо локальний, а не хмарний.
+function mergeIncomingArray(localArr, cloudArr){
+  if(!Array.isArray(cloudArr)) return localArr;
+  if(!Array.isArray(localArr)) return cloudArr;
+  const localById=new Map(localArr.filter(it=>it&&it.id!=null).map(it=>[it.id,it]));
+  const merged=cloudArr.map(cIt=>{
+    if(!cIt||cIt.id==null) return cIt;
+    const lIt=localById.get(cIt.id);
+    if(!lIt) return cIt;
+    const lTs=typeof lIt.updatedAt==='number'?lIt.updatedAt:-Infinity;
+    const cTs=typeof cIt.updatedAt==='number'?cIt.updatedAt:-Infinity;
+    return lTs>cTs ? lIt : cIt;
+  });
+  const cloudIds=new Set(cloudArr.filter(it=>it&&it.id!=null).map(it=>it.id));
+  localArr.forEach(lIt=>{ if(lIt&&lIt.id!=null && !cloudIds.has(lIt.id)) merged.push(lIt); });
+  return merged;
+}
 function startSync(){
   if(!DOC) return;
   DOC.onSnapshot(snap=>{
@@ -7780,23 +7807,23 @@ function startSync(){
     }
     const d=snap.data();
     applyingSnapshot=true;
-    if(Array.isArray(d.tasks))    tasks=d.tasks;
-    if(Array.isArray(d.guests))   guests=d.guests;
-    if(Array.isArray(d.budget))   budget=d.budget;
-    if(Array.isArray(d.contacts)) contacts=d.contacts;
-    if(Array.isArray(d.notes))    notes=d.notes;
+    if(Array.isArray(d.tasks))    tasks=mergeIncomingArray(tasks, d.tasks);
+    if(Array.isArray(d.guests))   guests=mergeIncomingArray(guests, d.guests);
+    if(Array.isArray(d.budget))   budget=mergeIncomingArray(budget, d.budget);
+    if(Array.isArray(d.contacts)) contacts=mergeIncomingArray(contacts, d.contacts);
+    if(Array.isArray(d.notes))    notes=mergeIncomingArray(notes, d.notes);
     if(typeof d.cap==='number')   budgetCap=d.cap;
-    if(Array.isArray(d.ideas))       ideas=d.ideas.filter(it=>it && it.id!=null);
-    if(Array.isArray(d.scriptSofia)) scriptSofia=d.scriptSofia;
-    if(Array.isArray(d.scriptWave))  scriptWave=d.scriptWave;
-    if(Array.isArray(d.hotels))      hotels=d.hotels;
-    if(Array.isArray(d.decor))       decor=d.decor.filter(it=>it && it.id!=null);
-    if(Array.isArray(d.orders))      orders=d.orders;
-    if(Array.isArray(d.diyMaterials)) diyMaterials=d.diyMaterials;
-    if(Array.isArray(d.helpers))      helpers=d.helpers;
-    if(Array.isArray(d.music))       music=d.music;
-    if(Array.isArray(d.mustPlay))    mustPlay=d.mustPlay;
-    if(Array.isArray(d.inspo))       inspo=d.inspo;
+    if(Array.isArray(d.ideas))       ideas=mergeIncomingArray(ideas, d.ideas.filter(it=>it && it.id!=null));
+    if(Array.isArray(d.scriptSofia)) scriptSofia=mergeIncomingArray(scriptSofia, d.scriptSofia);
+    if(Array.isArray(d.scriptWave))  scriptWave=mergeIncomingArray(scriptWave, d.scriptWave);
+    if(Array.isArray(d.hotels))      hotels=mergeIncomingArray(hotels, d.hotels);
+    if(Array.isArray(d.decor))       decor=mergeIncomingArray(decor, d.decor.filter(it=>it && it.id!=null));
+    if(Array.isArray(d.orders))      orders=mergeIncomingArray(orders, d.orders);
+    if(Array.isArray(d.diyMaterials)) diyMaterials=mergeIncomingArray(diyMaterials, d.diyMaterials);
+    if(Array.isArray(d.helpers))      helpers=mergeIncomingArray(helpers, d.helpers);
+    if(Array.isArray(d.music))       music=mergeIncomingArray(music, d.music);
+    if(Array.isArray(d.mustPlay))    mustPlay=mergeIncomingArray(mustPlay, d.mustPlay);
+    if(Array.isArray(d.inspo))       inspo=mergeIncomingArray(inspo, d.inspo);
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
     if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
