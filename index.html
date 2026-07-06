@@ -2991,7 +2991,7 @@ function renderContacts(){
     card.innerHTML=`
       <div class="cc-top">
         <div style="flex:1;min-width:0">
-          <div class="cc-role">${esc(c.role)}</div>
+          <div class="cc-role" data-crole="${c.id}" contenteditable="true" spellcheck="false" title="Тицяй, щоб перейменувати">${esc(c.role)}</div>
           <div class="cc-name ${chosen?'':'empty'}">${chosen?esc(chosen.name||'—'):'не обрано'}</div>
           ${chosen&&chosen.contact?`<div class="cc-contact">${esc(chosen.contact)}</div>`:''}
           ${chosen&&chosen.note?`<div class="cc-note">${esc(chosen.note)}</div>`:''}
@@ -3037,6 +3037,15 @@ function renderContacts(){
   });
   listEl.querySelectorAll('[data-cdel]').forEach(btn=>btn.onclick=()=>{
     delUndo('wed-contacts',btn.dataset.cdel,'Контакт видалено');
+  });
+  listEl.querySelectorAll('[data-crole]').forEach(el=>{
+    const save=()=>{ const c=contacts.find(x=>x.id===el.dataset.crole); if(!c)return;
+      const v=el.textContent.replace(/\s+/g,' ').trim();
+      if(!v){ el.textContent=c.role; return; }
+      if(v!==c.role){ c.role=v; saveJSON('wed-contacts',contacts); }
+    };
+    el.addEventListener('blur',save);
+    el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
   });
   listEl.querySelectorAll('[data-contactwho]').forEach(el=>el.onchange=()=>{
     const c=contacts.find(x=>x.id===el.dataset.contactwho); if(!c)return;
@@ -7519,7 +7528,7 @@ function maybeSwipeHint(){
 const QUICKADD_TARGETS=[
   ['her','👗 Одяг — Вона'],['his','🤵 Одяг — Він'],['rings','💍 Каблучки'],['idea','✨ Ідеї весілля'],
   ['decor','🌸 Декор'],['cake','🎂 Торт'],['music','🎵 Музика'],['hotel','🏨 Готель'],['inspo','🖼 Натхнення'],
-  ['task','✅ Завдання'],['note','📝 Нотатка'],
+  ['contact','📇 Підрядник / контакт'],['task','✅ Завдання'],['note','📝 Нотатка'],
 ];
 function guessQuickAddTarget(text){
   const t=(text||'').trim();
@@ -7533,6 +7542,7 @@ function guessQuickAddTarget(text){
     [/декор|квіт|флорист|\bdecor\b|flower/,'decor'],
     [/сукня|плаття|вбрання|вишиванк|костюм|сорочка|\bdress\b|vyshyt|etnodim|svarga|gunia|malvy|katrya|serpen|hrushenka|faina/,'her'],
     [/каблучк|обручк|перстен|\bring\b/,'rings'],
+    [/ведуч|конферансьє|тамада|мс\b|\bmc\b|host\b/,'contact'],
   ];
   for(const [re,target] of rules){ if(re.test(hay)) return target; }
   if(urlMatch) return 'idea';
@@ -7572,6 +7582,14 @@ async function quickAddDispatch(target,rawText){
       }
     }
     showToast('✨ Додано в Одяг/Ідеї'); return;
+  }
+  if(target==='contact'){
+    const role=restText||'Контакт';
+    const opts=[]; let chosen='';
+    if(url){ const oid='o'+Date.now(); opts.push({id:oid,name:'',contact:url,note:''}); chosen=oid; }
+    contacts.push({id:'c'+Date.now(),role,status:'search',options:opts,chosen});
+    saveJSON('wed-contacts',contacts); renderContacts();
+    showToast('📇 Додано в підрядники'); return;
   }
   if(target==='decor'||target==='cake'){
     const id=(target==='cake'?'ck':'d')+Date.now();
