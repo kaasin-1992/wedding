@@ -2013,7 +2013,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2339,6 +2339,7 @@ let scriptDraftSeeded = loadJSON('wed-script-draft-seed', false); // чи вже
 let sofiaFixSeeded = loadJSON('wed-sofia-fix-seed', false); // чи вже прибрано "легкий обід" і додано повний таймінг Софі (раз)
 let decorDiySeeded = loadJSON('wed-decor-diy-seed', false); // чи вже додано фінальний список декору DIY (раз)
 let julySeed2Seeded = loadJSON('wed-july-seed2-seed', false); // чи вже додано завдання про водійські права + РАЦС Поділ (раз)
+let julySeed3Seeded = loadJSON('wed-july-seed3-seed', false); // чи вже додано термінові завдання про віночок/котильйон і обручки (раз)
 let hotels      = loadJSON('wed-hotels', []);
 let decor       = pruneNoId(loadJSON('wed-decor', []), 'wed-decor');
 let orders      = loadJSON('wed-orders', []); // замовлення (Amazon → Нова пошта) {id,title,url,price,ttn,status,note,ts}
@@ -5187,6 +5188,24 @@ function seedJuly2(){
   renderTasks(); renderNotes();
 }
 
+// одноразовий seed: два термінові замовлення, щоб не загубились
+function seedJuly3(){
+  if(julySeed3Seeded || IS_GUEST) return;
+  julySeed3Seeded=true;
+  const base=Date.now();
+  tasks.push({
+    id:'jt3'+base+'_1', deadline:null, done:false,
+    text:'❗ ТЕРМІНОВО: замовити віночок і котильйон в Олени',
+  });
+  tasks.push({
+    id:'jt3'+base+'_2', deadline:null, done:false,
+    text:'❗ ТЕРМІНОВО: замовити обручки в тата Ані',
+  });
+  saveJSON('wed-tasks',tasks);
+  saveJSON('wed-july-seed3-seed',true);
+  renderTasks();
+}
+
 /* ════ РОЗСАДКА ════ */
 let activeSeat='sofia';
 function seatRef(){ if(!seating[activeSeat]) seating[activeSeat]={tip:'',zones:[]}; if(!Array.isArray(seating[activeSeat].zones)) seating[activeSeat].zones=[]; return seating[activeSeat]; }
@@ -7665,6 +7684,7 @@ function startSync(){
     if(typeof d.sofiaFixSeeded==='boolean') sofiaFixSeeded=d.sofiaFixSeeded;
     if(typeof d.decorDiySeeded==='boolean') decorDiySeeded=d.decorDiySeeded;
     if(typeof d.julySeed2Seeded==='boolean') julySeed2Seeded=d.julySeed2Seeded;
+    if(typeof d.julySeed3Seeded==='boolean') julySeed3Seeded=d.julySeed3Seeded;
     // одноразова міграція старих картинок зі state в окремі документи
     if(!IS_GUEST) ['photos','photosFull','outfit'].forEach(name=>{
       if(legacyMedia[name] && !mediaCache.base[name]) mediaSet(MEDIA_DOC[name], {d:legacyMedia[name]});
@@ -7735,6 +7755,7 @@ function startSync(){
     seedSofiaScheduleFix(); // один раз прибираємо "легкий обід" і докладаємо повний таймінг Софі
     seedDecorDiy(); // один раз додаємо фінальний список декору DIY
     seedJuly2(); // один раз додаємо завдання про водійські права + РАЦС Поділ
+    seedJuly3(); // один раз додаємо термінові завдання про віночок/котильйон і обручки
   }, err=>{ console.warn('snapshot', err); });
   startMediaSync();
 }
@@ -7778,7 +7799,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
