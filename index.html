@@ -6807,9 +6807,15 @@ function renderDressCode(){
   const presetsBox=document.getElementById('dcPresets');
   if(presetsBox){
     const cats=[...new Set(DRESSCODE_PRESETS.map(p=>p.cat))];
+    // НЕ запікаємо ".active" у сам HTML-рядок — інакше вибір пресету щоразу відрізняється від
+    // кешу й ганяє повний innerHTML-rebuild, знищуючи й наново створюючи ВСІ чіпи, включно з
+    // тим, що саме зараз під пальцем на горизонтальному скролі. На телефоні (особливо мідскрол)
+    // це виглядає так, ніби ряд "злітає"/вислизає з-під пальця в момент вибору. Структура
+    // (іконки/назви/палітри) кешується окремо від активного стану — сам чіп ніколи не
+    // перестворюється при виборі, лише клас .active перемикається нижче.
     const presetsHtml=cats.map(cat=>`<span class="dc-preset-cat">${esc(cat)}</span>`+
       DRESSCODE_PRESETS.filter(p=>p.cat===cat).map(p=>`
-        <div class="dc-preset-chip${dresscode.presetId===p.id?' active':''}" data-dcpreset="${p.id}" title="${esc(p.hint)}">
+        <div class="dc-preset-chip" data-dcpreset="${p.id}" title="${esc(p.hint)}">
           <span class="dc-preset-icon">${p.icon}</span>
           <span class="dc-preset-label">${esc(p.label)}</span>
           <span class="dc-preset-dots">${p.colors.map(c=>`<span style="background:${esc(c)}"></span>`).join('')}</span>
@@ -6829,6 +6835,11 @@ function renderDressCode(){
         saveJSON('wed-dresscode',dresscode); renderDressCode();
       });
     }
+    // активний чіп оновлюємо окремо, класом — щоразу, незалежно від кешу вище, і без
+    // перестворення жодного DOM-вузла (звідси й фікс "злітання" при виборі)
+    presetsBox.querySelectorAll('[data-dcpreset]').forEach(chip=>{
+      chip.classList.toggle('active', dresscode.presetId===chip.dataset.dcpreset);
+    });
   }
   const colorsBox=document.getElementById('dcColors'); if(!colorsBox) return;
   const colorsHtml=`<div class="dc-swatches">
