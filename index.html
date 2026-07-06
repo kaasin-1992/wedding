@@ -1857,6 +1857,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-df="idea">💭 Ідеї</button>
   </div>
   <div id="decorList"></div>
+  <details class="venue-photos-wrap" open>
+    <summary>📋 Завдання декору (з'являються тут, коли позначаєш «✅ Беремо»)</summary>
+    <div id="decorTasksList"></div>
+  </details>
   <details class="venue-photos-wrap">
     <summary>📦 Замовлення (Amazon → Нова Пошта)</summary>
     <div class="add-form">
@@ -2506,7 +2510,7 @@ function renderTasks(){
     tl.appendChild(grp);
   });
 }
-function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; t.updatedAt=Date.now(); saveJSON('wed-tasks',tasks); renderTasks();} }
+function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; t.updatedAt=Date.now(); saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks();} }
 // розпізнає "ДД.ММ", "ДД.ММ.РРРР" чи "ДД.ММ.РР" (рік необовʼязковий — весілля все одно 2026);
 // повертає ISO-рядок YYYY-MM-DD або null, якщо не вдалось розібрати чи рік явно абсурдний
 function parseTaskDeadlineInput(str){
@@ -5955,10 +5959,11 @@ function renderDecor(){
     e.stopPropagation();
     const d=decor.find(x=>x.id===b.dataset.ddel);
     if(d && d.budgetId){ const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
-    if(d && d.taskId){ const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); } }
+    if(d && d.taskId){ const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks(); } }
     delUndo('wed-decor',b.dataset.ddel,'Декор видалено');
     if(_decorDetailId===b.dataset.ddel) closeDecorDetail();
   });
+  renderDecorTasks();
   renderCake();   // торт живе в тому ж масиві decor — оновлюємо разом, щоб не забути окремого виклику
   renderDecorMoodboard();   // пісочниця вбудована прямо у вкладку — оновлюємо разом з рештою декору
 }
@@ -6026,7 +6031,7 @@ function wireDecorDetailHandlers(panel){
   panel.querySelectorAll('[data-ddel]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.ddel);
     if(d && d.budgetId){ const i=budget.findIndex(x=>x.id===d.budgetId); if(i>-1){ budget.splice(i,1); saveJSON('wed-budget',budget); renderBudget(); } }
-    if(d && d.taskId){ const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); } }
+    if(d && d.taskId){ const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks(); } }
     delUndo('wed-decor',b.dataset.ddel,'Декор видалено');
     closeDecorDetail();
   });
@@ -6086,7 +6091,7 @@ function wireDecorDetailHandlers(panel){
       const i=tasks.findIndex(x=>x.id===d.taskId); if(i>-1){ tasks.splice(i,1); saveJSON('wed-tasks',tasks); renderTasks(); }
       delete d.taskId;
     }
-    saveJSON('wed-decor',decor); renderDecorDetail(); renderDecor();
+    saveJSON('wed-decor',decor); renderDecorDetail(); renderDecor(); renderDecorTasks();
   });
   panel.querySelectorAll('[data-dbought]').forEach(b=>b.onclick=()=>{
     const d=decor.find(x=>x.id===b.dataset.dbought); if(!d)return;
@@ -6454,6 +6459,21 @@ document.getElementById('addHelperBtn').onclick=()=>{
   document.getElementById('hlName').value=''; document.getElementById('hlOffer').value='';
   saveJSON('wed-helpers',helpers); renderHelpers();
 };
+// завдання, авто-створені при позначенні декору "✅ Беремо" (d.taskId) — щоб не змушувати
+// шукати їх в окремій вкладці Завдання, показуємо (і даємо відмічати) прямо тут же, в Декорі.
+// Це той САМИЙ масив tasks (не копія) — done-toggle тут одразу відображається і в Завданнях.
+function renderDecorTasks(){
+  const listEl=document.getElementById('decorTasksList'); if(!listEl) return;
+  const linkedIds=new Set(decor.filter(d=>d.taskId).map(d=>d.taskId));
+  const items=tasks.filter(t=>linkedIds.has(t.id));
+  if(!items.length){ listEl.innerHTML='<div class="empty-state">Поки нічого — тицьни «✅ Беремо» на елементі декору, і задача з’явиться тут.</div>'; return; }
+  listEl.innerHTML=items.map(t=>`
+    <div class="note-card${t.done?' done':''}" style="display:flex;align-items:center;gap:10px;">
+      <input type="checkbox" data-decortaskdone="${t.id}" ${t.done?'checked':''} style="width:20px;height:20px;flex:none;">
+      <div class="note-text" style="${t.done?'text-decoration:line-through;opacity:.6;':''}">${esc(t.text)}</div>
+    </div>`).join('');
+  listEl.querySelectorAll('[data-decortaskdone]').forEach(cb=>cb.onchange=()=>toggleTask(cb.dataset.decortaskdone));
+}
 
 /* ════ МУЗИКА (артисти / діджеї) ════ */
 const MUSIC_STATUS={search:'🔍 Шукаємо',contacted:'✉️ Написали',booked:'✅ Заброньовано'};
