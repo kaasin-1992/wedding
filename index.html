@@ -1785,38 +1785,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- DECOR -->
 <div class="panel" id="tab-decor">
   <div class="section-hint">Ідеї та закупівлі декору: квіти, арки, свічки, текстиль, неон, пресвол… Встав посилання — підтягнеться фото й опис. Тицьни на статус, щоб позначити «беремо».</div>
-  <details class="decor-mb-inline" open>
-    <summary>🎨 Мудборд декору — перетягни фото туди-сюди (тицьни, щоб згорнути)</summary>
-    <div class="moodboard-head" style="padding:0 0 6px;">
-      <button class="modal-btn ghost" id="dMbAddFileBtn" title="Додати фото з компʼютера">📁 Фото</button>
-    </div>
-    <div class="mb-dual-wrap" id="mbDualWrap">
-      <div class="mb-venue-toggle" id="mbVenueToggle">
-        <button class="filt-btn active" data-mbv="sofia">💒 Софі</button>
-        <button class="filt-btn" data-mbv="wave">🥂 Хвильовий</button>
-      </div>
-      <div class="mb-dual-row">
-        <div class="mb-venue-board active" data-venue="sofia">
-          <div class="mb-venue-label-row">
-            <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
-            <button class="mb-venue-gen-btn" id="mbGenSofia" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
-          </div>
-          <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
-        </div>
-        <div class="mb-venue-board" data-venue="wave">
-          <div class="mb-venue-label-row">
-            <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
-            <button class="mb-venue-gen-btn" id="mbGenWave" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
-          </div>
-          <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
-        </div>
-      </div>
-    </div>
-  </details>
-  <details class="venue-photos-wrap">
-    <summary>📍 Фото локацій (для візуалізації декору)</summary>
-    <div class="venue-photos" id="venuePhotosBox"></div>
-  </details>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати декор</summary>
@@ -1857,6 +1825,38 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <button class="filt-btn" data-df="idea">💭 Ідеї</button>
   </div>
   <div id="decorList"></div>
+  <details class="venue-photos-wrap">
+    <summary>📍 Фото локацій (для візуалізації декору)</summary>
+    <div class="venue-photos" id="venuePhotosBox"></div>
+  </details>
+  <details class="decor-mb-inline" open>
+    <summary>🎨 Мудборд декору — перетягни фото туди-сюди (тицьни, щоб згорнути)</summary>
+    <div class="moodboard-head" style="padding:0 0 6px;">
+      <button class="modal-btn ghost" id="dMbAddFileBtn" title="Додати фото з компʼютера">📁 Фото</button>
+    </div>
+    <div class="mb-dual-wrap" id="mbDualWrap">
+      <div class="mb-venue-toggle" id="mbVenueToggle">
+        <button class="filt-btn active" data-mbv="sofia">💒 Софі</button>
+        <button class="filt-btn" data-mbv="wave">🥂 Хвильовий</button>
+      </div>
+      <div class="mb-dual-row">
+        <div class="mb-venue-board active" data-venue="sofia">
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelSofia"></div>
+            <button class="mb-venue-gen-btn" id="mbGenSofia" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
+          <div class="moodboard-canvas" id="moodboardCanvasSofia"><div class="moodboard-inner" id="moodboardInnerSofia"></div></div>
+        </div>
+        <div class="mb-venue-board" data-venue="wave">
+          <div class="mb-venue-label-row">
+            <div class="mb-venue-label" id="mbVenueLabelWave">🥂 фуршет + 🎤 сцена у дворі</div>
+            <button class="mb-venue-gen-btn" id="mbGenWave" title="ШІ уявить, як виглядатиме локація з усім розкладеним тут декором">🪄 Уявити простір</button>
+          </div>
+          <div class="moodboard-canvas" id="moodboardCanvasWave"><div class="moodboard-inner" id="moodboardInnerWave"></div></div>
+        </div>
+      </div>
+    </div>
+  </details>
   <details class="venue-photos-wrap" open>
     <summary>📋 Завдання декору (з'являються тут, коли позначаєш «✅ Беремо»)</summary>
     <div id="decorTasksList"></div>
