@@ -3256,6 +3256,16 @@ function ideaFieldsHTML(it){
   const boughtBtn=(it.cat==='her'||it.cat==='his')?`<button class="idea-bought${it.bought?' on':''}" data-bought="${it.id}">${it.bought?'🛍 Куплено':'🛒 Ще не куплено'}</button>`:'';
   const photoBtn=`<button class="idea-photo-btn" data-photo="${it.id}">📷 ${it.img?'Замінити фото':'Додати фото'}</button>`;
   const pickBtn=it.url?`<button class="idea-photo-btn" data-pickimg="${it.id}">🖼 Обрати картинку</button>`:'';
+  // якщо вона сама вже вирізала й підготувала фото (напр. поклала на темний фон) — авто-обробка
+  // (ensureCleanGarment) все одно вважає будь-яке фото без ВІДПОВІДНОГО cleanImg "сирим" і при
+  // наступному "Обробити все одразу" пропускає його крізь ШІ-чищення, підмінюючи ЇЇ підготовлене
+  // фото на власний ШІ-варіант (звідси скарга "злетіло" — фото не губиться, it.img лишається
+  // цілим, але показ (cleanShow пріоритетний) і майбутня обробка перемикаються на ШІ-версію).
+  // Кнопка нижче дає позначити "це вже фінальне фото" — прирівнює cleanImg до самого it.img
+  // (миттєво повертає показ її фото і назавжди виключає цю річ з майбутньої авто-обробки), або
+  // зняти позначку, якщо вона таки хоче прогнати ШІ-чищення.
+  const isFinalMarked=isTry && it.img && it.cleanImg===it.img && it.cleanFor===garmentSig(it.img);
+  const keepOrigBtn=(isTry && it.img)?`<button class="idea-photo-btn${isFinalMarked?' on':''}" data-keeporig="${it.id}" title="Не давати ШІ переробляти це фото">${isFinalMarked?'✓ Фінальне фото (ШІ не чіпає)':'✓ Це вже фінальне фото'}</button>`:'';
   const comboBtn=(!it.img && !it.price && it.url)?`<button class="idea-photo-btn" data-combo="${it.id}">📸✨ Скрін + ШІ-інфо</button>`:'';
   const msgBtn=(isMakeable&&it.url)?`<button class="idea-photo-btn" data-vmsg="${it.id}">✉️ Написати</button>`:'';
   const aiTipBtn=isTry?`<button class="idea-photo-btn" data-aitip="${it.id}">💭 ${it.aiTip?'Оновити пораду':'Порада ШІ'}</button>`:'';
@@ -3267,7 +3277,7 @@ function ideaFieldsHTML(it){
   const extraPhotosRow=isTry?`<div class="idea-extra-photos">${extraImgsReal.map((src,i)=>
       `<div class="idea-extra-thumb"><img src="${esc(src)}" alt="" loading="lazy" data-extraview="${it.id}:${i}"><button class="idea-extra-x" data-extradel="${it.id}:${i}" aria-label="Видалити фото">✕</button></div>`
     ).join('')}</div>`:'';
-  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,voteRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow,addPhotoBtn,extraPhotosRow};
+  return {host,fav,isTry,isMakeable,showImg,thumb,aiBtns,favRow,voteRow,shopRoomRow,realTryonRow,approveBtn,boughtBtn,photoBtn,pickBtn,comboBtn,msgBtn,clothWhoRow,aiTipBtn,aiTipRow,addPhotoBtn,extraPhotosRow,keepOrigBtn};
 }
 // річ одягу ще не має ані фото, ані чистого вирізаного варіанту — кандидат на масову обробку
 function clothNeedsProcessing(it){
@@ -3438,7 +3448,7 @@ function renderIdeaDetail(){
       ${f.aiTipRow}
       ${f.shopRoomRow}
       ${f.realTryonRow}
-      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.aiTipBtn}${f.pickBtn}${f.photoBtn}${f.addPhotoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
+      <div class="idea-actions">${it.url?`<a class="idea-open" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Відкрити ↗</a>`:''}${f.comboBtn}${f.msgBtn}${f.aiTipBtn}${f.pickBtn}${f.photoBtn}${f.keepOrigBtn}${f.addPhotoBtn}${f.aiBtns}${f.approveBtn}${f.boughtBtn}</div>
     </div>`;
   wireIdeaDetailHandlers(panel);
 }
@@ -3474,6 +3484,18 @@ function wireIdeaDetailHandlers(panel){
   panel.querySelectorAll('[data-bought]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.bought); if(!it)return;
     it.bought=!it.bought; saveJSON('wed-ideas',ideas); refreshIdeaViews();
+  });
+  panel.querySelectorAll('[data-keeporig]').forEach(b=>b.onclick=()=>{
+    const it=ideas.find(x=>x.id===b.dataset.keeporig); if(!it || !it.img)return;
+    const alreadyMarked=it.cleanImg===it.img && it.cleanFor===garmentSig(it.img);
+    if(alreadyMarked){
+      delete it.cleanImg; delete it.cleanFor;
+      showToast('Знято — ШІ знову може почистити це фото');
+    }else{
+      it.cleanImg=it.img; it.cleanFor=garmentSig(it.img);
+      showToast('✓ Позначено як фінальне — ШІ більше не чіпатиме це фото');
+    }
+    saveJSON('wed-ideas',ideas); refreshIdeaViews();
   });
   panel.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.fav); if(!it)return;
