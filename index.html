@@ -2035,6 +2035,23 @@ try{
 }catch(e){ console.warn('firebase init', e); }
 if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
 
+// Коли локальне сховище браузера (localStorage/IndexedDB) переповнене — Firestore SDK не може
+// записати навіть свій маленький службовий ключ, падає з QuotaExceededError і переходить у
+// "INTERNAL ASSERTION FAILED: Unexpected state", після чого практично будь-яка дія, що чіпає
+// Firestore (тобто майже кожен клік, що щось зберігає), тихо не спрацьовує — застосунок виглядає
+// так, ніби "взагалі нічого не клікається". Раніше це було видно ЛИШЕ в консолі розробника;
+// тепер показуємо зрозумілу підказку одразу на екрані (раз на сесію, щоб не спамити).
+let _quotaWarnShown=false;
+function warnIfQuotaError(msg){
+  if(_quotaWarnShown) return;
+  const s=String(msg||'');
+  if(!/QuotaExceeded|INTERNAL ASSERTION FAILED/i.test(s)) return;
+  _quotaWarnShown=true;
+  try{ showToast('⚠️ Локальне сховище браузера переповнене — онови сторінку. Якщо не допоможе: налаштування сайту → «Очистити дані сайту» (це безпечно, стирає лише кеш, не хмару)'); }catch(e){}
+}
+window.addEventListener('unhandledrejection', ev=>warnIfQuotaError(ev.reason && (ev.reason.message||ev.reason)));
+window.addEventListener('error', ev=>warnIfQuotaError(ev.message));
+
 /* ── PORTABLE STORAGE (localStorage + in-memory fallback) ── */
 const _mem = {};
 const DB = {
@@ -2055,6 +2072,23 @@ function loadJSON(key, fallback){
 const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-outfit':'outfit','wed-venues':'venuePhotos'};
 const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', outfit:'m_outfit', venuePhotos:'m_venuePhotos'};
 const isDataUrl = s => /^data:/.test(s||'');
+// ключі, яким справді потрібні повні base64-картинки в localStorage (є окремий механізм
+// у applyMedia(), що читає DB.get(key) як фолбек на час гонки завантаження хмарного медіа-
+// документа) — для решти ключів (декор/готелі/натхнення/музика/мудборд/колаж тощо) локальний
+// кеш повних фото не дає нічого, крім необмеженого росту localStorage роками використання —
+// саме це й забило квоту сховища на одному з пристроїв (QuotaExceededError у Firestore SDK
+// при спробі записати навіть свій маленький службовий ключ → "INTERNAL ASSERTION FAILED" →
+// застосунок повністю перестає реагувати на кліки, бо кожен saveJSON після цього падає)
+const LOCAL_FULL_IMG_KEYS = new Set(['wed-ideas','wed-dresscode','wed-photos','wed-photos-full','wed-outfit','wed-venues']);
+function stripDataUrlsDeep(v){
+  if(Array.isArray(v)) return v.map(stripDataUrlsDeep);
+  if(v && typeof v==='object'){
+    const out={};
+    for(const k in v) out[k]=isDataUrl(v[k]) ? '' : stripDataUrlsDeep(v[k]);
+    return out;
+  }
+  return v;
+}
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
 function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
 function mediaSet(docId, payload){
@@ -2090,7 +2124,10 @@ function splitIdeas(arr){
   return light;
 }
 function saveJSON(key, val){
-  DB.set(key, JSON.stringify(val));                 // локальний кеш (повні дані, працює офлайн)
+  // локальний кеш (працює офлайн). Повні base64-фото лишаємо лише для ключів, яким це
+  // реально потрібне (див. LOCAL_FULL_IMG_KEYS) — для решти прибираємо важкі картинки,
+  // щоб не забивати обмежену квоту localStorage браузера роками накопичення фото.
+  DB.set(key, JSON.stringify(LOCAL_FULL_IMG_KEYS.has(key) ? val : stripDataUrlsDeep(val)));
   if(!(DOC && cloudReady && !applyingSnapshot && !IS_GUEST)) return;
   if(HEAVY_KEYS[key]){                               // фото пари/манекени/примірки → окремий документ
     mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
