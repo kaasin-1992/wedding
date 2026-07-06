@@ -2012,6 +2012,9 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, DRESSVOTES=null, GUESTSCOL=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
+let _dcLastLocalSave=0;   // мітка часу останнього ЛОКАЛЬНОГО збереження дрес-коду — короткий "грейс-період"
+                          // нижче в onSnapshot захищає щойно обраний пресет/колір від фонового знімку,
+                          // що ще не встиг підхопити цю саму зміну (гонка мережі, не лише порівняння _ts)
 // гостьовий перегляд: ?guest у посиланні → анонімний вхід, тільки читання + коментарі
 const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('guest') || /(^|[#&])guest\b/i.test(location.hash); }catch(e){ return false; } })();
 let comments=[], commentsBound=false, cmtTab=null;
@@ -2107,6 +2110,7 @@ function saveJSON(key, val){
     // яке ще не встигло підхопити цю саму зміну (звідси скарга "підсвічується, але одразу
     // зникає" — вибір і справді стається, просто наступний фоновий рендер його стирає)
     val._ts=Date.now();
+    _dcLastLocalSave=val._ts;
     const light={...val};
     if(isDataUrl(val.gen)){ mediaSet('m_dresscode', {gen: val.gen}); light.gen='@m'; }
     DOC.set({dresscode: light, _updated: Date.now()}, {merge:true})
@@ -7728,11 +7732,15 @@ function startSync(){
     if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{sofia:{},wave:{}},...d.moodboard};
     if(d.dresscode && typeof d.dresscode==='object'){
       // не даємо застарілому знімку (без щойно зробленого локального вибору) перезаписати
-      // dresscode назад — приймаємо хмарну версію лише якщо вона НЕ старіша за вже наявну
-      // локальну (той самий принцип, що вже рятує чекбокси завдань від застарілих вкладок)
+      // dresscode назад. Порівняння САМИХ лише _ts виявилось недостатнім (скарга "підсвічується,
+      // але одразу зникає" повторилась і після цього фіксу) — додаємо ще й короткий "грейс-період"
+      // (4с) від моменту останнього ЛОКАЛЬНОГО збереження: протягом нього приймаємо хмарну версію
+      // лише якщо вона СТРОГО новіша (а не просто "не старіша") за локальну, щоб застрахуватись
+      // від будь-якої гонки мережі/розсинхрону годинника, не лише точного збігу _ts
       const localTs=(dresscode && typeof dresscode._ts==='number')?dresscode._ts:-Infinity;
       const cloudTs=typeof d.dresscode._ts==='number'?d.dresscode._ts:-Infinity;
-      if(cloudTs>=localTs) dresscode={colors:[],refs:[],gen:'',...d.dresscode};
+      const withinGrace=(Date.now()-_dcLastLocalSave)<4000;
+      if(withinGrace ? (cloudTs>localTs) : (cloudTs>=localTs)) dresscode={colors:[],refs:[],gen:'',...d.dresscode};
     }
     if(d.outfitLayers && typeof d.outfitLayers==='object') outfitLayers={her:{},his:{},...d.outfitLayers};
     if(d.moodboardExtra && typeof d.moodboardExtra==='object') moodboardExtra={cloth:[],decor:{sofia:[],wave:[]},...d.moodboardExtra};
