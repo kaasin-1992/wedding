@@ -3079,7 +3079,7 @@ function renderContacts(){
     const save=()=>{ const c=contacts.find(x=>x.id===el.dataset.crole); if(!c)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
       if(!v){ el.textContent=c.role; return; }
-      if(v!==c.role){ c.role=v; saveJSON('wed-contacts',contacts); }
+      if(v!==c.role){ c.role=v; c.updatedAt=Date.now(); saveJSON('wed-contacts',contacts); }
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
