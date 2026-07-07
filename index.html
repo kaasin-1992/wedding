@@ -2124,6 +2124,30 @@ function splitIdeas(arr){
   return light;
 }
 function saveJSON(key, val){
+  // автоматично проставляємо updatedAt на елементах, чиї поля реально змінились відносно
+  // попередньо збереженої локальної версії — рятує ВСІ per-item редагування (десятки
+  // contenteditable/onchange-обробників по всьому застосунку: назви, нотатки, статуси,
+  // "хто відповідає" тощо) одним місцем, замість необхідності вручну стемпати updatedAt
+  // у кожному окремому handler-і (саме відсутність такого стемпа й спричинила баги з
+  // чекбоксом завдань і роллю контакту — мердж-гарди бачили -Infinity з обох боків для
+  // щойно відредагованого поля, і хмара "перемагала", відкочуючи свіжу зміну). Порівнюємо
+  // БЕЗ картинок (stripDataUrlsDeep з обох боків) — вони йдуть окремим, вже наявним шляхом
+  // синхронізації (mediaSet/applyMedia), інакше кожне поле з фото завжди "відрізнялось" би
+  // просто через те, що локальний кеш для більшості ключів навмисно не тримає base64.
+  if(Array.isArray(val) && val.every(it=>it && typeof it==='object' && it.id!=null)){
+    try{
+      const prev=JSON.parse(DB.get(key)||'[]');
+      if(Array.isArray(prev)){
+        const prevById=new Map(prev.filter(it=>it&&it.id!=null).map(it=>[it.id,it]));
+        val.forEach(it=>{
+          const p=prevById.get(it.id); if(!p) return;
+          const a=JSON.stringify(stripDataUrlsDeep({...it,updatedAt:undefined}));
+          const b=JSON.stringify(stripDataUrlsDeep({...p,updatedAt:undefined}));
+          if(a!==b) it.updatedAt=Date.now();
+        });
+      }
+    }catch(e){}
+  }
   // локальний кеш (працює офлайн). Повні base64-фото лишаємо лише для ключів, яким це
   // реально потрібне (див. LOCAL_FULL_IMG_KEYS) — для решти прибираємо важкі картинки,
   // щоб не забивати обмежену квоту localStorage браузера роками накопичення фото.
@@ -2761,12 +2785,14 @@ function renderGuests(){
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.grp); if(!g)return;
     g.group=(g.group||'friends')==='family'?'friends':'family';
+    g.updatedAt=Date.now();
     saveJSON('wed-guests',guests); renderGuests();
   });
   listEl.querySelectorAll('[data-ev]').forEach(el=>el.onclick=e=>{
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.ev); if(!g)return;
     g.event={both:'ceremony',ceremony:'party',party:'both'}[g.event]||'both';
+    g.updatedAt=Date.now();
     saveJSON('wed-guests',guests); renderGuests();
   });
   listEl.querySelectorAll('[data-attr]').forEach(el=>el.onclick=e=>{
@@ -2780,6 +2806,7 @@ function renderGuests(){
     else if(a==='veg') g.veg=!g.veg;
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     else if(a==='plus1'){ const order=['none','pending','confirmed']; let cur=order.indexOf(g.plus1); if(cur<0)cur=0; g.plus1=order[(cur+1)%order.length]; }
+    g.updatedAt=Date.now();
     saveJSON('wed-guests',guests); renderGuests();
     if(a==='alco'||a==='veg') renderBar();
   });
@@ -2787,7 +2814,7 @@ function renderGuests(){
     const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gname); if(!g)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
       if(!v){ el.textContent=g.name; return; }
-      if(v!==g.name){ g.name=v; saveJSON('wed-guests',guests); renderGuests(); }
+      if(v!==g.name){ g.name=v; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); renderGuests(); }
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
@@ -2796,7 +2823,7 @@ function renderGuests(){
     el.addEventListener('focus',()=>{ if(!el.classList.contains('empty')) return; el.textContent=''; el.classList.remove('empty'); });
     const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gcontact); if(!g)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
-      if(v!==(g.contact||'')){ g.contact=v; saveJSON('wed-guests',guests); }
+      if(v!==(g.contact||'')){ g.contact=v; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); }
       if(!v){ el.textContent='＋ контакт'; el.classList.add('empty'); }
     };
     el.addEventListener('blur',save);
@@ -2806,7 +2833,7 @@ function renderGuests(){
     const g=guests.find(x=>x.id===b.dataset.gvcf); if(!g) return;
     pickVcfContact(({contact})=>{
       if(!contact){ showToast('У файлі немає телефону/email 😕'); return; }
-      g.contact=contact; saveJSON('wed-guests',guests); renderGuests();
+      g.contact=contact; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); renderGuests();
       showToast('📇 Контакт додано');
     });
   });
