@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Краса — план підготовки, Катя</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EBEBE3;--surface:#F8F8F3;--surface2:#E1E1D5;
+  --text:#222633;--muted:#6E7484;
+  --terra:#A8505F;--terra-dim:#F0DEE1;
+  --gold:#B58A2E;
+  --done:#4E8A6B;--done-dim:#DAE8E0;
+  --line:#D5D4C7;
+  --serif:'Unbounded','Manrope',sans-serif;
+  --sans:'Manrope',-apple-system,sans-serif;
+  --r:16px;
+  --shadow-sm:0 2px 10px rgba(74,65,56,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15171E;--surface:#1E212A;--surface2:#272B36;
+    --text:#ECEAE0;--muted:#9AA0AE;
+    --terra:#D58597;--terra-dim:#34232A;
+    --gold:#DCB85E;
+    --done:#79B488;--done-dim:#1E2C22;
+    --line:#313644;
+    --shadow-sm:0 2px 10px rgba(0,0,0,.32);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+header{text-align:center;margin-bottom:20px}
+header .eyebrow{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+header h1{font-family:var(--serif);font-weight:800;font-size:26px;margin:0 0 8px;letter-spacing:-.01em}
+header p{color:var(--muted);font-size:14.5px;margin:0}
+.intro{background:var(--surface2);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--muted);margin:18px 0 22px;line-height:1.6}
+.intro b{color:var(--text)}
+.progress-strip{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.pbar-track{flex:1;height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--terra),var(--gold));border-radius:99px;transition:width .4s}
+.pbar-lbl{font-size:12.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.week{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);margin-bottom:14px;overflow:hidden}
+.week summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--serif);font-weight:600;font-size:15px}
+.week summary::-webkit-details-marker{display:none}
+.week summary .wk-dates{font-family:var(--sans);font-weight:500;font-size:12.5px;color:var(--muted);margin-left:auto;margin-right:8px}
+.week summary .wk-chev{transition:transform .2s;color:var(--muted)}
+.week[open] summary .wk-chev{transform:rotate(90deg)}
+.week-body{padding:0 18px 16px}
+.wk-focus{font-size:13px;color:var(--terra);margin:-4px 0 12px;font-weight:600}
+.grp-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 0 6px}
+.grp-label:first-child{margin-top:0}
+.item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14.5px}
+.item:first-of-type{border-top:none}
+.item input[type=checkbox]{width:19px;height:19px;flex:0 0 auto;margin-top:1px;accent-color:var(--done)}
+.item label{flex:1;cursor:pointer}
+.item.done label{color:var(--muted);text-decoration:line-through}
+.callout{background:var(--terra-dim);border-radius:12px;padding:12px 14px;font-size:13.5px;margin:12px 0;line-height:1.55}
+.callout.gold{background:var(--surface2)}
+footer{text-align:center;margin-top:30px;color:var(--muted);font-size:12.5px}
+footer a{color:var(--terra)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Особисте · 06.09.2026</div>
+    <h1>💐 Краса</h1>
+    <p>План підготовки — покроково, без тиску</p>
+  </header>
+
+  <div class="intro">
+    Кожен тиждень має пункти. Відмічай, що встигла — <b>прогрес зберігається в цьому браузері</b>.
+    Пропустила день чи тиждень — просто продовжуй з того місця, де зупинилась, без вини за паузу.
+  </div>
+
+  <div class="progress-strip">
+    <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
+    <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
+  </div>
+
+  <div id="weeks"></div>
+
+  <footer>з любов'ю до себе · <a href="../">до застосунку</a></footer>
+</div>
+
+<script>
+const WEEKS = [
+  {
+    id: 'w1', title: 'Тиждень 1', dates: '20–26 липня', focus: 'Старт: стоматолог, база, нічого нового',
+    items: [
+      '🦷 Стоматолог — профчистка (21.07)',
+      'Звичний доглядовий ритуал ранок/вечір, без пропусків',
+      'Нічого нового не купувати й не пробувати на шкірі',
+    ]
+  },
+  {
+    id: 'w2', title: 'Тиждень 2', dates: '27 липня – 2 серпня', focus: 'Дедлайн: вінок + бутоньєрка (01.08)',
+    items: [
+      '🌾 Замовити вінок собі + бутоньєрку Дімі — дедлайн 01.08',
+      '🪥 Купити змінні насадки для електричної щітки',
+      'Лягати спати приблизно в один і той самий час',
+    ]
+  },
+  {
+    id: 'w3', title: 'Тиждень 3', dates: '3–9 серпня', focus: '8 серпня: взуття + пробний мейк і зачіска',
+    items: [
+      '👠 8 серпня: взуття вже розношене (не вперше вдягнене в цей день)',
+      '💄 8 серпня: пробний мейк і зачіска',
+      'Легкий домашній догляд за руками (готуємось до манікюру)',
+      'Перевірити стан брів/вій — чи потрібне лямінування/фарбування завчасно',
+    ]
+  },
+  {
+    id: 'w4', title: 'Тиждень 4', dates: '10–16 серпня', focus: 'Перукар (фарбування) + старт засмаги',
+    items: [
+      '💇 Перукар: фарбування, якщо плануєш — з запасом часу до реакції шкіри/тону',
+      '☀️ Почати поступову засмагу — рівномірно, без опіків',
+    ]
+  },
+  {
+    id: 'w5', title: 'Тиждень 5', dates: '17–23 серпня', focus: 'Тестовий манікюр/педикюр',
+    items: [
+      '💅 Тестовий манікюр/педикюр — визначитись з формою і кольором заздалегідь',
+      'Засмага триває у тому ж темпі',
+    ]
+  },
+  {
+    id: 'w6', title: 'Тиждень 6', dates: '24–30 серпня', focus: 'Перукар (кінчики) + іспит з водіння',
+    items: [
+      '✂️ Перукар: підстригти кінчики — ближче до дати, ризик менший ніж фарбування',
+      '🚗 Іспит з водіння — дедлайн 24.08',
+      '☀️ Остання сесія засмаги цього тижня, далі не чіпаємо',
+    ]
+  },
+  {
+    id: 'w7', title: 'Тиждень 7', dates: '31 серпня – 5 вересня', focus: 'Фінішна пряма — нічого нового',
+    items: [
+      '💅 Фінальний манікюр/педикюр — за 1-2 дні до весілля',
+      'Жодних нових засобів, процедур, кольорів, форм нігтів',
+      'Менше солі/цукру в останні 2-3 дні (набряклість)',
+      'Менше/без алкоголю і трави',
+    ]
+  },
+];
+
+function loadDone(){ try{ return JSON.parse(localStorage.getItem('krasa-done')||'{}'); }catch(e){ return {}; } }
+function saveDone(d){ try{ localStorage.setItem('krasa-done', JSON.stringify(d)); }catch(e){} }
+let done = loadDone();
+
+function updateProgress(){
+  let total=0, doneCount=0;
+  WEEKS.forEach(w=>w.items.forEach((_,i)=>{ total++; if(done[w.id+'_'+i]) doneCount++; }));
+  document.getElementById('pbarFill').style.width=(total?Math.round(doneCount/total*100):0)+'%';
+  document.getElementById('pbarLabel').textContent=`${doneCount} / ${total} зроблено`;
+}
+
+function render(){
+  const box=document.getElementById('weeks');
+  box.innerHTML = WEEKS.map(w=>`
+    <details class="week" ${w.id==='w1'?'open':''}>
+      <summary>${w.title}<span class="wk-dates">${w.dates}</span><span class="wk-chev">›</span></summary>
+      <div class="week-body">
+        <div class="wk-focus">${w.focus}</div>
+        ${w.items.map((text,i)=>{
+          const key=w.id+'_'+i;
+          const isDone=!!done[key];
+          return `<div class="item${isDone?' done':''}">
+            <input type="checkbox" id="${key}" ${isDone?'checked':''}>
+            <label for="${key}">${text}</label>
+          </div>`;
+        }).join('')}
+      </div>
+    </details>
+  `).join('');
+  box.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.onchange=()=>{
+      done[cb.id]=cb.checked;
+      saveDone(done);
+      cb.closest('.item').classList.toggle('done', cb.checked);
+      updateProgress();
+    };
+  });
+  updateProgress();
+}
+render();
+</script>
+</body>
+</html>
