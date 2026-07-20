@@ -85,6 +85,23 @@ header p{color:var(--muted);font-size:14.5px;margin:0}
 .callout.gold{background:var(--surface2)}
 footer{text-align:center;margin-top:30px;color:var(--muted);font-size:12.5px}
 footer a{color:var(--terra)}
+.recipe{margin:0 0 16px}
+.recipe:last-child{margin-bottom:0}
+.recipe h4{font-family:var(--serif);font-size:14.5px;margin:0 0 4px;color:var(--rose)}
+.recipe p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.6}
+.diary-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.diary-stat{flex:1;min-width:110px;background:var(--surface2);border-radius:12px;padding:10px 12px;text-align:center}
+.diary-stat b{display:block;font-size:20px;font-family:var(--serif);color:var(--terra)}
+.diary-stat span{font-size:11.5px;color:var(--muted)}
+.diary-form{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.diary-form select,.diary-form input{font-family:var(--sans);font-size:14px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.diary-form input{flex:1;min-width:120px}
+.diary-form button{font-family:var(--sans);font-weight:700;font-size:13px;padding:8px 16px;border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer}
+.diary-list{display:flex;flex-direction:column;gap:6px}
+.diary-row{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line)}
+.diary-row:first-child{border-top:none}
+.diary-row .drdel{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px}
+.diary-empty{font-size:13.5px;color:var(--muted);font-style:italic}
 </style>
 </head>
 <body>
@@ -136,6 +153,32 @@ footer a{color:var(--terra)}
   <details class="week">
     <summary>💡 LED-маска (опційно)<span class="wk-chev">›</span></summary>
     <div class="week-body" id="ledBody"></div>
+  </details>
+
+  <details class="week">
+    <summary>🍽 Рецепти — їжа й доглядові маски<span class="wk-chev">›</span></summary>
+    <div class="week-body" id="recipesBody"></div>
+  </details>
+
+  <details class="week">
+    <summary>🧠 Коли хочеться травки — АуРДАГ + тривоги<span class="wk-chev">›</span></summary>
+    <div class="week-body" id="cravingBody"></div>
+  </details>
+
+  <details class="week" open>
+    <summary>🌿🍺 Щоденник — трава і пиво<span class="wk-chev">›</span></summary>
+    <div class="week-body">
+      <div class="diary-stats" id="diaryStats"></div>
+      <div class="diary-form">
+        <select id="diaryType">
+          <option value="trava">🌿 Трава</option>
+          <option value="pivo">🍺 Пиво</option>
+        </select>
+        <input type="text" id="diaryNote" placeholder="Скільки/нотатка (необов'язково)…">
+        <button type="button" id="diaryAdd">Записати</button>
+      </div>
+      <div class="diary-list" id="diaryList"></div>
+    </div>
   </details>
 
   <footer>з любов'ю до себе · <a href="../">до застосунку</a></footer>
@@ -266,6 +309,15 @@ const TEETH_WHITENING = [
 
 const LED_NOTE = 'Якщо є LED-маска (червоне світло) — можна почати вже зараз щодня. Чесні цифри з дослідження: -2.5% дрібних зморшок за 8 тижнів, -3.1% за 12 — за 7 тижнів це реальний, але скромний ефект (шкіра свіжіша, не "інший вік"). Не купувати заради цього нову, якщо нема вже.';
 
+const RECIPES = [
+  { h:'🥤 Ранковий детокс-напій проти набряклості', p:'Склянка теплої води + сік половини лимона + скибка огірка. Пити одразу після пробудження, до кави — заводить обмін рідини, менше набряклості обличчя вранці.' },
+  { h:'🥗 Салат для сяючої шкіри', p:'Шпинат/руккола + авокадо + волоські горіхи + гранат + оливкова олія. Омега-3 і антиоксиданти — те, що реально впливає на тонус шкіри за кілька тижнів регулярного вживання, не разово.' },
+  { h:'🍵 Вечірній заспокійливий чай', p:'Ромашка + м\'ята, без цукру, за годину до сну — краще засинання = менше набряків і сірості вранці. Простіше й дешевше за будь-яку сироватку.' },
+  { h:'🍯 Маска "мед + овес"', p:'1 ст.л. вівсяних пластівців (перемолоти) + 1 ст.л. меду + трохи теплої води до кашки. На 15 хв на чисте обличчя, змити теплою водою. М\'яко очищає й зволожує, підходить для будь-якої шкіри.' },
+  { h:'☕ Скраб для тіла "кава + олія"', p:'2 ст.л. мелена кава + 1 ст.л. оливкової/кокосової олії. Легкими рухами на вологу шкіру тіла, 2 р/тиждень — покращує кровообіг і текстуру шкіри перед засмагою.' },
+  { h:'🥒 Швидкий де-паф під очі', p:'Охолоджені скибки огірка або пакетики зеленого чаю (вологі, з холодильника) на 10 хв. Класика не просто так — реально знімає ранкову набряклість перед фото/подіями.' },
+];
+
 const FACE_EXERCISES = [
   { name: 'Щоки-«риб\'яче личко»', how: 'Втягни щоки й губи всередину (як цілуєш рибу), утримуй 5 сек, повтори 10 разів.' },
   { name: 'Підняття брів проти опору', how: 'Пальцями легко притисни брови, намагайся їх підняти, утримуй 5 сек, 10 повторів.' },
@@ -279,6 +331,59 @@ const SPORT_PLAN = [
   'Уникати НОВИХ інтенсивних програм ближче ніж за 2 тижні до Х — ризик забитості/поганого самопочуття саме тоді, коли це найменше потрібно',
   'Останні 2-3 дні — зовсім легко, ходьба, без силового',
 ];
+
+const CRAVING_TIPS = {
+  intro: 'Головний принцип: зрозумій, ЯКУ функцію виконує трава в цей момент — і підміняй саме її, а не "щось абстрактне".',
+  groups: [
+    { h: '🧩 Якщо це про сенсорне перевантаження', p: 'Важка ковдра, сильне самообійняття або компресійний одяг, навушники з білим/коричневим шумом, приглушене світло. Та сама "вимикаюча" функція, без хімії.' },
+    { h: '🌀 Якщо думки гасають без зупинки', p: 'Стимити відкрито, не стримувати (розхитування, перебирання чогось руками) — для АуРДАГ це реальна регуляція, не "дитяча звичка".' },
+    { h: '⚡ Якщо це дофаміновий голод / нудьга', p: 'Заздалегідь мати готове "меню" з 3-4 конкретних дій — не вигадувати в моменті (це найважче при ADHD): улюблений серіал, конкретна закуска, коротке інтенсивне тренування.' },
+  ],
+  alerts: {
+    h: '🚨 Спеціально про обстріли',
+    p: 'Тяга зазвичай накриває НЕ під час тривоги, а ПІСЛЯ, коли адреналін спадає — це нормально, не слабкість.',
+    items: [
+      'Техніка 5-4-3-2-1 (5 бачиш, 4 чуєш, 3 відчуваєш дотиком, 2 нюхаєш, 1 на смак) — швидке заземлення при гострій тривозі',
+      'Видих довший за вдих (напр. 4 рахунки вдих, 8 видих) — фізіологічно вимикає "бий-біжи" швидше за просто "подихай"',
+      'Холодна вода на зап\'ястя/обличчя одразу після — активує блукаючий нерв, реально заспокоює тіло',
+      '"Валізка на випадок тривоги" — заздалегідь зібрана: важка річ/ковдра, навушники, жуйка, написана заздалегідь фраза-нагадування собі. Коли вже трясе, вибору робити не треба',
+      'Дозволь собі НЕ бути продуктивною одразу після тривоги — виснаження після адреналіну реальне, і саме тоді найбільша спокуса',
+    ],
+  },
+};
+
+function loadDiary(){ try{ return JSON.parse(localStorage.getItem('krasa-diary')||'[]'); }catch(e){ return []; } }
+function saveDiary(d){ try{ localStorage.setItem('krasa-diary', JSON.stringify(d)); }catch(e){} }
+let diary = loadDiary();
+
+function daysSince(ts){
+  if(!ts) return null;
+  const diff = Date.now() - ts;
+  return Math.floor(diff / 86400000);
+}
+function renderDiary(){
+  const lastTrava = diary.filter(e=>e.type==='trava').sort((a,b)=>b.ts-a.ts)[0];
+  const lastPivo = diary.filter(e=>e.type==='pivo').sort((a,b)=>b.ts-a.ts)[0];
+  const dsT = daysSince(lastTrava && lastTrava.ts), dsP = daysSince(lastPivo && lastPivo.ts);
+  document.getElementById('diaryStats').innerHTML = `
+    <div class="diary-stat"><b>${dsT===null?'—':dsT}</b><span>днів без трави</span></div>
+    <div class="diary-stat"><b>${dsP===null?'—':dsP}</b><span>днів без пива</span></div>
+  `;
+  const listEl = document.getElementById('diaryList');
+  const sorted = [...diary].sort((a,b)=>b.ts-a.ts);
+  if(!sorted.length){ listEl.innerHTML = '<div class="diary-empty">Поки нічого не записано.</div>'; return; }
+  listEl.innerHTML = sorted.map(e=>{
+    const d = new Date(e.ts);
+    const dateStr = d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
+    const icon = e.type==='trava' ? '🌿' : '🍺';
+    return `<div class="diary-row"><span>${icon}</span><span>${dateStr}</span><span>${e.note?esc(e.note):''}</span><button class="drdel" data-diarydel="${e.id}">✕</button></div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-diarydel]').forEach(b=>b.onclick=()=>{
+    diary = diary.filter(e=>e.id!==b.dataset.diarydel);
+    saveDiary(diary); renderDiary();
+  });
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function loadDone(){ try{ return JSON.parse(localStorage.getItem('krasa-done')||'{}'); }catch(e){ return {}; } }
 function saveDone(d){ try{ localStorage.setItem('krasa-done', JSON.stringify(d)); }catch(e){} }
@@ -340,6 +445,28 @@ document.getElementById('botoxBody').innerHTML =
 document.getElementById('teethBody').innerHTML = TEETH_WHITENING.map(text=>`<div class="item"><label>${text}</label></div>`).join('');
 
 document.getElementById('ledBody').innerHTML = `<div class="callout">${LED_NOTE}</div>`;
+
+document.getElementById('recipesBody').innerHTML = RECIPES.map(r=>`
+  <div class="recipe"><h4>${r.h}</h4><p>${r.p}</p></div>
+`).join('');
+
+document.getElementById('cravingBody').innerHTML =
+  `<div class="callout">${CRAVING_TIPS.intro}</div>` +
+  CRAVING_TIPS.groups.map(g=>`<div class="recipe"><h4>${g.h}</h4><p>${g.p}</p></div>`).join('') +
+  `<div class="callout">
+    <b>${CRAVING_TIPS.alerts.h}</b><br>${CRAVING_TIPS.alerts.p}
+  </div>` +
+  CRAVING_TIPS.alerts.items.map(t=>`<div class="item"><label>${t}</label></div>`).join('');
+
+renderDiary();
+document.getElementById('diaryAdd').onclick=()=>{
+  const type=document.getElementById('diaryType').value;
+  const note=document.getElementById('diaryNote').value.trim();
+  diary.push({id:'d'+Date.now(), type, note, ts:Date.now()});
+  saveDiary(diary);
+  document.getElementById('diaryNote').value='';
+  renderDiary();
+};
 
 (function(){
   const btn=document.getElementById('themeToggle');
