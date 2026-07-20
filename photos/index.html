@@ -33,17 +33,41 @@ h1{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 14px;color
 .card p{margin:0 0 10px;font-size:15px}
 .hint{font-size:13px;color:var(--muted);margin-top:16px}
 .ph{width:100%;aspect-ratio:4/3;border-radius:12px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;margin-bottom:16px}
+.shot{width:100%;border-radius:12px;margin-bottom:16px;display:block}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="eyebrow">Weддінг · 06.09.2026 · камера "Одне фото на всіх"</div>
-  <h1>Фото ще в дорозі 📸</h1>
-  <div class="card">
-    <div class="ph">тут з'явиться кадр, який треба повторити</div>
-    <p>Катя й Діма скоро додадуть сюди фото-референс — той самий кадр, який треба зібратись і повторити всім разом.</p>
-    <p class="hint">Заскануй цей QR ще раз ближче до весілля, якщо зараз тут порожньо — сторінка оновиться сама, наклейку міняти не треба.</p>
-  </div>
+  <div id="content"></div>
 </div>
+<script>
+// Список фото-референсів для повторення. Кожне відкриття сторінки показує
+// випадкове фото з цього списку. Щоб додати нове фото: покласти файл у
+// ./images/ і додати його ім'я в цей масив -- QR-код на наклейці міняти не треба.
+const PHOTOS = [
+  // 'images/photo1.jpg',
+  // 'images/photo2.jpg',
+];
+
+const el = document.getElementById('content');
+if (PHOTOS.length > 0) {
+  const pick = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
+  el.innerHTML = `
+    <h1>Повтори оце 📸</h1>
+    <div class="card">
+      <img class="shot" src="${pick}" alt="фото для повторення">
+      <p class="hint">Онови сторінку — випаде інший кадр з тих, що ми зібрали.</p>
+    </div>`;
+} else {
+  el.innerHTML = `
+    <h1>Фото ще в дорозі 📸</h1>
+    <div class="card">
+      <div class="ph">тут з'явиться кадр, який треба повторити</div>
+      <p>Катя й Діма скоро додадуть сюди фото-референси.</p>
+      <p class="hint">Заскануй цей QR ще раз ближче до весілля, якщо зараз тут порожньо — сторінка оновиться сама, наклейку міняти не треба.</p>
+    </div>`;
+}
+</script>
 </body>
 </html>
