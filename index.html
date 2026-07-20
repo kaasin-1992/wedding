@@ -922,6 +922,15 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
 .toast button{background:none;border:none;color:var(--terra);font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px;}
 .toast.dark-text button{color:var(--gold);}
+/* банер "є оновлення" — на відміну від toast, сам не ховається, чекає рішення */
+.update-banner{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:960;
+  background:var(--text);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:90vw;}
+.update-banner.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+.update-banner button{background:none;border:none;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px;}
+.update-banner button.ub-go{color:var(--terra);}
+.update-banner.dark-text button.ub-go{color:var(--gold);}
+.update-banner button.ub-later{color:inherit;opacity:.6;}
 /* одноразова підказка про свайп */
 .swipe-hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:960;background:rgba(18,20,26,.9);color:#ECEAE0;
   border-radius:14px;padding:16px 20px;font-size:14px;line-height:1.5;text-align:center;max-width:260px;box-shadow:0 10px 40px rgba(0,0,0,.3);
@@ -1044,6 +1053,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <div class="sync-pill" id="syncPill"><span class="sync-dot" id="syncDot"></span><span id="syncTxt">Синхронізовано</span></div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastUndo" type="button">Скасувати</button></div>
+<div class="update-banner" id="updateBanner" role="status" aria-live="polite"><span>Є оновлення застосунку</span><button class="ub-go" id="updateBannerGo" type="button">Оновити</button><button class="ub-later" id="updateBannerLater" type="button">Пізніше</button></div>
 <div class="swipe-hint" id="swipeHint">👈 Гортай вліво-вправо, щоб<br>перемикати вкладки 👉</div>
 
 <button id="quickAddFab" class="quick-add-fab" aria-label="Швидко додати" title="Швидко додати">＋</button>
@@ -8164,9 +8174,40 @@ function tickNokiaClock(){
 tickNokiaClock();
 setInterval(tickNokiaClock,15000);
 
-/* ── PWA: офлайн + іконка на екрані ── */
+/* ── PWA: офлайн + іконка на екрані + банер оновлення (важливо саме на iOS,
+   де іконка з домашнього екрана інакше може довго показувати стару версію) ── */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      let waitingWorker=null;
+      const showUpdateBanner=worker=>{
+        waitingWorker=worker;
+        const b=document.getElementById('updateBanner');
+        b.classList.toggle('dark-text', document.documentElement.classList.contains('dark'));
+        b.classList.add('show');
+      };
+      if(reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
+        });
+      });
+      document.getElementById('updateBannerGo').onclick=()=>{
+        if(waitingWorker) waitingWorker.postMessage('SKIP_WAITING');
+      };
+      document.getElementById('updateBannerLater').onclick=()=>{
+        document.getElementById('updateBanner').classList.remove('show');
+      };
+      let reloaded=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(reloaded) return;
+        reloaded=true;
+        window.location.reload();
+      });
+    }).catch(()=>{});
+  });
 }
 </script>
 </body>
