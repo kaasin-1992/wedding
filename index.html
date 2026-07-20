@@ -164,6 +164,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pbar-track{flex:1;height:5px;background:var(--line);border-radius:99px;overflow:hidden;}
 .pbar-fill{height:100%;background:linear-gradient(90deg,var(--terra),var(--rose));border-radius:99px;transition:width .4s;}
 .pbar-lbl{font-size:12px;color:var(--muted);white-space:nowrap;}
+.driving-counter{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:var(--surface2);border-radius:12px;padding:10px 14px;margin-bottom:20px;font-size:13.5px;}
+.driving-counter-btns{display:flex;gap:8px;}
+.driving-counter-btns button{font-family:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);border-radius:999px;padding:6px 14px;cursor:pointer;min-height:36px;}
+.driving-counter-btns #drivingMinus{padding:6px 14px;min-width:40px;}
 .timeline{position:relative;}
 .timeline::before{content:'';position:absolute;top:0;bottom:0;left:9px;width:1px;background:var(--line);}
 .month-lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--terra);font-weight:600;padding:16px 0 9px 30px;}
@@ -1207,6 +1213,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
     <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
   </div>
+  <div class="driving-counter" id="drivingCounterBox">
+    <span>🚗 Занять з водіння: <b id="drivingCount">0</b></span>
+    <div class="driving-counter-btns">
+      <button type="button" id="drivingMinus" aria-label="Мінус одне заняття">−</button>
+      <button type="button" id="drivingPlus" aria-label="Плюс одне заняття">+1 заняття</button>
+    </div>
+  </div>
   <div class="timeline" id="timeline"></div>
 </div>
 
@@ -2030,7 +2043,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2528,6 +2541,7 @@ let partyHis    = loadJSON('wed-party-his', []);
 let partyNotes  = loadJSON('wed-party-notes', {her:'',his:''}); // загальний коментар про вечірку {her,his}
 let bar         = loadJSON('wed-bar', DEFAULT_BAR);
 let team        = loadJSON('wed-team', DEFAULT_TEAM);
+let drivingLessons = loadJSON('wed-driving-lessons', 0); // лічильник відвіданих занять з водіння (40 год до 24.08)
 
 /* ── HELPERS ── */
 const fmtDate = s => { if(!s)return''; const p=s.split('-'); return`${p[2]}.${p[1]}`; };
@@ -2535,7 +2549,12 @@ const fmtMoney = n => (Number(n)||0).toLocaleString('uk-UA') + ' ₴';
 const MONTHS = ['','Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 
 /* ════ TASKS ════ */
+function renderDrivingCounter(){
+  const el=document.getElementById('drivingCount'); if(!el) return;
+  el.textContent=drivingLessons;
+}
 function renderTasks(){
+  renderDrivingCounter();
   const vtasks = tasks;
   const total=vtasks.length, done=vtasks.filter(t=>t.done).length;
   document.getElementById('pbarFill').style.width=(total?Math.round(done/total*100):0)+'%';
@@ -2666,6 +2685,13 @@ document.getElementById('addTaskBtn').onclick=()=>{
   tasks.push({id:'u'+Date.now(),text,deadline,done:false});
   document.getElementById('newTaskText').value=''; document.getElementById('newTaskDate').value='';
   saveJSON('wed-tasks',tasks); renderTasks();
+};
+document.getElementById('drivingPlus').onclick=()=>{
+  drivingLessons++; saveJSON('wed-driving-lessons',drivingLessons); renderDrivingCounter();
+};
+document.getElementById('drivingMinus').onclick=()=>{
+  if(drivingLessons<=0) return;
+  drivingLessons--; saveJSON('wed-driving-lessons',drivingLessons); renderDrivingCounter();
 };
 
 /* ════ GUESTS ════ */
@@ -7909,6 +7935,7 @@ function startSync(){
     if(Array.isArray(d.partyHis)) partyHis=d.partyHis;
     if(d.partyNotes && typeof d.partyNotes==='object') partyNotes={her:d.partyNotes.her||'',his:d.partyNotes.his||''};
     if(d.bar && typeof d.bar==='object') bar=d.bar;
+    if(typeof d.drivingLessons==='number') drivingLessons=d.drivingLessons;
     if(Array.isArray(d.team)) team=d.team;
     if(d.collage && typeof d.collage==='object') collage={her:{},his:{},...d.collage};
     if(d.moodboard && typeof d.moodboard==='object') moodboard={cloth:{},decor:{sofia:{},wave:{}},...d.moodboard};
@@ -7964,6 +7991,7 @@ function startSync(){
     DB.set('wed-party-his',JSON.stringify(partyHis));
     DB.set('wed-party-notes',JSON.stringify(partyNotes));
     DB.set('wed-bar',JSON.stringify(bar));
+    DB.set('wed-driving-lessons',JSON.stringify(drivingLessons));
     DB.set('wed-team',JSON.stringify(team));
     DB.set('wed-collage',JSON.stringify(collage));
     DB.set('wed-moodboard',JSON.stringify(moodboard));
