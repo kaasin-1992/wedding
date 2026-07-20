@@ -1,4 +1,4 @@
-const CACHE = 'wedding-v60';
+const CACHE = 'wedding-v61';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,13 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // не самоактивуємось одразу — чекаємо на команду SKIP_WAITING зі сторінки,
+  // щоб застосунок міг показати банер "є оновлення" перед перезавантаженням
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
