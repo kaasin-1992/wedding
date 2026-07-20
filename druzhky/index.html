@@ -34,11 +34,16 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
-header{text-align:center;margin-bottom:28px}
+header{text-align:center;margin-bottom:22px}
 header .eyebrow{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 header h1{font-family:var(--serif);font-weight:800;font-size:26px;margin:0 0 8px;letter-spacing:-.01em}
 header p{color:var(--muted);font-size:14.5px;margin:0}
 .disclaimer{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);margin:18px 0 26px;line-height:1.55}
+.links-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
+.links-box h2{font-family:var(--serif);font-size:15px;margin:0 0 10px;color:var(--terra)}
+.links-box ul{margin:0;padding-left:18px;font-size:14px}
+.links-box li{margin-bottom:5px}
+.links-box a{color:var(--terra)}
 .roles-table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:14px;background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-sm)}
 .roles-table th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:10px 14px;background:var(--surface2)}
 .roles-table td{padding:10px 14px;border-top:1px solid var(--line)}
@@ -50,6 +55,9 @@ section.cards{display:flex;flex-direction:column;gap:14px}
 .card p{margin:0 0 8px;font-size:14.5px}
 .card ul{margin:6px 0 0;padding-left:20px;font-size:14.5px}
 .card li{margin-bottom:4px}
+.card .contact{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px}
+.card .contact a{color:var(--terra);margin-right:14px}
+.tbd{color:var(--muted);font-style:italic}
 footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 </style>
 </head>
@@ -64,6 +72,15 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   <div class="disclaimer">
     Цей текст писала Катя за допомогою ШІ, тому формулювання можуть бути не ідеальними — суть перевірена нею особисто.
     Список ролей і деталі можуть змінюватись ближче до дати, це не завжди найсвіжіша версія — за фінальними деталями пишіть Каті напряму.
+  </div>
+
+  <div class="links-box">
+    <h2>🔗 Корисні посилання для всіх</h2>
+    <ul>
+      <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30</li>
+      <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська), з 16:20</li>
+      <li>Спільний Telegram-чат: <span class="tbd">[додати посилання на групу]</span></li>
+    </ul>
   </div>
 
   <table class="roles-table">
@@ -81,90 +98,97 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 
   <section class="cards">
     <div class="card">
-      <h2>Марійка</h2>
+      <h2>Марія</h2>
       <span class="tag">Софі — координаторка</span>
-      <p>Дякую, що погодилась допомогти з Софі 💛 Знаю, що зараз непростий період — тому не прошу нічого вигадувати, тільки триматися короткого списку:</p>
       <ul>
-        <li>В день весілля — ти головна точка контакту на локації Софі: якщо щось не так (декор не там, хтось загубився, час зсувається) — усі питання спершу до тебе.</li>
-        <li>За тиждень до весілля звірити з Катею фінальний чекліст по Софі (декор на місці, хто де сидить, порядок церемонії).</li>
-        <li>Більше нічого придумувати не треба — просто триматись плану й приймати рішення на місці, якщо Катя недоступна в моменті.</li>
+        <li>Головна точка контакту на локації Софі в день весілля (декор, гості, зсув часу — все спершу до неї).</li>
+        <li>За тиждень до весілля звіряє з Катею фінальний чекліст по Софі (декор на місці, хто де сидить, порядок церемонії).</li>
+        <li>Приймає рішення на місці, якщо Катя недоступна в моменті.</li>
       </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Алісо</h2>
+      <h2>Аліса</h2>
       <span class="tag">Хвильовий — координаторка</span>
-      <p>Ти — головна по Хвильовому 🎉 Твоя зона відповідальності:</p>
       <ul>
         <li>Координація декору й розкладу на локації в день весілля (хто що ставить, коли, де).</li>
-        <li>Точка контакту для Юлі й Ані Кімельфельд по decor-завданнях там.</li>
-        <li>В сам день — ти "на землі" на Хвильовому, приймаєш рішення, якщо Каті немає поруч.</li>
+        <li>Точка контакту для Юлі й Ані Кімельфельд по decor-завданнях.</li>
+        <li>Приймає рішення на місці на Хвильовому, якщо Каті немає поруч.</li>
       </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Аню Кімельфельд</h2>
+      <h2>Аня Кімельфельд</h2>
       <span class="tag">Розпис — Хвильовий</span>
-      <p>Тебе призначаємо на все, що треба намалювати/розписати на Хвильовому 🎨 Конкретно три речі:</p>
       <ul>
         <li>Розписані полотна у стилі Приймаченко (3 шт, полотна вже є, треба тільки фарби).</li>
         <li>Розпис ліплених глиняних фігурок (тварини/квіти а-ля Приймаченко) для столів.</li>
-        <li>Розписаний вручну раннер на банкетний стіл (простий лінійний малюнок — пара танцює, кіт, місяць — плюс імена рукописним шрифтом).</li>
+        <li>Розписаний вручну раннер на банкетний стіл (лінійний малюнок — пара танцює, кіт, місяць — плюс імена рукописним шрифтом).</li>
+        <li>Формат і кольори — на її дизайнерський розсуд.</li>
       </ul>
-      <p>Формат і кольори — повністю на твій дизайнерський розсуд.</p>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Юльцю</h2>
+      <h2>Юля Приймак</h2>
       <span class="tag">Декор — Хвильовий</span>
-      <p>Ти на Хвильовому по декору — конкретні пункти, нічого вигадувати не треба:</p>
       <ul>
-        <li>Нитяні китиці/чоловічки, яскраві тони (синя/сіра оксамитова + оливкова пряжа), ~15-20 шт — точну техніку скинуть окремо.</li>
+        <li>Нитяні китиці/чоловічки, яскраві тони (синя/сіра оксамитова + оливкова пряжа), ~15-20 шт — техніку скинуть окремо.</li>
         <li>Білі банти-стрічки з матової тканини — кількість залежить від стільців, скажуть ближче до дати.</li>
       </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Лую</h2>
+      <h2>Луїза</h2>
       <span class="tag">Одяг</span>
-      <p>Ти вже рятуєш з одягом 💕 Нагадування по тому, що вже домовились:</p>
       <ul>
-        <li>Спідниця для Каті — шиєш.</li>
-        <li>Можливо жилетка для Діми — якщо встигнеш, буде бонус, якщо ні — не критично.</li>
+        <li>Спідниця для Каті — шиє.</li>
+        <li>Можливо жилетка для Діми — якщо встигне, бонус, якщо ні — не критично.</li>
       </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Вікусю</h2>
+      <h2>Віка</h2>
       <span class="tag">Зачіски — день Х</span>
-      <p>У тебе — окрема класна місія в сам день весілля: заплітати волосся дружкам 💇‍♀️ Більше нічого завчасного не просимо — просто прийди вчасно в день Х на локацію (домовляться на яку саме), і зроби те, що виходить найкраще.</p>
+      <ul>
+        <li>Заплітає волосся дружкам у день весілля.</li>
+        <li>Без завчасної підготовки — прийти вчасно в день Х на локацію (буде уточнено на яку саме).</li>
+      </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Насть</h2>
+      <h2>Настя</h2>
       <span class="tag">День Х + дівич-вечір</span>
-      <p>Ти потрібна в двох місцях — там, де треба енергія й рух:</p>
       <ul>
-        <li>У сам день весілля — конкретні активності скажуть ближче до дати.</li>
-        <li>На дівич-вечорі (орієнтовно 22 серпня) — потрібна саме ти "на землі" у Києві, бо організовує все Аня Дідора здалеку з Праги. Скооперуєтесь: вона придумує формат, ти втілюєш на місці.</li>
+        <li>У сам день весілля — конкретні активності буде уточнено ближче до дати.</li>
+        <li>На дівич-вечорі (орієнтовно 22 серпня) — виконує на місці в Києві, поки Аня Дідора координує здалеку з Праги.</li>
       </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Аню Дідора</h2>
+      <h2>Аня Дідора</h2>
       <span class="tag">Дівич-вечір — дистанційно</span>
-      <p>Знаємо, що ти в Празі і фізична присутність складна — тому формат такий: ти як головна дружка придумуєш ідею/формат дівич-вечора (дата орієнтовно 22 серпня, субота перед Днем Незалежності), а виконання на місці в Києві візьме на себе Настя. Ти на зв'язку, координуєш здалеку, не треба нікуди летіти заради підготовки — тільки на сам день, якщо вийде.</p>
+      <ul>
+        <li>Придумує ідею/формат дівич-вечора (дата орієнтовно 22 серпня, субота перед Днем Незалежності).</li>
+        <li>Координує здалеку з Праги, виконання на місці в Києві бере на себе Настя.</li>
+      </ul>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
 
     <div class="card">
-      <h2>Катю Большакова</h2>
+      <h2>Катя Большакова</h2>
       <span class="tag">Логістика</span>
-      <p>Дякуємо, що готова допомогти організаційно 🙏 Конкретна логістична зона, без творчості:</p>
       <ul>
-        <li>Стежити за розсадкою/списком гостей на вході в день весілля — хто де сидить, хто ще не прийшов.</li>
-        <li>Бути точкою контакту "хто де" для обох локацій одночасно, якщо Марії й Алісі знадобиться звірити щось між собою.</li>
+        <li>Стежить за розсадкою/списком гостей на вході в день весілля — хто де сидить, хто ще не прийшов.</li>
+        <li>Точка контакту "хто де" для обох локацій одночасно, якщо Марії й Алісі знадобиться звірити щось між собою.</li>
       </ul>
-      <p>Деталі скинуть ближче до дати, коли фіналізують розсадку.</p>
+      <div class="contact">Telegram: <span class="tbd">[додати]</span> · Гілка чату: <span class="tbd">[додати]</span></div>
     </div>
   </section>
 
