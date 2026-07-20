@@ -59,6 +59,28 @@ section.cards{display:flex;flex-direction:column;gap:14px}
 .card .contact a{color:var(--terra);margin-right:14px}
 .tbd{color:var(--muted);font-style:italic}
 footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
+.schedule-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
+.schedule-box h2{font-family:var(--serif);font-size:15px;margin:0 0 4px;color:var(--terra)}
+.schedule-hint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.sched-venue{margin-bottom:14px}
+.sched-venue:last-child{margin-bottom:0}
+.sched-venue h3{font-size:13.5px;margin:0 0 8px;color:var(--rose)}
+.sched-row{display:flex;gap:12px;font-size:14px;padding:5px 0;border-top:1px solid var(--line)}
+.sched-row:first-of-type{border-top:none}
+.sched-time{flex:0 0 auto;min-width:78px;font-weight:600;color:var(--terra);font-variant-numeric:tabular-nums}
+.notes-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
+.notes-box h2{font-family:var(--serif);font-size:15px;margin:0 0 4px;color:var(--terra)}
+.notes-hint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.notes-form{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.notes-form input,.notes-form textarea{font-family:var(--sans);font-size:15px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical}
+.notes-form textarea{min-height:70px}
+.notes-form button{align-self:flex-end;font-family:var(--sans);font-weight:700;font-size:14px;padding:9px 18px;border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer}
+.notes-form button:disabled{opacity:.6}
+.notes-list{display:flex;flex-direction:column;gap:10px}
+.note-item{border-top:1px solid var(--line);padding-top:10px;font-size:14px}
+.note-item:first-child{border-top:none;padding-top:0}
+.note-item .note-meta{font-size:12px;color:var(--muted);margin-bottom:2px}
+.notes-empty{font-size:13.5px;color:var(--muted);font-style:italic}
 </style>
 </head>
 <body>
@@ -82,6 +104,39 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       <li>Приєднатись до спільного чату: <a href="https://t.me/+wFqTDj3OYmkyN2Ey" target="_blank" rel="noopener">запрошення в групу</a></li>
       <li>Гілки спільного чату: <a href="https://t.me/c/3974464697/1" target="_blank" rel="noopener">дженерал</a> · <a href="https://t.me/c/3974464697/8" target="_blank" rel="noopener">балачка</a> · <a href="https://t.me/c/3974464697/5" target="_blank" rel="noopener">зустріч</a> · <a href="https://t.me/c/3974464697/6" target="_blank" rel="noopener">софі</a> · <a href="https://t.me/c/3974464697/7" target="_blank" rel="noopener">хвлв</a> · <a href="https://t.me/c/3974464697/2" target="_blank" rel="noopener">декор що вже є</a> · <a href="https://t.me/c/3974464697/4" target="_blank" rel="noopener">декор референси</a> · <a href="https://t.me/c/3974464697/3" target="_blank" rel="noopener">одяг зачіска</a></li>
     </ul>
+  </div>
+
+  <div class="schedule-box">
+    <h2>🕐 Орієнтовний розклад дня</h2>
+    <p class="schedule-hint">Орієнтовно, часи можуть зміститись на місці. Це скелет для координації —
+    конкретний зміст активностей і сюрпризи навмисно тут не розписані, щоб не спойлерити.</p>
+    <div class="sched-venue">
+      <h3>☀️ Софі (день)</h3>
+      <div class="sched-row"><span class="sched-time">11:30</span><span>Збір гостей</span></div>
+      <div class="sched-row"><span class="sched-time">~13:00</span><span>Церемонія</span></div>
+      <div class="sched-row"><span class="sched-time">~14:00</span><span>Обід</span></div>
+      <div class="sched-row"><span class="sched-time">~14:45</span><span>Танці й спільні активності</span></div>
+      <div class="sched-row"><span class="sched-time">~16:00</span><span>Виїзд до Хвильового</span></div>
+    </div>
+    <div class="sched-venue">
+      <h3>🌙 Хвильовий (вечір)</h3>
+      <div class="sched-row"><span class="sched-time">16:20–17:00</span><span>Зустріч гостей</span></div>
+      <div class="sched-row"><span class="sched-time">Вечір</span><span>Банкет, тости, перший танець молодих</span></div>
+      <div class="sched-row"><span class="sched-time">Пізніше</span><span>Торт</span></div>
+      <div class="sched-row"><span class="sched-time">Ніч</span><span>Танці, завершення орієнтовно ~23:30</span></div>
+    </div>
+  </div>
+
+  <div class="notes-box">
+    <h2>✍️ Маєш щось корисне для нас?</h2>
+    <p class="notes-hint">Ідея, фото-знахідка, нагадування, питання — залиш тут, Катя й Дiма це бачать.
+    Список нижче видно всім дружкам (прозоро, не приватно).</p>
+    <div class="notes-form">
+      <input type="text" id="noteName" placeholder="Твоє імʼя" autocomplete="name">
+      <textarea id="noteText" placeholder="Що хочеш повідомити?"></textarea>
+      <button type="button" id="noteSend">Надіслати</button>
+    </div>
+    <div class="notes-list" id="notesList"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
   <table class="roles-table">
@@ -207,5 +262,77 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 
   <footer>з любов'ю, Катя & Діма · 06.09.2026</footer>
 </div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* Використовуємо ТУ САМУ колекцію 'comments', що й основний застосунок (tab:'druzhky') —
+   так дружки можуть писати анонімно без потреби заводити окреме Firestore-правило: цей
+   шлях анонімного запису вже відкритий для гостьового коментування в основному застосунку. */
+(function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtHp8tsubQ_v4iSi2zkfCZTgKKMjm2VGA",
+    authDomain: "wedding-6e47f.firebaseapp.com",
+    projectId: "wedding-6e47f",
+    storageBucket: "wedding-6e47f.firebasestorage.app",
+    messagingSenderId: "87093437583",
+    appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
+  };
+  let COMMENTS=null, auth=null, ready=false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    auth=firebase.auth();
+    COMMENTS=firebase.firestore().collection('comments');
+  }catch(e){ console.warn('firebase init', e); }
+
+  const listEl=document.getElementById('notesList');
+  const nameEl=document.getElementById('noteName');
+  const textEl=document.getElementById('noteText');
+  const sendBtn=document.getElementById('noteSend');
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtTime(ts){
+    try{ const d=new Date(ts); return d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}); }
+    catch(e){ return ''; }
+  }
+  function render(notes){
+    if(!notes.length){ listEl.innerHTML='<div class="notes-empty">Поки нічого — будь першою 🙂</div>'; return; }
+    listEl.innerHTML=notes.slice().reverse().map(n=>`
+      <div class="note-item">
+        <div class="note-meta">${esc(n.name||'Дружка')} · ${fmtTime(n.ts)}</div>
+        <div>${esc(n.text||'')}</div>
+      </div>`).join('');
+  }
+
+  try{ const saved=localStorage.getItem('druzhky-name'); if(saved) nameEl.value=saved; }catch(e){}
+
+  function bindSync(){
+    if(!COMMENTS) return;
+    COMMENTS.where('tab','==','druzhky').onSnapshot(snap=>{
+      const notes=snap.docs.map(d=>d.data()).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      render(notes);
+    }, err=>{ console.warn('notes snapshot', err); listEl.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>'; });
+  }
+
+  if(auth){
+    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); }).catch(err=>{
+      console.warn('anon sign-in', err);
+      listEl.innerHTML='<div class="notes-empty">Не вдалося увійти — спробуй оновити сторінку.</div>';
+    });
+  }
+
+  sendBtn.onclick=()=>{
+    const name=(nameEl.value||'').trim()||'Дружка';
+    const text=(textEl.value||'').trim();
+    if(!text){ textEl.focus(); return; }
+    if(!ready || !COMMENTS){ alert('Ще підключаюсь до бази, спробуй за кілька секунд'); return; }
+    try{ localStorage.setItem('druzhky-name', name); }catch(e){}
+    sendBtn.disabled=true; const old=sendBtn.textContent; sendBtn.textContent='Надсилаю…';
+    COMMENTS.add({tab:'druzhky', name, text, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>{ textEl.value=''; sendBtn.disabled=false; sendBtn.textContent=old; })
+      .catch(e=>{ console.warn('add note', e); sendBtn.disabled=false; sendBtn.textContent=old; alert('Не вдалося надіслати, спробуй ще раз'); });
+  };
+})();
+</script>
 </body>
 </html>
