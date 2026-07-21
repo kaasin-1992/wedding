@@ -177,6 +177,16 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .decor-venue-h:first-child{margin-top:0}
 .decor-row{font-size:14px;padding:5px 0;border-top:1px solid var(--line)}
 .decor-row:first-of-type{border-top:none}
+.dc-suggest-form{display:flex;gap:8px;align-items:center;margin:10px 0 12px;flex-wrap:wrap}
+.dc-suggest-form input[type="color"]{width:44px;height:44px;padding:2px;border-radius:50%;border:2px solid var(--line);background:var(--bg);cursor:pointer}
+.dc-suggest-form input[type="text"]{flex:1;min-width:120px;font-family:var(--sans);font-size:15px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.dc-suggest-form button{font-family:var(--sans);font-weight:700;font-size:14px;padding:9px 18px;border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer;
+  box-shadow:0 3px 0 rgba(0,0,0,.18);transition:transform .12s ease, box-shadow .12s ease;text-transform:uppercase;letter-spacing:.03em}
+.dc-suggest-form button:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.dc-suggest-form button:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.dc-suggest-list{display:flex;flex-wrap:wrap;gap:12px}
+.dc-suggest-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);max-width:64px;text-align:center}
+.dc-suggest-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);box-shadow:var(--shadow-sm)}
 </style>
 </head>
 <body>
@@ -385,6 +395,17 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     <div id="decorSummary"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
+  <div class="schedule-box" id="dcSuggestBox">
+    <h2>🎨 Дрес-код — запропонуй колір</h2>
+    <p class="schedule-hint">Катя ще підбирає фінальну палітру — накидай сюди кольори, які подобаються, вона перегляне й вирішить.</p>
+    <div class="dc-suggest-form">
+      <input type="color" id="dcSuggestColor" value="#FF1DA6" aria-label="Обрати колір">
+      <input type="text" id="dcSuggestName" placeholder="Твоє імʼя" autocomplete="name">
+      <button type="button" id="dcSuggestSend">Запропонувати</button>
+    </div>
+    <div class="dc-suggest-list" id="dcSuggestList"><div class="notes-empty">Завантаження…</div></div>
+  </div>
+
   <div class="links-box">
     <h2>🔗 Корисні посилання для всіх</h2>
     <ul>
@@ -462,7 +483,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   }
 
   if(auth){
-    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindMainDocSync(); }).catch(err=>{
+    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindMainDocSync(); bindDcSuggestSync(); }).catch(err=>{
       console.warn('anon sign-in', err);
       listEl.innerHTML='<div class="notes-empty">Не вдалося увійти — спробуй оновити сторінку.</div>';
     });
@@ -618,6 +639,44 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       });
     }catch(e){ console.warn('main doc read', e); }
   }
+
+  /* ════ ЗАПРОПОНОВАНІ КОЛЬОРИ ДРЕС-КОДУ ════
+     Додатковий, неофіційний шар поверх дрес-коду в основному застосунку — дружки накидають
+     кольори-кандидати, Катя бачить їх і сама вирішує, чи додати в реальну палітру (вкладка
+     Дрес-код застосунку). Той самий rule-safe патерн — лише додавання в 'comments'. */
+  let dcSuggestions=[];
+  const dcColorEl=document.getElementById('dcSuggestColor');
+  const dcNameEl=document.getElementById('dcSuggestName');
+  const dcSendBtn=document.getElementById('dcSuggestSend');
+  const dcListEl=document.getElementById('dcSuggestList');
+  try{ const saved=localStorage.getItem('druzhky-name'); if(saved && dcNameEl) dcNameEl.value=saved; }catch(e){}
+  function renderDcSuggestions(){
+    if(!dcListEl) return;
+    if(!dcSuggestions.length){ dcListEl.innerHTML='<div class="notes-empty">Ще ніхто не запропонував — будь першою 🎨</div>'; return; }
+    dcListEl.innerHTML=dcSuggestions.slice().reverse().map(s=>`
+      <div class="dc-suggest-item">
+        <span class="dc-suggest-swatch" style="background:${esc(s.color)}" title="${esc(s.color)}"></span>
+        <span>${esc(s.name||'Дружка')}</span>
+      </div>`).join('');
+  }
+  function bindDcSuggestSync(){
+    if(!COMMENTS || !dcListEl) return;
+    COMMENTS.where('tab','==','druzhky-dc-color').onSnapshot(snap=>{
+      dcSuggestions=snap.docs.map(d=>d.data());
+      renderDcSuggestions();
+    }, err=>{ console.warn('dc suggestions snapshot', err); dcListEl.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>'; });
+  }
+  if(dcSendBtn) dcSendBtn.onclick=()=>{
+    const color=(dcColorEl.value||'').trim();
+    const name=(dcNameEl.value||'').trim()||'Дружка';
+    if(!color) return;
+    if(!ready || !COMMENTS){ alert('Ще підключаюсь до бази, спробуй за кілька секунд'); return; }
+    try{ localStorage.setItem('druzhky-name', name); }catch(e){}
+    dcSendBtn.disabled=true; const old=dcSendBtn.textContent; dcSendBtn.textContent='Додаю…';
+    COMMENTS.add({tab:'druzhky-dc-color', color, name, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>{ dcSendBtn.disabled=false; dcSendBtn.textContent=old; })
+      .catch(e=>{ console.warn('add dc color', e); dcSendBtn.disabled=false; dcSendBtn.textContent=old; alert('Не вдалося додати, спробуй ще раз'); });
+  };
 
   dtaskSendBtn.onclick=()=>{
     const name=(dtaskNameEl.value||'').trim()||'Дружка';
