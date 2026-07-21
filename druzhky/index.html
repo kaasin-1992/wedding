@@ -105,6 +105,45 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .note-item:first-child{border-top:none;padding-top:0}
 .note-item .note-meta{font-size:12px;color:var(--muted);margin-bottom:2px}
 .notes-empty{font-size:13.5px;color:var(--muted);font-style:italic}
+.tasks-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
+.tasks-box h2{font-family:var(--serif);font-size:15px;margin:0 0 4px;color:var(--terra)}
+.tasks-hint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.mini-cal{margin-bottom:16px}
+.mini-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mini-cal-head button{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;
+  width:28px;height:28px;font-size:14px;cursor:pointer}
+.mini-cal-head span{font-size:13.5px;font-weight:700;text-transform:capitalize}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.mini-cal-dow{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:3px}
+.mini-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:12px;border-radius:8px;position:relative;color:var(--text)}
+.mini-cal-day.pad{visibility:hidden}
+.mini-cal-day.today{outline:1.5px solid var(--terra)}
+.mini-cal-day .dot{width:4px;height:4px;border-radius:50%;background:var(--rose);position:absolute;bottom:3px}
+.mini-cal-day.has-item{background:var(--terra-dim);cursor:pointer;font-weight:700}
+.dtask-form{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.dtask-kind-toggle{display:flex;gap:6px}
+.dtask-kind-toggle button{flex:1;font-family:var(--sans);font-size:13px;font-weight:600;padding:8px 10px;
+  border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.dtask-kind-toggle button.active{background:var(--terra);border-color:var(--terra);color:#fff}
+.dtask-form input{font-family:var(--sans);font-size:15px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.dtask-form .row2{display:flex;gap:8px}
+.dtask-form .row2 input{flex:1;min-width:0}
+.dtask-form button.dtask-submit{align-self:flex-end;font-family:var(--sans);font-weight:700;font-size:14px;padding:9px 18px;border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer}
+.dtask-form button.dtask-submit:disabled{opacity:.6}
+.dtask-err{font-size:12.5px;color:var(--rose);display:none}
+.dtask-list{display:flex;flex-direction:column;gap:2px}
+.dtask-row{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--line);padding:10px 0;font-size:14px}
+.dtask-row:first-child{border-top:none;padding-top:0}
+.dtask-check{flex:0 0 auto;width:20px;height:20px;margin-top:1px;border-radius:6px;border:1.5px solid var(--terra);
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.dtask-check.done{background:var(--terra)}
+.dtask-row.done .dtask-text{text-decoration:line-through;color:var(--muted)}
+.dtask-body{flex:1;min-width:0}
+.dtask-text{margin-bottom:2px}
+.dtask-meta{font-size:12px;color:var(--muted)}
+.dtask-tag-meeting{display:inline-block;font-size:10.5px;color:var(--rose);background:var(--rose-dim);border-radius:999px;padding:1px 8px;margin-right:6px}
+.dtask-date{font-variant-numeric:tabular-nums;font-weight:600;color:var(--terra)}
 </style>
 </head>
 <body>
@@ -164,6 +203,27 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       <li>Легка курточка/накидка на вечір — надворі може похолодати</li>
       <li>Готівка — якщо плануєш щось купувати по дорозі між локаціями</li>
     </ul>
+  </div>
+
+  <div class="tasks-box">
+    <h2>✅ Спільні завдання та зустрічі</h2>
+    <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
+    <div class="mini-cal" id="dtaskCal"></div>
+    <div class="dtask-form">
+      <div class="dtask-kind-toggle">
+        <button type="button" id="dtaskKindTask" class="active">✅ Завдання</button>
+        <button type="button" id="dtaskKindMeeting">📅 Зустріч</button>
+      </div>
+      <input type="text" id="dtaskName" placeholder="Твоє імʼя" autocomplete="name">
+      <input type="text" id="dtaskText" placeholder="Що саме?">
+      <div class="row2">
+        <input type="date" id="dtaskDate">
+        <input type="text" id="dtaskPlace" placeholder="Місце (для зустрічі)" style="display:none;">
+      </div>
+      <div class="dtask-err" id="dtaskErr">Вкажи дату — без дати не збережеться.</div>
+      <button type="button" class="dtask-submit" id="dtaskSend">Додати</button>
+    </div>
+    <div class="dtask-list" id="dtaskList"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
   <div class="notes-box">
@@ -364,7 +424,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   }
 
   if(auth){
-    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); }).catch(err=>{
+    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); }).catch(err=>{
       console.warn('anon sign-in', err);
       listEl.innerHTML='<div class="notes-empty">Не вдалося увійти — спробуй оновити сторінку.</div>';
     });
@@ -380,6 +440,124 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     COMMENTS.add({tab:'druzhky', name, text, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
       .then(()=>{ textEl.value=''; sendBtn.disabled=false; sendBtn.textContent=old; })
       .catch(e=>{ console.warn('add note', e); sendBtn.disabled=false; sendBtn.textContent=old; alert('Не вдалося надіслати, спробуй ще раз'); });
+  };
+
+  /* ════ СПІЛЬНІ ЗАВДАННЯ ТА ЗУСТРІЧІ ════
+     Той самий rule-safe патерн, що й нотатки/dressVotes в основному застосунку: усі записи —
+     в тій самій колекції 'comments' з окремим tab, і ЛИШЕ ДОДАВАННЯ нових документів (без
+     update/delete) — бо анонімному запису відкритий лише шлях create. "Відмітити виконаним" —
+     теж ОКРЕМИЙ додатковий документ-подія {tab:'druzhky-task-done', taskId, done, ts}, а
+     поточний стан рахуємо як НАЙСВІЖІШУ подію для цього taskId (event-sourcing) — так можна
+     перемикати галочку туди-сюди, не потребуючи права редагувати чужий документ. */
+  let dtasks=[], dtaskEvents=[], dtaskKind='task', dtaskMonthOffset=0;
+  const calEl=document.getElementById('dtaskCal');
+  const listElT=document.getElementById('dtaskList');
+  const kindTaskBtn=document.getElementById('dtaskKindTask');
+  const kindMeetingBtn=document.getElementById('dtaskKindMeeting');
+  const dtaskNameEl=document.getElementById('dtaskName');
+  const dtaskTextEl=document.getElementById('dtaskText');
+  const dtaskDateEl=document.getElementById('dtaskDate');
+  const dtaskPlaceEl=document.getElementById('dtaskPlace');
+  const dtaskErrEl=document.getElementById('dtaskErr');
+  const dtaskSendBtn=document.getElementById('dtaskSend');
+
+  try{ const saved=localStorage.getItem('druzhky-name'); if(saved) dtaskNameEl.value=saved; }catch(e){}
+
+  kindTaskBtn.onclick=()=>{ dtaskKind='task'; kindTaskBtn.classList.add('active'); kindMeetingBtn.classList.remove('active'); dtaskPlaceEl.style.display='none'; };
+  kindMeetingBtn.onclick=()=>{ dtaskKind='meeting'; kindMeetingBtn.classList.add('active'); kindTaskBtn.classList.remove('active'); dtaskPlaceEl.style.display=''; };
+  dtaskDateEl.addEventListener('input',()=>{ dtaskErrEl.style.display='none'; });
+
+  function fmtShortDate(iso){
+    if(!iso) return '';
+    const p=iso.split('-'); if(p.length<3) return iso;
+    return `${p[2]}.${p[1]}`;
+  }
+  function doneMap(){
+    const latest={};
+    dtaskEvents.forEach(e=>{ if(!e.taskId) return; if(!latest[e.taskId] || (e.ts||0)>(latest[e.taskId].ts||0)) latest[e.taskId]=e; });
+    const out={};
+    Object.keys(latest).forEach(k=>out[k]=!!latest[k].done);
+    return out;
+  }
+  function renderMiniCal(){
+    if(!calEl) return;
+    const now=new Date();
+    const base=new Date(now.getFullYear(), now.getMonth()+dtaskMonthOffset, 1);
+    const y=base.getFullYear(), m=base.getMonth();
+    const startDow=(new Date(y,m,1).getDay()+6)%7; // Пн=0
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const itemDays=new Set(dtasks.filter(t=>t.deadline).map(t=>t.deadline));
+    const todayIso=now.toISOString().slice(0,10);
+    const monthLbl=base.toLocaleDateString('uk-UA',{month:'long',year:'numeric'});
+    let grid='';
+    ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].forEach(d=>{ grid+=`<div class="mini-cal-dow">${d}</div>`; });
+    for(let i=0;i<startDow;i++) grid+='<div class="mini-cal-day pad"></div>';
+    for(let d=1; d<=daysInMonth; d++){
+      const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const has=itemDays.has(iso);
+      const isToday=iso===todayIso;
+      grid+=`<div class="mini-cal-day${has?' has-item':''}${isToday?' today':''}" data-caldate="${iso}">${d}${has?'<span class="dot"></span>':''}</div>`;
+    }
+    calEl.innerHTML=`<div class="mini-cal-head"><button type="button" id="calPrev">‹</button><span>${monthLbl}</span><button type="button" id="calNext">›</button></div><div class="mini-cal-grid">${grid}</div>`;
+    document.getElementById('calPrev').onclick=()=>{ dtaskMonthOffset--; renderMiniCal(); };
+    document.getElementById('calNext').onclick=()=>{ dtaskMonthOffset++; renderMiniCal(); };
+    calEl.querySelectorAll('.mini-cal-day.has-item').forEach(el=>{
+      el.onclick=()=>{ const row=listElT.querySelector(`[data-rowdate="${el.dataset.caldate}"]`); if(row) row.scrollIntoView({behavior:'smooth', block:'center'}); };
+    });
+  }
+  function renderDtaskList(){
+    if(!listElT) return;
+    if(!dtasks.length){ listElT.innerHTML='<div class="notes-empty">Поки нічого — додай перше завдання чи зустріч 🙂</div>'; return; }
+    const dm=doneMap();
+    const sorted=dtasks.slice().sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999') || ((a.ts||0)-(b.ts||0)));
+    listElT.innerHTML=sorted.map(t=>{
+      const isDone=t.kind==='task' && dm[t.id];
+      const checkbox=t.kind==='task'
+        ? `<button type="button" class="dtask-check${isDone?' done':''}" data-dtoggle="${t.id}" aria-label="Відмітити">${isDone?'✓':''}</button>`
+        : `<span class="dtask-check" style="border:none;font-size:16px;">📅</span>`;
+      return `<div class="dtask-row${isDone?' done':''}" data-rowdate="${t.deadline||''}">
+        ${checkbox}
+        <div class="dtask-body">
+          <div class="dtask-text">${t.kind==='meeting'?'<span class="dtask-tag-meeting">зустріч</span>':''}${esc(t.text)}</div>
+          <div class="dtask-meta"><span class="dtask-date">${fmtShortDate(t.deadline)}</span>${t.place?' · 📍 '+esc(t.place):''} · ${esc(t.name||'Дружка')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    listElT.querySelectorAll('[data-dtoggle]').forEach(btn=>btn.onclick=()=>{
+      if(!ready || !COMMENTS) return;
+      const taskId=btn.dataset.dtoggle;
+      const cur=doneMap()[taskId]||false;
+      COMMENTS.add({tab:'druzhky-task-done', taskId, done:!cur, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+        .catch(e=>console.warn('toggle task', e));
+    });
+  }
+  function bindTasksSync(){
+    if(!COMMENTS) return;
+    COMMENTS.where('tab','==','druzhky-task').onSnapshot(snap=>{
+      dtasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderMiniCal(); renderDtaskList();
+    }, err=>{ console.warn('dtasks snapshot', err); listElT.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>'; });
+    COMMENTS.where('tab','==','druzhky-task-done').onSnapshot(snap=>{
+      dtaskEvents=snap.docs.map(d=>d.data());
+      renderDtaskList();
+    }, err=>{ console.warn('dtask events snapshot', err); });
+  }
+  renderMiniCal();
+
+  dtaskSendBtn.onclick=()=>{
+    const name=(dtaskNameEl.value||'').trim()||'Дружка';
+    const text=(dtaskTextEl.value||'').trim();
+    const date=(dtaskDateEl.value||'').trim();
+    if(!text){ dtaskTextEl.focus(); return; }
+    if(!date){ dtaskErrEl.style.display='block'; dtaskDateEl.focus(); return; }
+    dtaskErrEl.style.display='none';
+    if(!ready || !COMMENTS){ alert('Ще підключаюсь до бази, спробуй за кілька секунд'); return; }
+    try{ localStorage.setItem('druzhky-name', name); }catch(e){}
+    dtaskSendBtn.disabled=true; const old=dtaskSendBtn.textContent; dtaskSendBtn.textContent='Додаю…';
+    const place=(dtaskPlaceEl.value||'').trim();
+    COMMENTS.add({tab:'druzhky-task', kind:dtaskKind, text, deadline:date, place:(dtaskKind==='meeting'?place:''), name, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>{ dtaskTextEl.value=''; dtaskDateEl.value=''; dtaskPlaceEl.value=''; dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; })
+      .catch(e=>{ console.warn('add dtask', e); dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; alert('Не вдалося додати, спробуй ще раз'); });
   };
 })();
 (function(){
