@@ -72,6 +72,13 @@ header h1{font-family:var(--serif);font-weight:400;font-size:36px;margin:0 0 10p
 @keyframes y2kShine{0%{background-position:0% 50%}100%{background-position:300% 50%}}
 @media (prefers-reduced-motion: reduce){ header h1{animation:none} }
 header p{color:var(--muted);font-size:15px;font-weight:600;margin:0}
+.hero-countdown{margin-top:14px;display:inline-flex;align-items:baseline;gap:8px;padding-top:14px;border-top:2px dashed var(--terra-dim)}
+.hero-countdown .cnt-num{font-family:var(--serif);font-size:30px;color:var(--terra);line-height:1}
+.hero-countdown .cnt-lbl{font-size:13px;color:var(--muted);font-weight:600}
+.hero-weather{margin-top:10px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;line-height:1.4}
+.hero-weather .hw-temp{color:var(--terra);font-weight:700}
+.hero-weather .hw-ico{font-size:15px}
+.hero-weather .hw-note{font-size:11px;opacity:.85;flex-basis:100%}
 .disclaimer{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);margin:18px 0 26px;line-height:1.55}
 .links-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
 .links-box h2{font-family:var(--serif);font-size:15px;margin:0 0 10px;color:var(--terra)}
@@ -196,6 +203,11 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     <div class="eyebrow">✨ Weддінг · 06.09.2026 ✨</div>
     <h1>Дружки 💗</h1>
     <p>Софі (день) + Хвильовий (вечір) — хто за що відповідає</p>
+    <div class="hero-countdown">
+      <span class="cnt-num" id="daysLeft">—</span>
+      <span class="cnt-lbl" id="cntLbl">днів залишилось</span>
+    </div>
+    <div class="hero-weather" id="heroWeather"></div>
   </header>
 
   <div class="disclaimer">
@@ -715,6 +727,46 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       .then(()=>{ dtaskTextEl.value=''; dtaskDateEl.value=''; dtaskPlaceEl.value=''; dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; })
       .catch(e=>{ console.warn('add dtask', e); dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; alert('Не вдалося додати, спробуй ще раз'); });
   };
+})();
+/* ── ЛІЧИЛЬНИК ДНІВ + ПОГОДА (та сама логіка, що в основному застосунку) ── */
+(function(){
+  const WEDDING=new Date('2026-09-06T00:00:00');
+  const today=()=>new Date(new Date().toDateString());
+  const daysUntilWedding=()=>Math.ceil((WEDDING-today())/86400000);
+  function plDays(n){ const a=n%100, b=n%10; if(a>10&&a<20)return'днів'; if(b===1)return'день'; if(b>=2&&b<=4)return'дні'; return'днів'; }
+  function updateCountdown(){
+    const d=Math.max(0,daysUntilWedding());
+    const dl=document.getElementById('daysLeft'), cl=document.getElementById('cntLbl');
+    if(dl) dl.textContent=d;
+    if(cl) cl.textContent=plDays(d)+' залишилось';
+  }
+  updateCountdown();
+  setInterval(updateCountdown,60000);
+
+  const WX_DATE='2026-09-06';
+  function wxFmtT(t){ return (t>0?'+':'')+t+'°'; }
+  function wxCode(c){
+    const m={0:['☀️','ясно'],1:['🌤','майже ясно'],2:['⛅','мінлива хмарність'],3:['☁️','хмарно'],
+      45:['🌫','туман'],48:['🌫','паморозь'],51:['🌦','мряка'],53:['🌦','мряка'],55:['🌦','густа мряка'],
+      61:['🌧','невеликий дощ'],63:['🌧','дощ'],65:['🌧','сильний дощ'],66:['🌧','крижаний дощ'],67:['🌧','крижаний дощ'],
+      71:['🌨','сніг'],73:['🌨','сніг'],75:['❄️','сильний сніг'],80:['🌦','злива'],81:['🌦','злива'],82:['⛈','сильна злива'],
+      95:['⛈','гроза'],96:['⛈','гроза з градом'],99:['⛈','гроза з градом']};
+    return m[c]||['🌡',''];
+  }
+  async function loadWeather(){
+    const el=document.getElementById('heroWeather'); if(!el) return;
+    const seasonal=`<span class="hw-ico">🌤</span><span>у Києві на початку вересня зазвичай <span class="hw-temp">≈ +21° вдень / +11° вночі</span></span><span class="hw-note">точний прогноз на 6 вересня зʼявиться ближче до дати ⛅</span>`;
+    if(daysUntilWedding()>16){ el.innerHTML=seasonal; return; }
+    try{
+      const u=`https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.52&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FKyiv&start_date=${WX_DATE}&end_date=${WX_DATE}`;
+      const r=await fetch(u); const j=await r.json(); const d=j&&j.daily;
+      if(!d||!d.time||!d.time.length) throw new Error('no data');
+      const [ico,lbl]=wxCode(d.weather_code[0]);
+      const mx=Math.round(d.temperature_2m_max[0]), mn=Math.round(d.temperature_2m_min[0]);
+      el.innerHTML=`<span class="hw-ico">${ico}</span><span>Київ, 6 вересня: <span class="hw-temp">${wxFmtT(mx)} / ${wxFmtT(mn)}</span>${lbl?' · '+lbl:''}</span><span class="hw-note">прогноз погоди 🌦</span>`;
+    }catch(e){ el.innerHTML=seasonal; }
+  }
+  loadWeather();
 })();
 (function(){
   const btn=document.getElementById('themeToggle');
