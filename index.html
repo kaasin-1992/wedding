@@ -235,6 +235,25 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .task-dl-edit{cursor:pointer;border-bottom:1px dashed var(--muted);padding-bottom:1px;}
 .task-dl-edit.add{color:var(--terra);font-weight:600;border-bottom-color:var(--terra);}
 .task-dl-inp{font:inherit;font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--terra);background:var(--surface2);color:var(--text);}
+.date-row{display:flex;gap:8px;align-items:stretch;}
+.date-row input{flex:1;min-width:0;}
+.cal-btn{flex:0 0 auto;width:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);
+  color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.dp-pop{position:fixed;z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px;width:240px;}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.dp-head span{font-size:13px;font-weight:700;text-transform:capitalize;}
+.dp-nav{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;
+  width:26px;height:26px;font-size:14px;cursor:pointer;}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.dp-dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px;}
+.dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;
+  border-radius:8px;cursor:pointer;color:var(--text);}
+.dp-day.pad{visibility:hidden;cursor:default;}
+.dp-day:not(.pad):hover{background:var(--terra-dim);}
+.dp-day.sel{background:var(--terra);color:#fff;font-weight:700;}
+.dp-clear{width:100%;margin-top:8px;background:none;border:none;color:var(--muted);font-size:12px;
+  cursor:pointer;text-decoration:underline;padding:4px;}
 .del-x{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;opacity:.5;transition:.15s;padding:10px 12px;line-height:1;border-radius:8px;}
 .task-card:hover .del-x{opacity:.7;}
 .del-x:hover,.del-x:active{opacity:1!important;color:var(--danger);}
@@ -1240,7 +1259,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
       <summary>＋ Додати завдання</summary>
       <div class="add-form">
         <input type="text" id="newTaskText" placeholder="Назва завдання…">
-        <input type="text" inputmode="numeric" id="newTaskDate" placeholder="Дедлайн ДД.ММ (необовʼязково)">
+        <div class="date-row">
+          <input type="text" inputmode="numeric" id="newTaskDate" placeholder="Дедлайн ДД.ММ (необовʼязково)">
+          <button type="button" class="cal-btn" id="newTaskDateCal" aria-label="Обрати дату в календарі">📅</button>
+        </div>
         <button class="submit-btn" id="addTaskBtn">Додати</button>
       </div>
     </details>
@@ -2719,6 +2741,56 @@ function parseTaskDeadlineInput(str){
   if(y<2020||y>2100) return null;   // явно абсурдний рік (напр. "0002") — краще перепитати, ніж мовчки зберегти сміття
   return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
+/* ════ КЛІКАБЕЛЬНИЙ КАЛЕНДАРИК ДЛЯ ДАТ ════
+   Скарга "не можу нормально написати жодну дату" — набір цифр вручну (навіть із фолбеком без
+   крапки) все одно виявився незручним. Це не заміна нативного <input type="date"> (той свідомо
+   уникали через баг з роком на iOS, див. коментар нижче) — свій маленький попап-календарик,
+   клік по дню замість набору цифр. Текстове поле поруч лишається робочим про всяк випадок. */
+let _dpEl=null, _dpAnchor=null;
+function _dpOutsideHandler(e){
+  if(_dpEl && !_dpEl.contains(e.target) && _dpAnchor && !_dpAnchor.contains(e.target)) closeDatePicker();
+}
+function closeDatePicker(){
+  if(_dpEl){ _dpEl.remove(); _dpEl=null; }
+  document.removeEventListener('pointerdown', _dpOutsideHandler, true);
+}
+function openDatePicker(anchorEl, initialIso, onPick){
+  closeDatePicker();
+  _dpAnchor=anchorEl;
+  const initDate = initialIso ? new Date(initialIso+'T00:00:00') : new Date();
+  let viewY=initDate.getFullYear(), viewM=initDate.getMonth();
+  const pop=document.createElement('div'); pop.className='dp-pop';
+  // якщо анкер — текстове поле (напр. редагування дедлайну), звичайний клік по кнопці всередині
+  // попапу спершу зрушує фокус (mousedown) → встигає відпрацювати blur/commit ЗІ СТАРИМ значенням
+  // поля, ще до того як власне click дня/кнопки "прибрати" встигне застосувати вибір — гонка,
+  // програна стороною commit(). preventDefault на mousedown лишає фокус на анкері, доки триває
+  // взаємодія з попапом, тож click-хендлери нижче спрацьовують першими й коректно.
+  pop.addEventListener('mousedown', e=>e.preventDefault());
+  document.body.appendChild(pop);
+  function renderCal(){
+    const startDow=(new Date(viewY,viewM,1).getDay()+6)%7;   // Пн=0
+    const daysInMonth=new Date(viewY,viewM+1,0).getDate();
+    const monthLbl=new Date(viewY,viewM,1).toLocaleDateString('uk-UA',{month:'long',year:'numeric'});
+    let grid='';
+    ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].forEach(d=>{ grid+=`<div class="dp-dow">${d}</div>`; });
+    for(let i=0;i<startDow;i++) grid+='<div class="dp-day pad"></div>';
+    for(let d=1; d<=daysInMonth; d++){
+      const iso=`${viewY}-${String(viewM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      grid+=`<div class="dp-day${initialIso===iso?' sel':''}" data-dpick="${iso}">${d}</div>`;
+    }
+    pop.innerHTML=`<div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
+    pop.querySelector('[data-dpprev]').onclick=()=>{ viewM--; if(viewM<0){viewM=11;viewY--;} renderCal(); };
+    pop.querySelector('[data-dpnext]').onclick=()=>{ viewM++; if(viewM>11){viewM=0;viewY++;} renderCal(); };
+    pop.querySelectorAll('[data-dpick]').forEach(el=>el.onclick=()=>{ onPick(el.dataset.dpick); closeDatePicker(); });
+    pop.querySelector('[data-dpclear]').onclick=()=>{ onPick(''); closeDatePicker(); };
+  }
+  renderCal();
+  const r=anchorEl.getBoundingClientRect();
+  pop.style.top=Math.min(r.bottom+6, window.innerHeight-280)+'px';
+  pop.style.left=Math.max(8, Math.min(r.left, window.innerWidth-256))+'px';
+  _dpEl=pop;
+  setTimeout(()=>document.addEventListener('pointerdown', _dpOutsideHandler, true), 0);
+}
 // клік на дедлайн у списку завдань → інлайн текстове поле замість того щоб видаляти й додавати
 // завдання заново. РАНІШЕ був нативний <input type="date"> — на мобільних (особливо iOS) сегмент
 // року в ньому легко "з'їжджає" при швидкому наборі і замість 2026 виходить щось на кшталт 0002,
@@ -2731,11 +2803,10 @@ function openTaskDeadlineEdit(id, el){
   inp.placeholder='ДД.ММ (напр. 17.06)';
   inp.value=task.deadline?fmtDate(task.deadline):'';
   el.replaceWith(inp);
-  inp.focus();
-  inp.select();
   let done=false;
   const commit=()=>{
     if(done) return; done=true;
+    closeDatePicker();
     const v=inp.value.trim();
     if(!v){ task.deadline=''; saveJSON('wed-tasks',tasks); renderTasks(); return; }
     const parsed=parseTaskDeadlineInput(v);
@@ -2747,13 +2818,23 @@ function openTaskDeadlineEdit(id, el){
   };
   const cancel=()=>{
     if(done) return; done=true;
+    closeDatePicker();
     renderTasks();
+  };
+  const pick=(iso)=>{
+    if(done) return;
+    if(iso && iso!==task.deadline && new Date(iso)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); return; }
+    done=true;
+    task.deadline=iso||''; saveJSON('wed-tasks',tasks); renderTasks();
   };
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',e=>{
     if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
     else if(e.key==='Escape'){ e.preventDefault(); cancel(); }
   });
+  inp.addEventListener('focus',()=>openDatePicker(inp, task.deadline, pick));
+  inp.focus();
+  inp.select();
 }
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
@@ -2768,6 +2849,11 @@ document.getElementById('addTaskBtn').onclick=()=>{
   tasks.push({id:'u'+Date.now(),text,deadline,done:false});
   document.getElementById('newTaskText').value=''; document.getElementById('newTaskDate').value='';
   saveJSON('wed-tasks',tasks); renderTasks();
+};
+document.getElementById('newTaskDateCal').onclick=()=>{
+  const dateInp=document.getElementById('newTaskDate');
+  const cur=parseTaskDeadlineInput(dateInp.value)||'';
+  openDatePicker(dateInp, cur, iso=>{ dateInp.value=iso?fmtDate(iso):''; });
 };
 document.getElementById('drivingPlus').onclick=()=>{
   drivingLessons++; saveJSON('wed-driving-lessons',drivingLessons); renderDrivingCounter();
