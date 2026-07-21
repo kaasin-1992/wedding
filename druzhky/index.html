@@ -865,6 +865,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
      'druzhky-contact'), поточний стан = НАЙСВІЖІША подія на кожен cid (event-sourcing),
      видалення — подія {deleted:true}. Слоти, які Катя назвала, пре-створені як дефолти. */
   const EDIT_CODE='K1TANA';   // ← секретний код нареченої (пароль для розробника/редактора)
+  const codeOk=c=>(c||'').trim().toLowerCase()===EDIT_CODE.toLowerCase();   // регістр не важливий
   const DEFAULT_CONTACTS=[
     {cid:'dima',        label:'Діма (наречений)',                 note:''},
     {cid:'mama-katya',  label:'Мама Каті',                        note:'турбувати тільки по важливому'},
@@ -886,7 +887,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   // розблокування редагування: ?edit=КОД у посиланні, або збережений прапорець, або кнопка 🔒
   try{
     const p=new URLSearchParams(location.search);
-    if(p.get('edit')===EDIT_CODE){ localStorage.setItem('druzhky-editor','1'); }
+    if(codeOk(p.get('edit'))){ localStorage.setItem('druzhky-editor','1'); }
     if(localStorage.getItem('druzhky-editor')==='1') contactsEditing=true;
   }catch(e){}
 
@@ -967,7 +968,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     if(contactsEditing){ contactsEditing=false; try{localStorage.removeItem('druzhky-editor');}catch(e){} renderContacts(); return; }
     const code=prompt('Код для редагування (лише для нареченої):');
     if(code===null) return;
-    if(code.trim()===EDIT_CODE){ contactsEditing=true; try{localStorage.setItem('druzhky-editor','1');}catch(e){} renderContacts(); }
+    if(codeOk(code)){ contactsEditing=true; try{localStorage.setItem('druzhky-editor','1');}catch(e){} renderContacts(); }
     else alert('Невірний код');
   };
   if(cLockOff) cLockOff.onclick=()=>{ contactsEditing=false; try{localStorage.removeItem('druzhky-editor');}catch(e){} renderContacts(); };
