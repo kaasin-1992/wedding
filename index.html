@@ -2804,6 +2804,9 @@ function renderRolesAssign(){
   });
 }
 function renderGuests(){
+  // не рвемо фокус/клавіатуру, поки вона редагує ім'я/контакт гостя (contenteditable) — той
+  // самий клас бага, що вже фіксили для дедлайну/бюджету
+  if(isTextEntryFocused(document.getElementById('guestList'))) return;
   renderRolesAssign();
   // цифри зверху рахуються ВІД АКТИВНОГО ФІЛЬТРА, а не від усього списку —
   // щоб було видно, скільки саме людей у розписі/на вечірці серед відфільтрованих
@@ -3646,6 +3649,7 @@ function openIdeaDetail(id){
   const ov=document.getElementById('ideaDetailOverlay'); if(ov) ov.style.display='flex';
 }
 function renderIdeaDetail(){
+  if(isTextEntryFocused(document.getElementById('ideaDetailPanel'))) return;
   let ov=document.getElementById('ideaDetailOverlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='ideaDetailOverlay'; ov.className='idea-detail-overlay';
@@ -3914,7 +3918,9 @@ function wireIdeaDetailHandlers(panel){
 let activeBeauty='her';
 let activeBeautyType='makeup';
 function renderBeauty(){
-  const listEl=document.getElementById('beautyList'); if(!listEl) return; listEl.innerHTML='';
+  const listEl=document.getElementById('beautyList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   const targetEl=document.getElementById('beAddTarget');
   if(targetEl) targetEl.textContent=`Додається до: ${activeBeauty==='her'?'👰 Каті':'🤵 Діми'} · ${activeBeautyType==='makeup'?'💄 Мейк':'💇 Зачіска'}`;
   const items=ideas.filter(i=>i.cat===activeBeautyType && i.who===activeBeauty);
@@ -5127,7 +5133,9 @@ function renderScripts(){
   const locMatch=m=>!scriptLocFilter || m.loc===scriptLocFilter;
   const timed=scriptRef().filter(m=>m.time).filter(locMatch).sort((a,b)=>a.time.localeCompare(b.time));
   const backlog=[...scriptSofia,...scriptWave].filter(m=>!m.time).filter(locMatch);
-  const listEl=document.getElementById('scriptList'); listEl.innerHTML='';
+  const listEl=document.getElementById('scriptList');
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   // ── Таймлайн (з часом) ──
   if(!timed.length){
     const e=document.createElement('div'); e.className='empty-state';
@@ -5554,7 +5562,9 @@ function renderSeating(){
   ua.innerHTML=`<div class="seat-ua-title">Не розсаджені (${unassigned.length})</div>`+
     (all.length? (unassigned.length?`<div class="seat-chips">${unassigned.map(g=>seatChip(g,null)).join('')}</div>`:`<div class="backlog-empty">Усіх розсаджено 🎉</div>`)
      : `<div class="backlog-empty">Ще нема гостей на цю локацію. Додай їх у вкладці «Гості».</div>`);
-  const zc=document.getElementById('seatZones'); zc.innerHTML='';
+  const zc=document.getElementById('seatZones');
+  if(isTextEntryFocused(zc)) return;
+  zc.innerHTML='';
   loc.zones.forEach(z=>{
     const cap=z.seats.reduce((s,id)=>{const g=all.find(x=>x.id===id);return s+(g?headCount(g):0);},0);
     const card=document.createElement('div'); card.className='seat-zone'; card.dataset.seatzone=z.id;
@@ -5652,6 +5662,7 @@ function renderInvites(){
   }
   // ── ідеї запрошень ──
   const list=document.getElementById('invList'); if(!list) return;
+  if(isTextEntryFocused(list)) return;
   list.innerHTML='';
   if(!invites.length){ list.innerHTML='<div class="empty-state">Поки порожньо.<br>Додай посилання-приклад або опиши ідею 💌</div>'; return; }
   invites.forEach(it=>{
@@ -5742,6 +5753,7 @@ function renderParties(){
   const glbl=document.getElementById('partyGenLbl');
   if(glbl) glbl.textContent=isHer?'💬 Загальний коментар про дівич-вечір':'💬 Загальний коментар про мальчішник';
   const listEl=document.getElementById('partyList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
   const arr=partyRef(); listEl.innerHTML='';
   const cnt=document.createElement('div'); cnt.className='party-count';
   cnt.textContent=arr.length?`Людей у списку: ${arr.length}`:'';
@@ -6001,7 +6013,9 @@ document.querySelectorAll('#barTabs .filt-btn').forEach(btn=>btn.onclick=()=>{
 
 /* ════ HOTEL (ночівля до/після) ════ */
 function renderHotels(){
-  const listEl=document.getElementById('hotelList'); listEl.innerHTML='';
+  const listEl=document.getElementById('hotelList');
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   if(!hotels.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай готель чи варіант ночівлі 🏨</div>'; return; }
   hotels.forEach(h=>{
     const host=hostOf(h.url);
@@ -6247,7 +6261,9 @@ let _decorDetailId=null;   // яка ідея декору зараз відкр
 // плитка декору відкриває деталі й усі дії в одному overlay замість довгого стовпця бейджів/кнопок
 // під кожним фото у стрічці — той самий принцип, що вже в Одязі (renderIdeas/openIdeaDetail)
 function renderDecor(){
-  const listEl=document.getElementById('decorList'); if(!listEl) return; listEl.innerHTML='';
+  const listEl=document.getElementById('decorList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   renderVenuePhotos();
   let items=decor.filter(d=>d.cat!=='cake');   // торт — окрема вкладка
   if(decorFilter==='buy') items=items.filter(d=>!d.bought && !d.diy);
@@ -6300,6 +6316,7 @@ function openDecorDetail(id){
   const ov=document.getElementById('decorDetailOverlay'); if(ov) ov.style.display='flex';
 }
 function renderDecorDetail(){
+  if(isTextEntryFocused(document.getElementById('decorDetailPanel'))) return;
   let ov=document.getElementById('decorDetailOverlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='decorDetailOverlay'; ov.className='idea-detail-overlay';
@@ -6709,7 +6726,9 @@ document.getElementById('ckImagineBtn').onclick=async()=>{
 const ORDER_STATUS=['ordered','transit','warehouse','received'];
 const ORDER_STATUS_LBL={ordered:'🛒 Замовлено',transit:'🚚 В дорозі',warehouse:'📦 На складі НП',received:'✅ Отримано'};
 function renderOrders(){
-  const listEl=document.getElementById('ordersList'); if(!listEl) return; listEl.innerHTML='';
+  const listEl=document.getElementById('ordersList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   if(!orders.length){ listEl.innerHTML='<div class="empty-state">Поки нічого не замовлено 🌸</div>'; return; }
   listEl.innerHTML=orders.map(o=>`
     <div class="idea-card">
@@ -6821,7 +6840,9 @@ function musicEmbedSrc(url){
   return null;
 }
 function renderMusic(){
-  const listEl=document.getElementById('musicList'); if(!listEl) return; listEl.innerHTML='';
+  const listEl=document.getElementById('musicList'); if(!listEl) return;
+  if(isTextEntryFocused(listEl)) return;
+  listEl.innerHTML='';
   if(!music.length){ listEl.innerHTML='<div class="empty-state">Поки нічого.<br>Додай артиста чи діджея 🎵</div>'; return; }
   music.forEach(m=>{
     const host=hostOf(m.url);
