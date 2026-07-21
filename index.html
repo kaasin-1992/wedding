@@ -2426,7 +2426,38 @@ function applyMedia(){
   DB.set('wed-ideas',JSON.stringify(ideas));
   if(dresscode) DB.set('wed-dresscode',JSON.stringify(dresscode));
   applyingSnapshot=false;
-  if(typeof renderAll==='function') renderAll();
+  snapshotRender();
+}
+// Фоновий Firestore-снапшот (навіть про зовсім інше поле, чи власне щойно збережене) раніше
+// БЕЗУМОВНО запускав важкий renderAll() — перемальовування всіх ~25 розділів. Якщо це ставалось
+// саме коли користувачка вписує ім'я гостя / текст завдання (а ці поля-форми лежать ПОЗА
+// списками, тож контейнерні isTextEntryFocused-гарди їх не прикривали), сторінку смикало прямо
+// під час набору: підвисання, стрибок скролу, іноді згорнута клавіатура. Дані вже змержені вище —
+// відкладаємо лише саме ВІЗУАЛЬНЕ перемалювання, поки активне будь-яке текстове поле, і робимо
+// його один раз, щойно фокус звільниться (усі снапшоти, що надійшли поки чекали, коалесуємо в один).
+function isAnyTextEntryFocused(){
+  const el=document.activeElement; if(!el) return false;
+  if(el.tagName==='TEXTAREA' || el.isContentEditable) return true;
+  if(el.tagName==='INPUT'){
+    const t=(el.getAttribute('type')||'text').toLowerCase();
+    return ['text','number','search','tel','url','email','password',''].includes(t);
+  }
+  return false;
+}
+let _snapRenderTimer=null;
+function snapshotRender(){
+  if(typeof renderAll!=='function') return;
+  if(isAnyTextEntryFocused()){
+    if(_snapRenderTimer) return;   // вже чекаємо — коалесуємо
+    _snapRenderTimer=setInterval(()=>{
+      if(!isAnyTextEntryFocused()){
+        clearInterval(_snapRenderTimer); _snapRenderTimer=null;
+        renderAll();
+      }
+    }, 500);
+    return;
+  }
+  renderAll();
 }
 let mediaBound=false;
 function startMediaSync(){
