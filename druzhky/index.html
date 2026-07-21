@@ -205,6 +205,19 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dtask-meta{font-size:12px;color:var(--muted)}
 .dtask-tag-meeting{display:inline-block;font-size:10.5px;color:var(--rose);background:var(--rose-dim);border-radius:999px;padding:1px 8px;margin-right:6px}
 .dtask-date{font-variant-numeric:tabular-nums;font-weight:600;color:var(--terra)}
+/* теги зустрічі */
+.dtask-tags{display:flex;flex-wrap:wrap;gap:6px}
+.dtask-tags .dtag{font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.dtask-tags .dtag.on{background:var(--rose);border-color:var(--rose);color:#fff}
+.dtask-tags-lbl{font-size:11.5px;color:var(--muted);margin-bottom:-2px}
+.dtask-chips{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 2px}
+.dtask-chip{display:inline-block;font-size:10.5px;font-weight:600;color:var(--terra);background:var(--terra-dim);border-radius:999px;padding:2px 9px}
+/* дії зустрічі */
+.dtask-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.dtask-actions a,.dtask-actions button{font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--terra);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.dtask-actions button.rsvp.going{background:var(--done,#4E8A6B);border-color:var(--done,#4E8A6B);color:#fff}
+.dtask-going{font-size:12px;color:var(--muted);margin-top:5px}
+.dtask-going b{color:var(--done,#4E8A6B)}
 
 /* ═══ Y2K флюр: наліпкові картки, глянцеві кнопки, хром-заголовки ═══ */
 .links-box,.card,.schedule-box,.notes-box,.tasks-box{border:3px dashed var(--terra-dim)}
@@ -497,7 +510,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 
   <div class="tasks-box">
     <h2 class="sec-head" data-nav="✅ Завдання">✅ Спільні завдання та зустрічі</h2>
-    <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
+    <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Для зустрічі можна обрати час, теги (чому присвячена) й місце. Потім у кожної зустрічі: <b>📅 В календар</b> (додати собі), <b>✈️ У Телеграм</b> (кинути в гілку зустрічей) і <b>✋ Я буду</b> (відмітити себе — видно, хто прийде). Видно всім, хто заходить на цю сторінку.</p>
     <div class="mini-cal" id="dtaskCal"></div>
     <div class="dtask-form">
       <div class="dtask-kind-toggle">
@@ -508,8 +521,11 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       <input type="text" id="dtaskText" placeholder="Що саме?">
       <div class="row2">
         <input type="date" id="dtaskDate">
+        <input type="time" id="dtaskTime" style="display:none;" title="Час (для зустрічі)">
         <input type="text" id="dtaskPlace" placeholder="Місце (для зустрічі)" style="display:none;">
       </div>
+      <div class="dtask-tags-lbl" id="dtaskTagsLbl" style="display:none;">Чому присвячена (обери теги):</div>
+      <div class="dtask-tags" id="dtaskTags" style="display:none;"></div>
       <div class="dtask-err" id="dtaskErr">Вкажи дату — без дати не збережеться.</div>
       <button type="button" class="dtask-submit" id="dtaskSend">Додати</button>
     </div>
@@ -670,6 +686,18 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
      поточний стан рахуємо як НАЙСВІЖІШУ подію для цього taskId (event-sourcing) — так можна
      перемикати галочку туди-сюди, не потребуючи права редагувати чужий документ. */
   let dtasks=[], dtaskEvents=[], dtaskKind='task', dtaskMonthOffset=0, dtaskFilter='all';
+  let dtaskRsvps=[], dtaskSelTags=[];
+  const MEETINGS_THREAD='https://t.me/c/3974464697/5'; // гілка «зустріч» у спільному чаті
+  const MEETING_TAGS=[
+    {id:'dance',ic:'💃',lbl:'Танц. номер'},
+    {id:'gift',ic:'🎁',lbl:'Подарунок'},
+    {id:'devich',ic:'🍾',lbl:'Дівич-вечір'},
+    {id:'look',ic:'👗',lbl:'Образ / дрес-код'},
+    {id:'decor',ic:'🎨',lbl:'Декор'},
+    {id:'photo',ic:'📸',lbl:'Фото/відео'},
+    {id:'org',ic:'📋',lbl:'Організація'},
+  ];
+  const TAG_BY_ID={}; MEETING_TAGS.forEach(t=>TAG_BY_ID[t.id]=t);
   const calEl=document.getElementById('dtaskCal');
   const listElT=document.getElementById('dtaskList');
   const kindTaskBtn=document.getElementById('dtaskKindTask');
@@ -677,14 +705,33 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   const dtaskNameEl=document.getElementById('dtaskName');
   const dtaskTextEl=document.getElementById('dtaskText');
   const dtaskDateEl=document.getElementById('dtaskDate');
+  const dtaskTimeEl=document.getElementById('dtaskTime');
   const dtaskPlaceEl=document.getElementById('dtaskPlace');
+  const dtaskTagsEl=document.getElementById('dtaskTags');
+  const dtaskTagsLblEl=document.getElementById('dtaskTagsLbl');
   const dtaskErrEl=document.getElementById('dtaskErr');
   const dtaskSendBtn=document.getElementById('dtaskSend');
 
   try{ const saved=localStorage.getItem('druzhky-name'); if(saved) dtaskNameEl.value=saved; }catch(e){}
 
-  kindTaskBtn.onclick=()=>{ dtaskKind='task'; kindTaskBtn.classList.add('active'); kindMeetingBtn.classList.remove('active'); dtaskPlaceEl.style.display='none'; };
-  kindMeetingBtn.onclick=()=>{ dtaskKind='meeting'; kindMeetingBtn.classList.add('active'); kindTaskBtn.classList.remove('active'); dtaskPlaceEl.style.display=''; };
+  // чипи-теги у формі
+  if(dtaskTagsEl){
+    dtaskTagsEl.innerHTML=MEETING_TAGS.map(t=>`<button type="button" class="dtag" data-tagid="${t.id}">${t.ic} ${t.lbl}</button>`).join('');
+    dtaskTagsEl.querySelectorAll('[data-tagid]').forEach(b=>b.onclick=()=>{
+      const id=b.dataset.tagid;
+      if(dtaskSelTags.includes(id)) dtaskSelTags=dtaskSelTags.filter(x=>x!==id);
+      else dtaskSelTags.push(id);
+      b.classList.toggle('on', dtaskSelTags.includes(id));
+    });
+  }
+  function showMeetingFields(on){
+    dtaskPlaceEl.style.display=on?'':'none';
+    dtaskTimeEl.style.display=on?'':'none';
+    dtaskTagsEl.style.display=on?'':'none';
+    dtaskTagsLblEl.style.display=on?'':'none';
+  }
+  kindTaskBtn.onclick=()=>{ dtaskKind='task'; kindTaskBtn.classList.add('active'); kindMeetingBtn.classList.remove('active'); showMeetingFields(false); };
+  kindMeetingBtn.onclick=()=>{ dtaskKind='meeting'; kindMeetingBtn.classList.add('active'); kindTaskBtn.classList.remove('active'); showMeetingFields(true); };
   dtaskDateEl.addEventListener('input',()=>{ dtaskErrEl.style.display='none'; });
   document.querySelectorAll('#dtaskFilter button').forEach(b=>b.onclick=()=>{
     dtaskFilter=b.dataset.df;
@@ -730,6 +777,55 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       el.onclick=()=>{ const row=listElT.querySelector(`[data-rowdate="${el.dataset.caldate}"]`); if(row) row.scrollIntoView({behavior:'smooth', block:'center'}); };
     });
   }
+  function rsvpMap(){
+    const latest={};
+    dtaskRsvps.forEach(e=>{ if(!e.taskId||!e.name) return; const k=e.taskId+'|'+e.name.trim().toLowerCase(); if(!latest[k]||(e.ts||0)>(latest[k].ts||0)) latest[k]=e; });
+    const byTask={};
+    Object.values(latest).forEach(e=>{ if(e.going){ (byTask[e.taskId]=byTask[e.taskId]||[]).push(e.name); } });
+    return byTask;
+  }
+  function myName(){ let n=(dtaskNameEl.value||'').trim(); if(n) return n; try{ return localStorage.getItem('druzhky-name')||''; }catch(e){ return ''; } }
+  function amGoing(taskId){ const nm=myName().trim().toLowerCase(); if(!nm) return false; return (rsvpMap()[taskId]||[]).some(x=>x.trim().toLowerCase()===nm); }
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function icsDataUri(t){
+    const dt=t.deadline; if(!dt) return '';
+    const [Y,M,D]=dt.split('-'); let dtStart, dtEnd, allDay=false;
+    if(t.time){ const [h,mi]=t.time.split(':'); dtStart=`${Y}${M}${D}T${pad2(h)}${pad2(mi)}00`; const eh=(parseInt(h,10)+1)%24; dtEnd=`${Y}${M}${D}T${pad2(eh)}${pad2(mi)}00`; }
+    else { allDay=true; dtStart=`${Y}${M}${D}`; const nd=new Date(Date.UTC(+Y,+M-1,+D+1)); dtEnd=`${nd.getUTCFullYear()}${pad2(nd.getUTCMonth()+1)}${pad2(nd.getUTCDate())}`; }
+    const stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+    const tags=(t.tags||[]).map(id=>TAG_BY_ID[id]?TAG_BY_ID[id].lbl:id).join(', ');
+    const esc2=s=>String(s||'').replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n');
+    const desc=(tags?('Теми: '+tags+' · '):'')+'Весілля Каті & Діми 06.09.2026';
+    const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//wedding//druzhky//UA','BEGIN:VEVENT','UID:druzhky-'+(t.id||Date.now())+'@wedding','DTSTAMP:'+stamp,
+      (allDay?'DTSTART;VALUE=DATE:'+dtStart:'DTSTART:'+dtStart),(allDay?'DTEND;VALUE=DATE:'+dtEnd:'DTEND:'+dtEnd),
+      'SUMMARY:'+esc2((t.kind==='meeting'?'Зустріч дружок: ':'')+(t.text||''))];
+    if(t.place) L.push('LOCATION:'+esc2(t.place));
+    L.push('DESCRIPTION:'+esc2(desc),'END:VEVENT','END:VCALENDAR');
+    return 'data:text/calendar;charset=utf-8,'+encodeURIComponent(L.join('\r\n'));
+  }
+  function meetingTgText(t){
+    const tags=(t.tags||[]).map(id=>TAG_BY_ID[id]?TAG_BY_ID[id].ic+' '+TAG_BY_ID[id].lbl:id).join(', ');
+    let s='📅 Зустріч: '+(t.text||'')+'\n🗓 '+fmtShortDate(t.deadline)+(t.time?(' о '+t.time):'');
+    if(t.place) s+='\n📍 '+t.place;
+    if(tags) s+='\n🏷 '+tags;
+    return s;
+  }
+  function copyAndOpenTg(t){
+    const txt=meetingTgText(t);
+    const go=()=>window.open(MEETINGS_THREAD,'_blank','noopener');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(()=>{ alert('Скопійовано ✍️ Встав (тримай палець → Вставити) у гілку «зустрічі» — вона зараз відкриється.'); go(); }).catch(go);
+    } else go();
+  }
+  function toggleRsvp(taskId){
+    if(!ready || !COMMENTS){ alert('Ще підключаюсь до бази, спробуй за кілька секунд'); return; }
+    const nm=myName().trim();
+    if(!nm){ alert('Спершу впиши своє імʼя у формі вгорі — щоб було видно, хто буде 🙂'); dtaskNameEl.focus(); return; }
+    try{ localStorage.setItem('druzhky-name', nm); }catch(e){}
+    const going=!amGoing(taskId);
+    COMMENTS.add({tab:'druzhky-meeting-rsvp', taskId, name:nm, going, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .catch(e=>console.warn('rsvp', e));
+  }
   function renderDtaskList(){
     if(!listElT) return;
     if(!dtasks.length){ listElT.innerHTML='<div class="notes-empty">Поки нічого — додай перше завдання чи зустріч 🙂</div>'; return; }
@@ -737,16 +833,32 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     const filtered=dtasks.filter(t=>dtaskFilter==='all' || (t.kind||'task')===dtaskFilter);
     if(!filtered.length){ listElT.innerHTML='<div class="notes-empty">'+(dtaskFilter==='meeting'?'Зустрічей поки немає 🙂':'Завдань поки немає 🙂')+'</div>'; return; }
     const sorted=filtered.slice().sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999') || ((a.ts||0)-(b.ts||0)));
+    const rm=rsvpMap();
     listElT.innerHTML=sorted.map(t=>{
       const isDone=t.kind==='task' && dm[t.id];
-      const checkbox=t.kind==='task'
+      const isMeeting=t.kind==='meeting';
+      const checkbox=!isMeeting
         ? `<button type="button" class="dtask-check${isDone?' done':''}" data-dtoggle="${t.id}" aria-label="Відмітити">${isDone?'✓':''}</button>`
         : `<span class="dtask-check" style="border:none;font-size:16px;">📅</span>`;
+      let extra='';
+      if(isMeeting){
+        const chips=(t.tags||[]).map(id=>TAG_BY_ID[id]?`<span class="dtask-chip">${TAG_BY_ID[id].ic} ${TAG_BY_ID[id].lbl}</span>`:'').join('');
+        const going=rm[t.id]||[];
+        const mine=amGoing(t.id);
+        extra=`${chips?`<div class="dtask-chips">${chips}</div>`:''}
+          <div class="dtask-actions">
+            <a href="${icsDataUri(t)}" download="zustrich-${(t.deadline||'').replace(/-/g,'')}.ics">📅 В календар</a>
+            <button type="button" data-tg="${t.id}">✈️ У Телеграм</button>
+            <button type="button" class="rsvp${mine?' going':''}" data-rsvp="${t.id}">${mine?'✓ Я буду':'✋ Я буду'} (${going.length})</button>
+          </div>
+          ${going.length?`<div class="dtask-going">Будуть: <b>${going.map(esc).join(', ')}</b></div>`:''}`;
+      }
       return `<div class="dtask-row${isDone?' done':''}" data-rowdate="${t.deadline||''}">
         ${checkbox}
         <div class="dtask-body">
-          <div class="dtask-text">${t.kind==='meeting'?'<span class="dtask-tag-meeting">зустріч</span>':''}${esc(t.text)}</div>
-          <div class="dtask-meta"><span class="dtask-date">${fmtShortDate(t.deadline)}</span>${t.place?' · 📍 '+esc(t.place):''} · ${esc(t.name||'Дружка')}</div>
+          <div class="dtask-text">${isMeeting?'<span class="dtask-tag-meeting">зустріч</span>':''}${esc(t.text)}</div>
+          <div class="dtask-meta"><span class="dtask-date">${fmtShortDate(t.deadline)}</span>${t.time?' о '+esc(t.time):''}${t.place?' · 📍 '+esc(t.place):''} · ${esc(t.name||'Дружка')}</div>
+          ${extra}
         </div>
       </div>`;
     }).join('');
@@ -757,6 +869,8 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       COMMENTS.add({tab:'druzhky-task-done', taskId, done:!cur, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
         .catch(e=>console.warn('toggle task', e));
     });
+    listElT.querySelectorAll('[data-tg]').forEach(btn=>btn.onclick=()=>{ const t=dtasks.find(x=>x.id===btn.dataset.tg); if(t) copyAndOpenTg(t); });
+    listElT.querySelectorAll('[data-rsvp]').forEach(btn=>btn.onclick=()=>toggleRsvp(btn.dataset.rsvp));
   }
   function bindTasksSync(){
     if(!COMMENTS) return;
@@ -768,6 +882,10 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       dtaskEvents=snap.docs.map(d=>d.data());
       renderDtaskList();
     }, err=>{ console.warn('dtask events snapshot', err); });
+    COMMENTS.where('tab','==','druzhky-meeting-rsvp').onSnapshot(snap=>{
+      dtaskRsvps=snap.docs.map(d=>d.data());
+      renderDtaskList();
+    }, err=>{ console.warn('rsvp snapshot', err); });
   }
   renderMiniCal();
 
@@ -820,8 +938,10 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     try{ localStorage.setItem('druzhky-name', name); }catch(e){}
     dtaskSendBtn.disabled=true; const old=dtaskSendBtn.textContent; dtaskSendBtn.textContent='Додаю…';
     const place=(dtaskPlaceEl.value||'').trim();
-    COMMENTS.add({tab:'druzhky-task', kind:dtaskKind, text, deadline:date, place:(dtaskKind==='meeting'?place:''), name, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
-      .then(()=>{ dtaskTextEl.value=''; dtaskDateEl.value=''; dtaskPlaceEl.value=''; dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; })
+    const time=(dtaskTimeEl.value||'').trim();
+    const isM=dtaskKind==='meeting';
+    COMMENTS.add({tab:'druzhky-task', kind:dtaskKind, text, deadline:date, time:(isM?time:''), place:(isM?place:''), tags:(isM?dtaskSelTags.slice():[]), name, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>{ dtaskTextEl.value=''; dtaskDateEl.value=''; dtaskTimeEl.value=''; dtaskPlaceEl.value=''; dtaskSelTags=[]; if(dtaskTagsEl) dtaskTagsEl.querySelectorAll('.dtag.on').forEach(x=>x.classList.remove('on')); dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; })
       .catch(e=>{ console.warn('add dtask', e); dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; alert('Не вдалося додати, спробуй ще раз'); });
   };
 
