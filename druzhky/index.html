@@ -173,8 +173,6 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dtask-check{border-width:2px;border-radius:50%}
 .mini-cal-day.has-item{border-radius:50%;box-shadow:0 2px 0 rgba(0,0,0,.12)}
 .mini-cal-head button{border-radius:50%;font-weight:700}
-.dc-swatches{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.dc-swatch{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);box-shadow:var(--shadow-sm)}
 .decor-venue-h{font-size:12px;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 4px}
 .decor-venue-h:first-child{margin-top:0}
 .decor-row{font-size:14px;padding:5px 0;border-top:1px solid var(--line)}
@@ -193,90 +191,6 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   <div class="disclaimer">
     Цей текст писала Катя за допомогою ШІ, тому формулювання можуть бути не ідеальними — суть перевірена нею особисто.
     Список ролей і деталі можуть змінюватись ближче до дати, це не завжди найсвіжіша версія — за фінальними деталями пишіть Каті напряму.
-  </div>
-
-  <div class="links-box">
-    <h2>🔗 Корисні посилання для всіх</h2>
-    <ul>
-      <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
-      <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
-      <li>Приєднатись до спільного чату: <a href="https://t.me/+wFqTDj3OYmkyN2Ey" target="_blank" rel="noopener">запрошення в групу</a></li>
-      <li>Гілки спільного чату: <a href="https://t.me/c/3974464697/1" target="_blank" rel="noopener">дженерал</a> · <a href="https://t.me/c/3974464697/8" target="_blank" rel="noopener">балачка</a> · <a href="https://t.me/c/3974464697/5" target="_blank" rel="noopener">зустріч</a> · <a href="https://t.me/c/3974464697/6" target="_blank" rel="noopener">софі</a> · <a href="https://t.me/c/3974464697/7" target="_blank" rel="noopener">хвлв</a> · <a href="https://t.me/c/3974464697/2" target="_blank" rel="noopener">декор що вже є</a> · <a href="https://t.me/c/3974464697/4" target="_blank" rel="noopener">декор референси</a> · <a href="https://t.me/c/3974464697/3" target="_blank" rel="noopener">одяг зачіска</a></li>
-    </ul>
-  </div>
-
-  <div class="schedule-box" id="decorDressBox">
-    <h2>🎨 Дрес-код і декор</h2>
-    <p class="schedule-hint">Тягнеться прямо з нашого спільного застосунку — завжди актуальне, оновлювати вручну не треба.</p>
-    <div id="dcColors"><div class="notes-empty">Завантаження…</div></div>
-    <div id="decorSummary"></div>
-  </div>
-
-  <div class="schedule-box">
-    <h2>🕐 Орієнтовний розклад дня</h2>
-    <p class="schedule-hint">Орієнтовно, часи можуть зміститись на місці. Це скелет для координації —
-    конкретний зміст активностей і сюрпризи навмисно тут не розписані, щоб не спойлерити.</p>
-    <div class="sched-venue">
-      <h3>☀️ Софі (день)</h3>
-      <div class="sched-row"><span class="sched-time">11:30</span><span>Збір гостей</span></div>
-      <div class="sched-row"><span class="sched-time">~13:00</span><span>Церемонія</span></div>
-      <div class="sched-row"><span class="sched-time">~14:00</span><span>Обід</span></div>
-      <div class="sched-row"><span class="sched-time">~14:45</span><span>Танці й спільні активності</span></div>
-      <div class="sched-row"><span class="sched-time">~16:00</span><span>Виїзд до Хвильового</span></div>
-    </div>
-    <div class="sched-venue">
-      <h3>🌙 Хвильовий (вечір)</h3>
-      <div class="sched-row"><span class="sched-time">16:20</span><span>Гості збираються заздалегідь — щоб уже "розігрілись" і зустріли молодих</span></div>
-      <div class="sched-row"><span class="sched-time">~18:00</span><span>Приїзд молодих</span></div>
-      <div class="sched-row"><span class="sched-time">Вечір</span><span>Банкет, тости, перший танець молодих</span></div>
-      <div class="sched-row"><span class="sched-time">Пізніше</span><span>Торт</span></div>
-      <div class="sched-row"><span class="sched-time">Ніч</span><span>Танці, завершення орієнтовно ~23:30</span></div>
-    </div>
-  </div>
-
-  <div class="schedule-box">
-    <h2>🎒 Що взяти з собою в день Х</h2>
-    <p class="schedule-hint">Загальне на всіх — незалежно від ролі. Розписані завдання дивись у своїй картці нижче.</p>
-    <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8">
-      <li>Зручне взуття для довгого дня (можна змінне на вечір)</li>
-      <li>Павербанк — заряд телефону витрачається швидко на фото/відео весь день</li>
-      <li>Сонцезахисний крем — Софі вдень, на вулиці</li>
-      <li>Легка курточка/накидка на вечір — надворі може похолодати</li>
-      <li>Готівка — якщо плануєш щось купувати по дорозі між локаціями</li>
-    </ul>
-  </div>
-
-  <div class="tasks-box">
-    <h2>✅ Спільні завдання та зустрічі</h2>
-    <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
-    <div class="mini-cal" id="dtaskCal"></div>
-    <div class="dtask-form">
-      <div class="dtask-kind-toggle">
-        <button type="button" id="dtaskKindTask" class="active">✅ Завдання</button>
-        <button type="button" id="dtaskKindMeeting">📅 Зустріч</button>
-      </div>
-      <input type="text" id="dtaskName" placeholder="Твоє імʼя" autocomplete="name">
-      <input type="text" id="dtaskText" placeholder="Що саме?">
-      <div class="row2">
-        <input type="date" id="dtaskDate">
-        <input type="text" id="dtaskPlace" placeholder="Місце (для зустрічі)" style="display:none;">
-      </div>
-      <div class="dtask-err" id="dtaskErr">Вкажи дату — без дати не збережеться.</div>
-      <button type="button" class="dtask-submit" id="dtaskSend">Додати</button>
-    </div>
-    <div class="dtask-list" id="dtaskList"><div class="notes-empty">Завантаження…</div></div>
-  </div>
-
-  <div class="notes-box">
-    <h2>✍️ Маєш щось корисне для нас?</h2>
-    <p class="notes-hint">Ідея, фото-знахідка, нагадування, питання — залиш тут, Катя й Дiма це бачать.
-    Список нижче видно всім дружкам (прозоро, не приватно).</p>
-    <div class="notes-form">
-      <input type="text" id="noteName" placeholder="Твоє імʼя" autocomplete="name">
-      <textarea id="noteText" placeholder="Що хочеш повідомити?"></textarea>
-      <button type="button" id="noteSend">Надіслати</button>
-    </div>
-    <div class="notes-list" id="notesList"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
   <table class="roles-table">
@@ -409,6 +323,89 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       <div class="contact"><span class="tbd">деталі уточнюються</span></div>
     </div>
   </section>
+
+  <div class="tasks-box">
+    <h2>✅ Спільні завдання та зустрічі</h2>
+    <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
+    <div class="mini-cal" id="dtaskCal"></div>
+    <div class="dtask-form">
+      <div class="dtask-kind-toggle">
+        <button type="button" id="dtaskKindTask" class="active">✅ Завдання</button>
+        <button type="button" id="dtaskKindMeeting">📅 Зустріч</button>
+      </div>
+      <input type="text" id="dtaskName" placeholder="Твоє імʼя" autocomplete="name">
+      <input type="text" id="dtaskText" placeholder="Що саме?">
+      <div class="row2">
+        <input type="date" id="dtaskDate">
+        <input type="text" id="dtaskPlace" placeholder="Місце (для зустрічі)" style="display:none;">
+      </div>
+      <div class="dtask-err" id="dtaskErr">Вкажи дату — без дати не збережеться.</div>
+      <button type="button" class="dtask-submit" id="dtaskSend">Додати</button>
+    </div>
+    <div class="dtask-list" id="dtaskList"><div class="notes-empty">Завантаження…</div></div>
+  </div>
+
+  <div class="schedule-box">
+    <h2>🕐 Орієнтовний розклад дня</h2>
+    <p class="schedule-hint">Орієнтовно, часи можуть зміститись на місці. Це скелет для координації —
+    конкретний зміст активностей і сюрпризи навмисно тут не розписані, щоб не спойлерити.</p>
+    <div class="sched-venue">
+      <h3>☀️ Софі (день)</h3>
+      <div class="sched-row"><span class="sched-time">11:30</span><span>Збір гостей</span></div>
+      <div class="sched-row"><span class="sched-time">~13:00</span><span>Церемонія</span></div>
+      <div class="sched-row"><span class="sched-time">~14:00</span><span>Обід</span></div>
+      <div class="sched-row"><span class="sched-time">~14:45</span><span>Танці й спільні активності</span></div>
+      <div class="sched-row"><span class="sched-time">~16:00</span><span>Виїзд до Хвильового</span></div>
+    </div>
+    <div class="sched-venue">
+      <h3>🌙 Хвильовий (вечір)</h3>
+      <div class="sched-row"><span class="sched-time">16:20</span><span>Гості збираються заздалегідь — щоб уже "розігрілись" і зустріли молодих</span></div>
+      <div class="sched-row"><span class="sched-time">~18:00</span><span>Приїзд молодих</span></div>
+      <div class="sched-row"><span class="sched-time">Вечір</span><span>Банкет, тости, перший танець молодих</span></div>
+      <div class="sched-row"><span class="sched-time">Пізніше</span><span>Торт</span></div>
+      <div class="sched-row"><span class="sched-time">Ніч</span><span>Танці, завершення орієнтовно ~23:30</span></div>
+    </div>
+  </div>
+
+  <div class="schedule-box">
+    <h2>🎒 Що взяти з собою в день Х</h2>
+    <p class="schedule-hint">Загальне на всіх — незалежно від ролі. Розписані завдання дивись у своїй картці нижче.</p>
+    <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8">
+      <li>Зручне взуття для довгого дня (можна змінне на вечір)</li>
+      <li>Павербанк — заряд телефону витрачається швидко на фото/відео весь день</li>
+      <li>Сонцезахисний крем — Софі вдень, на вулиці</li>
+      <li>Легка курточка/накидка на вечір — надворі може похолодати</li>
+      <li>Готівка — якщо плануєш щось купувати по дорозі між локаціями</li>
+    </ul>
+  </div>
+
+  <div class="schedule-box" id="decorDressBox">
+    <h2>🎨 Декор</h2>
+    <p class="schedule-hint">Тягнеться прямо з нашого спільного застосунку — завжди актуальне, оновлювати вручну не треба.</p>
+    <div id="decorSummary"><div class="notes-empty">Завантаження…</div></div>
+  </div>
+
+  <div class="links-box">
+    <h2>🔗 Корисні посилання для всіх</h2>
+    <ul>
+      <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
+      <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
+      <li>Приєднатись до спільного чату: <a href="https://t.me/+wFqTDj3OYmkyN2Ey" target="_blank" rel="noopener">запрошення в групу</a></li>
+      <li>Гілки спільного чату: <a href="https://t.me/c/3974464697/1" target="_blank" rel="noopener">дженерал</a> · <a href="https://t.me/c/3974464697/8" target="_blank" rel="noopener">балачка</a> · <a href="https://t.me/c/3974464697/5" target="_blank" rel="noopener">зустріч</a> · <a href="https://t.me/c/3974464697/6" target="_blank" rel="noopener">софі</a> · <a href="https://t.me/c/3974464697/7" target="_blank" rel="noopener">хвлв</a> · <a href="https://t.me/c/3974464697/2" target="_blank" rel="noopener">декор що вже є</a> · <a href="https://t.me/c/3974464697/4" target="_blank" rel="noopener">декор референси</a> · <a href="https://t.me/c/3974464697/3" target="_blank" rel="noopener">одяг зачіска</a></li>
+    </ul>
+  </div>
+
+  <div class="notes-box">
+    <h2>✍️ Маєш щось корисне для нас?</h2>
+    <p class="notes-hint">Ідея, фото-знахідка, нагадування, питання — залиш тут, Катя й Дiма це бачать.
+    Список нижче видно всім дружкам (прозоро, не приватно).</p>
+    <div class="notes-form">
+      <input type="text" id="noteName" placeholder="Твоє імʼя" autocomplete="name">
+      <textarea id="noteText" placeholder="Що хочеш повідомити?"></textarea>
+      <button type="button" id="noteSend">Надіслати</button>
+    </div>
+    <div class="notes-list" id="notesList"><div class="notes-empty">Завантаження…</div></div>
+  </div>
 
   <footer>з любов'ю, Катя & Діма · 06.09.2026</footer>
 </div>
@@ -585,17 +582,14 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   }
   renderMiniCal();
 
-  /* ════ ДРЕС-КОД І ДЕКОР — ЖИВИЙ READ-ONLY СИНК З ОСНОВНОГО ЗАСТОСУНКУ ════
+  /* ════ ДЕКОР — ЖИВИЙ READ-ONLY СИНК З ОСНОВНОГО ЗАСТОСУНКУ ════
      Читаємо ТОЙ САМИЙ документ 'wedding/state', що й основний застосунок — лише читання,
      жодного нового Firestore-правила не потрібно: анонімний гостьовий вхід в основному
      застосунку (?guest) уже читає цей самий документ цим самим шляхом, отже правило вже
      дозволяє анонімне читання. Важкі картинки (base64) свідомо НЕ підтягуємо сюди — лише
-     легкі текстові поля (кольори, назви, статус), щоб не роздувати трафік і код. */
-  function renderDressColors(colors){
-    const el=document.getElementById('dcColors'); if(!el) return;
-    if(!colors || !colors.length){ el.innerHTML='<div class="notes-empty">Кольори дрес-коду ще не обрано.</div>'; return; }
-    el.innerHTML='<div class="dc-swatches">'+colors.map(c=>`<span class="dc-swatch" style="background:${esc(c)}" title="${esc(c)}"></span>`).join('')+'</div>';
-  }
+     легкі текстові поля (назви, статус), щоб не роздувати трафік і код. Кольори дрес-коду
+     свідомо НЕ показуємо тут — вони ще не фінальні, показувати неактуальні кольори гірше,
+     ніж не показувати нічого. */
   function renderDecorSummary(decorArr){
     const el=document.getElementById('decorSummary'); if(!el) return;
     const items=(Array.isArray(decorArr)?decorArr:[]).filter(d=>d && d.cat!=='cake');
@@ -617,11 +611,10 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     try{
       firebase.firestore().collection('wedding').doc('state').onSnapshot(snap=>{
         const d=snap.data()||{};
-        renderDressColors(d.dresscode && d.dresscode.colors);
         renderDecorSummary(d.decor);
       }, err=>{
         console.warn('main doc snapshot', err);
-        const dc=document.getElementById('dcColors'); if(dc) dc.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>';
+        const el=document.getElementById('decorSummary'); if(el) el.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>';
       });
     }catch(e){ console.warn('main doc read', e); }
   }
