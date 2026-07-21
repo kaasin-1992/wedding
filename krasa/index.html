@@ -102,6 +102,72 @@ footer a{color:var(--terra)}
 .diary-row:first-child{border-top:none}
 .diary-row .drdel{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px}
 .diary-empty{font-size:13.5px;color:var(--muted);font-style:italic}
+/* ── вкладки ── */
+.tabbar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -18px 20px;padding:0 18px 4px;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tabbar button{flex:0 0 auto;font-family:var(--sans);font-weight:700;font-size:13.5px;white-space:nowrap;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.tabbar button.active{background:var(--terra);border-color:var(--terra);color:#fff}
+.kpanel[hidden]{display:none}
+/* ── календар-планер ── */
+.kcal{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:14px 16px;margin-bottom:16px}
+.kcal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kcal-head button{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer}
+.kcal-head span{font-size:14px;font-weight:700;text-transform:capitalize}
+.kcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.kcal-dow{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:3px}
+.kcal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;border-radius:9px;position:relative;color:var(--text);cursor:pointer;border:1.5px solid transparent}
+.kcal-day.pad{visibility:hidden}
+.kcal-day.today{outline:1.5px solid var(--terra)}
+.kcal-day.sel{border-color:var(--terra);background:var(--terra-dim)}
+.kcal-day .dots{position:absolute;bottom:4px;display:flex;gap:2px}
+.kcal-day .dots i{width:5px;height:5px;border-radius:50%}
+.plan-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.plan-form select,.plan-form input{font-family:var(--sans);font-size:14px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.plan-form input[type=text]{flex:1;min-width:130px}
+.plan-form input[type=date]{color-scheme:light}
+@media (prefers-color-scheme:dark){.plan-form input[type=date]{color-scheme:dark}}
+:root[data-theme="dark"] .plan-form input[type=date]{color-scheme:dark}
+:root[data-theme="light"] .plan-form input[type=date]{color-scheme:light}
+.plan-form button{font-family:var(--sans);font-weight:700;font-size:13px;padding:9px 16px;border-radius:999px;border:none;background:var(--terra);color:#fff;cursor:pointer}
+.plan-list{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.plan-daygrp{margin-top:12px}
+.plan-daygrp:first-child{margin-top:0}
+.plan-dayh{font-size:12.5px;font-weight:700;color:var(--terra);margin-bottom:4px}
+.plan-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.plan-row:first-of-type{border-top:none}
+.plan-row .pdel{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px}
+.plan-cat{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+/* ── сон ── */
+.sleep-quick{display:flex;gap:10px;margin-bottom:14px}
+.sleep-quick button{flex:1;font-family:var(--sans);font-weight:700;font-size:14px;padding:14px 10px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;box-shadow:var(--shadow-sm)}
+.sleep-quick button:active{transform:scale(.97)}
+.sleep-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.sleep-form label{font-size:12.5px;color:var(--muted)}
+.sleep-form input{font-family:var(--sans);font-size:14px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);color-scheme:light}
+@media (prefers-color-scheme:dark){.sleep-form input{color-scheme:dark}}
+:root[data-theme="dark"] .sleep-form input{color-scheme:dark}
+:root[data-theme="light"] .sleep-form input{color-scheme:light}
+.sleep-form button{font-family:var(--sans);font-weight:700;font-size:13px;padding:9px 16px;border-radius:999px;border:none;background:var(--terra);color:#fff;cursor:pointer}
+.sleep-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.sleep-row:first-of-type{border-top:none}
+.sleep-row .dur{margin-left:auto;font-weight:700;color:var(--terra);font-variant-numeric:tabular-nums}
+.sleep-row .sdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px}
+/* ── добавки ── */
+.supp{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--line)}
+.supp:first-of-type{border-top:none}
+.supp input[type=checkbox]{width:20px;height:20px;flex:0 0 auto;margin-top:2px;accent-color:var(--done)}
+.supp-b{flex:1}
+.supp-b .sn{font-weight:700;font-size:15px}
+.supp-b .sn .tag{font-size:11px;font-weight:700;color:var(--done);background:var(--done-dim);border-radius:999px;padding:1px 8px;margin-left:6px}
+.supp-b .sd{font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.55}
+/* ── водіння ── */
+.drive-counter{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:22px 18px;text-align:center;margin-bottom:16px}
+.drive-num{font-family:var(--serif);font-size:52px;font-weight:800;color:var(--terra);line-height:1}
+.drive-lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.drive-btns{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.drive-btns button{font-family:var(--sans);font-weight:700;font-size:15px;padding:11px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer}
+.drive-btns button.plus{background:var(--terra);border-color:var(--terra);color:#fff}
+.drive-btns button:active{transform:scale(.96)}
 </style>
 </head>
 <body>
@@ -113,6 +179,33 @@ footer a{color:var(--terra)}
     <p>План підготовки — покроково, без тиску</p>
   </header>
 
+  <div class="tabbar" id="tabbar">
+    <button type="button" data-ktab="plan" class="active">📅 План</button>
+    <button type="button" data-ktab="care">💄 Догляд</button>
+    <button type="button" data-ktab="sleep">😴 Сон</button>
+    <button type="button" data-ktab="supp">💊 Добавки</button>
+    <button type="button" data-ktab="drive">🚗 Водіння</button>
+    <button type="button" data-ktab="diary">🌿 Щоденник</button>
+  </div>
+
+  <div class="kpanel" data-kpanel="plan">
+  <div class="grp-label" style="margin-top:0">📅 Мій календар планів</div>
+  <div class="kcal"><div id="planCal"></div></div>
+  <div class="plan-form">
+    <select id="planCat">
+      <option value="sport">🏃 Спорт</option>
+      <option value="teeth">🦷 Зуби</option>
+      <option value="face">🧖 Фейсбілдінг</option>
+      <option value="drive">🚗 Водіння</option>
+      <option value="other">✨ Інше</option>
+    </select>
+    <input type="date" id="planDate">
+    <input type="text" id="planNote" placeholder="Що саме (необовʼязково)…">
+    <button type="button" id="planAdd">Додати</button>
+  </div>
+  <div class="plan-list" id="planList"></div>
+
+  <div class="grp-label" style="margin-top:24px">🗓 Тижневий план підготовки</div>
   <div class="intro">
     Кожен тиждень має пункти. Відмічай, що встигла — <b>прогрес зберігається в цьому браузері</b>.
     Пропустила день чи тиждень — просто продовжуй з того місця, де зупинилась, без вини за паузу.
@@ -125,7 +218,10 @@ footer a{color:var(--terra)}
 
   <div id="weeks"></div>
 
-  <details class="week" id="priorityBox">
+  </div><!-- /plan -->
+
+  <div class="kpanel" data-kpanel="care" hidden>
+  <details class="week" id="priorityBox" open>
     <summary>🎯 Найефективніше за пріоритетом<span class="wk-chev">›</span></summary>
     <div class="week-body" id="priorityBody"></div>
   </details>
@@ -159,7 +255,49 @@ footer a{color:var(--terra)}
     <summary>🍽 Рецепти — їжа й доглядові маски<span class="wk-chev">›</span></summary>
     <div class="week-body" id="recipesBody"></div>
   </details>
+  </div><!-- /care -->
 
+  <div class="kpanel" data-kpanel="sleep" hidden>
+    <div class="grp-label" style="margin-top:0">😴 Трекер сну</div>
+    <div class="sleep-quick">
+      <button type="button" id="sleepNowAsleep">😴 Заснула зараз</button>
+      <button type="button" id="sleepNowWake">☀️ Прокинулась зараз</button>
+    </div>
+    <div class="callout" id="sleepPending" style="display:none"></div>
+    <div class="sleep-form">
+      <label>або вручну:</label>
+      <input type="date" id="sleepDate" aria-label="Дата">
+      <input type="time" id="sleepAsleep" aria-label="Заснула" title="Заснула">
+      <input type="time" id="sleepWake" aria-label="Прокинулась" title="Прокинулась">
+      <button type="button" id="sleepAddManual">Додати</button>
+    </div>
+    <div class="diary-stats" id="sleepStats"></div>
+    <div class="sleep-list" id="sleepList"></div>
+  </div>
+
+  <div class="kpanel" data-kpanel="supp" hidden>
+    <div class="grp-label" style="margin-top:0">💊 Добавки — що варто розглянути</div>
+    <div id="suppList"></div>
+    <div class="callout" style="margin-top:14px">Це не медична порада — перед новими добавками звір з лікарем, особливо залізо (тільки за аналізом). І не починай багато нового одразу перед весіллям: додавай по одному, щоб бачити реакцію. Галочка = «приймаю» (для себе).</div>
+  </div>
+
+  <div class="kpanel" data-kpanel="drive" hidden>
+    <div class="grp-label" style="margin-top:0">🚗 Години за кермом</div>
+    <div class="drive-counter">
+      <div class="drive-num" id="driveNum">0</div>
+      <div class="drive-lbl">годин напрактиковано</div>
+      <div class="drive-btns">
+        <button type="button" data-dinc="-1">−1</button>
+        <button type="button" data-dinc="-0.5">−½</button>
+        <button type="button" class="plus" data-dinc="0.5">+½</button>
+        <button type="button" class="plus" data-dinc="1">+1</button>
+        <button type="button" class="plus" data-dinc="2">+2</button>
+      </div>
+    </div>
+    <div class="callout gold">Тисни «+» після кожного заняття з водіння. Рахунок зберігається в цьому браузері. Нагадування: іспит з водіння — дедлайн 24.08.</div>
+  </div>
+
+  <div class="kpanel" data-kpanel="diary" hidden>
   <details class="week">
     <summary>🧠 Коли хочеться травки — АуРДАГ + тривоги<span class="wk-chev">›</span></summary>
     <div class="week-body" id="cravingBody"></div>
@@ -180,8 +318,9 @@ footer a{color:var(--terra)}
       <div class="diary-list" id="diaryList"></div>
     </div>
   </details>
+  </div><!-- /diary -->
 
-  <footer>з любов'ю до себе · <a href="../">до застосунку</a></footer>
+  <footer>з любов'ю до себе · <a href="../">до застосунку</a> · <a href="../menu/">усі сторінки</a></footer>
 </div>
 
 <script>
@@ -467,6 +606,148 @@ document.getElementById('diaryAdd').onclick=()=>{
   document.getElementById('diaryNote').value='';
   renderDiary();
 };
+
+/* ── вкладки ── */
+(function(){
+  const tabs=document.querySelectorAll('#tabbar button');
+  const panels=document.querySelectorAll('.kpanel');
+  function show(t){
+    tabs.forEach(x=>x.classList.toggle('active',x.dataset.ktab===t));
+    panels.forEach(p=>{ p.hidden = p.dataset.kpanel!==t; });
+  }
+  tabs.forEach(b=>b.onclick=()=>{ show(b.dataset.ktab); try{localStorage.setItem('krasa-tab',b.dataset.ktab);}catch(e){} window.scrollTo({top:0,behavior:'smooth'}); });
+  try{ const last=localStorage.getItem('krasa-tab'); if(last && [...tabs].some(x=>x.dataset.ktab===last)) show(last); }catch(e){}
+})();
+
+function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ── календар-планер ── */
+const PLAN_CATS={sport:{ic:'🏃',lbl:'Спорт',c:'#5C93A8'},teeth:{ic:'🦷',lbl:'Зуби',c:'#B58A2E'},face:{ic:'🧖',lbl:'Фейсбілдінг',c:'#A8505F'},drive:{ic:'🚗',lbl:'Водіння',c:'#4E8A6B'},other:{ic:'✨',lbl:'Інше',c:'#6E7484'}};
+function loadPlans(){ try{return JSON.parse(localStorage.getItem('krasa-plans')||'[]');}catch(e){return[];} }
+function savePlans(p){ try{localStorage.setItem('krasa-plans',JSON.stringify(p));}catch(e){} }
+let plans=loadPlans(); let planViewOffset=0, planSelDate=null;
+function renderPlanCal(){
+  const el=document.getElementById('planCal'); if(!el) return;
+  const now=new Date(); const base=new Date(now.getFullYear(),now.getMonth()+planViewOffset,1);
+  const y=base.getFullYear(), m=base.getMonth();
+  const startDow=(new Date(y,m,1).getDay()+6)%7;
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const todayIso=isoDate(now);
+  const byDay={}; plans.forEach(p=>{ (byDay[p.date]=byDay[p.date]||[]).push(p); });
+  const monthLbl=base.toLocaleDateString('uk-UA',{month:'long',year:'numeric'});
+  let grid='';
+  ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].forEach(d=>grid+=`<div class="kcal-dow">${d}</div>`);
+  for(let i=0;i<startDow;i++) grid+='<div class="kcal-day pad"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const items=byDay[iso]||[];
+    const dots=items.slice(0,4).map(p=>`<i style="background:${PLAN_CATS[p.cat]?PLAN_CATS[p.cat].c:'#888'}"></i>`).join('');
+    grid+=`<div class="kcal-day${iso===todayIso?' today':''}${iso===planSelDate?' sel':''}" data-pday="${iso}">${d}${dots?`<span class="dots">${dots}</span>`:''}</div>`;
+  }
+  el.innerHTML=`<div class="kcal-head"><button type="button" id="planPrev">‹</button><span>${monthLbl}</span><button type="button" id="planNext">›</button></div><div class="kcal-grid">${grid}</div>`;
+  document.getElementById('planPrev').onclick=()=>{planViewOffset--;renderPlanCal();};
+  document.getElementById('planNext').onclick=()=>{planViewOffset++;renderPlanCal();};
+  el.querySelectorAll('[data-pday]').forEach(c=>c.onclick=()=>{ planSelDate=c.dataset.pday; const di=document.getElementById('planDate'); if(di) di.value=planSelDate; renderPlanCal(); });
+}
+function renderPlanList(){
+  const el=document.getElementById('planList'); if(!el) return;
+  if(!plans.length){ el.innerHTML='<div class="diary-empty">Поки нічого не заплановано. Обери день у календарі й додай 🙂</div>'; return; }
+  const byDay={}; plans.forEach(p=>{ (byDay[p.date]=byDay[p.date]||[]).push(p); });
+  el.innerHTML=Object.keys(byDay).sort().map(date=>{
+    const dObj=new Date(date+'T00:00:00');
+    const lbl=dObj.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'long'});
+    return `<div class="plan-daygrp"><div class="plan-dayh">${lbl}</div>`+byDay[date].sort((a,b)=>a.ts-b.ts).map(p=>{
+      const cat=PLAN_CATS[p.cat]||PLAN_CATS.other;
+      return `<div class="plan-row"><span class="plan-cat" style="background:${cat.c}22;color:${cat.c}">${cat.ic} ${cat.lbl}</span><span>${p.note?esc(p.note):''}</span><button class="pdel" data-plandel="${p.id}">✕</button></div>`;
+    }).join('')+`</div>`;
+  }).join('');
+  el.querySelectorAll('[data-plandel]').forEach(b=>b.onclick=()=>{ plans=plans.filter(x=>x.id!==b.dataset.plandel); savePlans(plans); renderPlanCal(); renderPlanList(); });
+}
+{ const da=document.getElementById('planDate'); if(da) da.value=isoDate(new Date()); }
+{ const pa=document.getElementById('planAdd'); if(pa) pa.onclick=()=>{
+  const cat=document.getElementById('planCat').value;
+  const date=document.getElementById('planDate').value;
+  const note=document.getElementById('planNote').value.trim();
+  if(!date){ alert('Обери дату'); return; }
+  plans.push({id:'p'+Date.now(),cat,date,note,ts:Date.now()});
+  savePlans(plans); document.getElementById('planNote').value='';
+  renderPlanCal(); renderPlanList();
+}; }
+renderPlanCal(); renderPlanList();
+
+/* ── сон ── */
+function loadSleep(){ try{return JSON.parse(localStorage.getItem('krasa-sleep')||'[]');}catch(e){return[];} }
+function saveSleep(s){ try{localStorage.setItem('krasa-sleep',JSON.stringify(s));}catch(e){} }
+let sleep=loadSleep();
+function hhmm(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtDur(h){ const H=Math.floor(h), M=Math.round((h-H)*60); return H+' год'+(M?' '+M+' хв':''); }
+function renderSleepPending(){
+  const el=document.getElementById('sleepPending'); if(!el) return;
+  let pend=null; try{ pend=JSON.parse(localStorage.getItem('krasa-sleep-pending')||'null'); }catch(e){}
+  if(pend){ el.style.display='block'; el.innerHTML=`😴 Заснула о <b>${hhmm(new Date(pend.ts))}</b> — тисни «Прокинулась зараз», коли встанеш.`; }
+  else { el.style.display='none'; el.innerHTML=''; }
+}
+function renderSleep(){
+  const el=document.getElementById('sleepList'); const st=document.getElementById('sleepStats');
+  const sorted=[...sleep].sort((a,b)=>b.ts-a.ts);
+  if(st){ const last=sorted[0]; st.innerHTML=`<div class="diary-stat"><b>${last?fmtDur(last.hours):'—'}</b><span>останній сон</span></div><div class="diary-stat"><b>${sleep.length}</b><span>записів</span></div>`; }
+  if(!el) return;
+  if(!sorted.length){ el.innerHTML='<div class="diary-empty">Поки нічого. Тисни «Заснула»/«Прокинулась» або додай вручну.</div>'; return; }
+  el.innerHTML=sorted.map(s=>{
+    const d=new Date(s.ts); const dateStr=d.toLocaleDateString('uk-UA',{day:'numeric',month:'short'});
+    return `<div class="sleep-row"><span>😴 ${s.asleep} → ☀️ ${s.wake}</span><span class="dur">${fmtDur(s.hours)}</span><span style="color:var(--muted);font-size:12px">${dateStr}</span><button class="sdel" data-sleepdel="${s.id}">✕</button></div>`;
+  }).join('');
+  el.querySelectorAll('[data-sleepdel]').forEach(b=>b.onclick=()=>{ sleep=sleep.filter(x=>x.id!==b.dataset.sleepdel); saveSleep(sleep); renderSleep(); });
+}
+function addSleep(asleepTs,wakeTs){
+  let ms=wakeTs-asleepTs; if(ms<0) ms+=86400000; const hours=ms/3600000;
+  sleep.push({id:'s'+Date.now(),asleep:hhmm(new Date(asleepTs)),wake:hhmm(new Date(wakeTs)),hours,ts:wakeTs});
+  saveSleep(sleep); renderSleep();
+}
+{ const b=document.getElementById('sleepNowAsleep'); if(b) b.onclick=()=>{ try{localStorage.setItem('krasa-sleep-pending',JSON.stringify({ts:Date.now()}));}catch(e){} renderSleepPending(); }; }
+{ const b=document.getElementById('sleepNowWake'); if(b) b.onclick=()=>{
+  let pend=null; try{ pend=JSON.parse(localStorage.getItem('krasa-sleep-pending')||'null'); }catch(e){}
+  if(!pend){ alert('Спершу тисни «Заснула зараз», коли лягаєш 🙂'); return; }
+  addSleep(pend.ts, Date.now());
+  try{ localStorage.removeItem('krasa-sleep-pending'); }catch(e){} renderSleepPending();
+}; }
+{ const b=document.getElementById('sleepAddManual'); if(b) b.onclick=()=>{
+  const date=document.getElementById('sleepDate').value || isoDate(new Date());
+  const a=document.getElementById('sleepAsleep').value, w=document.getElementById('sleepWake').value;
+  if(!a||!w){ alert('Впиши час «заснула» і «прокинулась»'); return; }
+  const asleepTs=new Date(date+'T'+a+':00').getTime();
+  let wakeTs=new Date(date+'T'+w+':00').getTime(); if(wakeTs<=asleepTs) wakeTs+=86400000;
+  addSleep(asleepTs,wakeTs);
+  document.getElementById('sleepAsleep').value=''; document.getElementById('sleepWake').value='';
+}; }
+{ const sd=document.getElementById('sleepDate'); if(sd) sd.value=isoDate(new Date()); }
+renderSleepPending(); renderSleep();
+
+/* ── добавки ── */
+const SUPPLEMENTS=[
+  {id:'creatine',n:'Креатин моногідрат',taken:true,d:'Ти вже пʼєш. Безпечно, добре для енергії й тонусу. Нюанс перед весіллям: може трохи затримувати воду в мʼязах (це НЕ жир) — якщо хвилюєшся за «набряклість» на фото, за 5-7 днів до Х просто не збільшуй дозу (різко кидати не треба).'},
+  {id:'omega',n:'Омега-3 (риб’ячий жир)',d:'Шкіра, волосся, менше запалень, настрій. Один з небагатьох, що реально впливає на тонус шкіри за кілька тижнів регулярно.'},
+  {id:'d3',n:'Вітамін D3 (+ K2)',d:'Більшість українців у дефіциті. Енергія, настрій, імунітет, шкіра. Ідеально — за аналізом, але профілактична доза безпечна.'},
+  {id:'mag',n:'Магній (гліцинат)',d:'Сон, тривожність, мʼязові спазми. Гліцинат — мʼяка форма, добре перед сном. Доречно і для сну, і для нервів.'},
+  {id:'collagen',n:'Колаген + вітамін C',d:'Шкіра/волосся/нігті. Докази помірні, але безпечно; багато хто відчуває різницю за 6-8 тижнів. Вітамін C поруч обовʼязково.'},
+  {id:'zinc',n:'Цинк',d:'Шкіра (особливо якщо буває акне), імунітет, загоєння. Не пий довго у високій дозі — краще курсом.'},
+  {id:'iron',n:'Залізо / феритин',d:'⚠️ ТІЛЬКИ за аналізом (феритин у крові). Наосліп не пити. Але якщо низький — це прямо про енергію, колір обличчя й випадіння волосся.'},
+];
+function loadSupp(){ try{return JSON.parse(localStorage.getItem('krasa-supp')||'{}');}catch(e){return{};} }
+function saveSupp(s){ try{localStorage.setItem('krasa-supp',JSON.stringify(s));}catch(e){} }
+let suppState=loadSupp();
+SUPPLEMENTS.forEach(s=>{ if(suppState[s.id]===undefined && s.taken) suppState[s.id]=true; });
+{ const el=document.getElementById('suppList'); if(el){
+  el.innerHTML=SUPPLEMENTS.map(s=>`<div class="supp"><input type="checkbox" id="supp_${s.id}" ${suppState[s.id]?'checked':''}><div class="supp-b"><div class="sn">${esc(s.n)}${s.taken?'<span class="tag">вже пʼю</span>':''}</div><div class="sd">${s.d}</div></div></div>`).join('');
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{ suppState[cb.id.replace('supp_','')]=cb.checked; saveSupp(suppState); });
+} }
+
+/* ── водіння: години ── */
+function loadDriveH(){ try{return parseFloat(localStorage.getItem('krasa-drive-hours')||'0')||0;}catch(e){return 0;} }
+let driveH=loadDriveH();
+function renderDrive(){ const el=document.getElementById('driveNum'); if(el) el.textContent=(Math.round(driveH*10)/10).toString().replace('.',','); }
+document.querySelectorAll('[data-dinc]').forEach(b=>b.onclick=()=>{ driveH=Math.max(0, Math.round((driveH+parseFloat(b.dataset.dinc))*10)/10); try{localStorage.setItem('krasa-drive-hours',String(driveH));}catch(e){} renderDrive(); });
+renderDrive();
 
 (function(){
   const btn=document.getElementById('themeToggle');
