@@ -2589,7 +2589,12 @@ function renderTasks(){
     (groups[key]=groups[key]||[]).push(t);
   });
 
-  const tl=document.getElementById('timeline'); tl.innerHTML='';
+  const tl=document.getElementById('timeline');
+  // не рвемо фокус/клавіатуру, поки вона вводить дедлайн — той самий інпут (openTaskDeadlineEdit)
+  // живе прямо всередині #timeline, і повне innerHTML='' на кожен фоновий Firestore-снапшот
+  // знищувало б поле саме в момент набору цифр, "з'їдаючи" натискання клавіш
+  if(isTextEntryFocused(tl)) return;
+  tl.innerHTML='';
   Object.entries(groups).forEach(([month,mt])=>{
     const grp=document.createElement('div');
     const lbl=document.createElement('div'); lbl.className='month-lbl';
