@@ -74,6 +74,11 @@ header .sub{font-size:19px;color:var(--muted);margin:0}
   margin:34px 12px 6px;font-weight:600}
 footer{text-align:center;color:var(--muted);font-size:16px;margin-top:22px}
 .tbd{font-style:italic;color:var(--muted)}
+.decor-venue-h{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--blush);margin:16px 0 6px}
+.decor-venue-h:first-child{margin-top:6px}
+.decor-row{padding:9px 0;border-top:1px solid var(--line);font-size:18px}
+.decor-row:first-of-type{border-top:none}
+.decor-row .st{color:var(--gold);font-weight:600}
 </style>
 </head>
 <body>
@@ -142,6 +147,13 @@ footer{text-align:center;color:var(--muted);font-size:16px;margin-top:22px}
   </div>
 
   <div class="card">
+    <h2><span class="ic">🎨</span>Декор — як усе виглядатиме</h2>
+    <p style="margin:0 0 6px;color:var(--muted)">Ідеї оформлення обох локацій — тягнеться з нашого планера, тож завжди актуальне:</p>
+    <div id="decorSummary"><p class="tbd">Завантаження…</p></div>
+    <div class="note-soft">Це орієнтир — деталі ще додаються. Загальний настрій: український, рукотворний, тепло й зі смаком 🌾</div>
+  </div>
+
+  <div class="card">
     <h2><span class="ic">📞</span>Кому телефонувати</h2>
     <p style="margin:0 0 8px;color:var(--muted)">Якщо в день весілля щось незрозуміло — не соромтесь питати:</p>
     <div class="contact-line">
@@ -151,14 +163,12 @@ footer{text-align:center;color:var(--muted);font-size:16px;margin-top:22px}
     <div class="contact-line">
       <span class="who">Марія</span>
       <span class="role">координаторка на Софі (день) — усе про церемонію, розсадку, час</span>
-      <a href="https://t.me/mariiyka_ua" target="_blank" rel="noopener">Написати в Telegram →</a>
     </div>
     <div class="contact-line">
       <span class="who">Аліса</span>
       <span class="role">координаторка на Хвильовому (вечір) — усе про святкування</span>
-      <a href="https://t.me/AlisaKisaa" target="_blank" rel="noopener">Написати в Telegram →</a>
     </div>
-    <div class="note-soft">Катя допише сюди номери телефонів, якщо буде зручніше дзвонити.</div>
+    <div class="note-soft">Катя допише сюди номери телефонів координаторок, щоб було зручно подзвонити.</div>
   </div>
 
   <div class="card">
@@ -174,5 +184,49 @@ footer{text-align:center;color:var(--muted);font-size:16px;margin-top:22px}
   <div class="closing">Дякуємо вам за все.<br>Цей день — і ваш теж. 💐</div>
   <footer>Катя &amp; Діма · 6 вересня 2026</footer>
 </div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* Живий read-only декор: читаємо ТОЙ САМИЙ документ wedding/state, що й планер (лише текстові
+   поля — назви/статус/локація, без важких картинок), тим самим анонімним шляхом, що вже
+   використовує гостьовий режим планера й сторінка дружок. Жодних кнопок для мам — тільки показ. */
+(function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtHp8tsubQ_v4iSi2zkfCZTgKKMjm2VGA",
+    authDomain: "wedding-6e47f.firebaseapp.com",
+    projectId: "wedding-6e47f",
+    storageBucket: "wedding-6e47f.firebasestorage.app",
+    messagingSenderId: "87093437583",
+    appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
+  };
+  const el=document.getElementById('decorSummary');
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function renderDecor(decorArr){
+    if(!el) return;
+    const items=(Array.isArray(decorArr)?decorArr:[]).filter(d=>d && d.cat!=='cake');
+    if(!items.length){ el.innerHTML='<p class="tbd">Декор ще додається — зазирніть трохи згодом 🙂</p>'; return; }
+    const groups={sofia:[],wave:[]};
+    items.forEach(d=>{ (groups[d.venue==='wave'?'wave':'sofia']).push(d); });
+    const row=d=>{
+      const status=d.taken?'✅ Беремо':'💭 Розглядаємо';
+      const place=d.place?` · ${esc(d.place)}`:'';
+      return `<div class="decor-row">${esc(d.title||'Декор')} — <span class="st">${status}</span>${place}</div>`;
+    };
+    el.innerHTML=[
+      groups.sofia.length?`<div class="decor-venue-h">☀️ Софі</div>${groups.sofia.map(row).join('')}`:'',
+      groups.wave.length?`<div class="decor-venue-h">🌙 Хвильовий</div>${groups.wave.map(row).join('')}`:''
+    ].join('') || '<p class="tbd">Декор ще додається 🙂</p>';
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    firebase.auth().signInAnonymously().then(()=>{
+      firebase.firestore().collection('wedding').doc('state').onSnapshot(snap=>{
+        renderDecor((snap.data()||{}).decor);
+      }, err=>{ console.warn('decor', err); if(el) el.innerHTML='<p class="tbd">Не вдалося завантажити декор — оновіть сторінку.</p>'; });
+    }).catch(err=>{ console.warn('anon', err); if(el) el.innerHTML='<p class="tbd">Декор зʼявиться трохи згодом.</p>'; });
+  }catch(e){ console.warn('fb init', e); if(el) el.innerHTML='<p class="tbd">Декор зʼявиться трохи згодом.</p>'; }
+})();
+</script>
 </body>
 </html>
