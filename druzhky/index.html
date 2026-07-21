@@ -6,6 +6,13 @@
 <title>Дружки — Катя & Діма, 06.09.2026</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%97%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF1DA6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Дружки">
+<link rel="apple-touch-icon" href="../icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -57,6 +64,32 @@
   transition:transform .15s ease}
 .theme-toggle:hover{transform:scale(1.1) rotate(-8deg)}
 .theme-toggle:active{transform:scale(.94)}
+.install-box{background:var(--surface);border:3px dashed var(--terra-dim);border-radius:var(--r);
+  padding:14px 18px;margin-bottom:22px;display:none;align-items:center;gap:12px;box-shadow:var(--shadow-sm)}
+.install-box.show{display:flex}
+.install-box .ib-txt{flex:1;font-size:13.5px;color:var(--muted);line-height:1.4}
+.install-box .ib-txt b{color:var(--text);display:block;font-size:14.5px;margin-bottom:2px}
+.install-box button{flex:none;font-family:var(--sans);font-weight:700;font-size:13px;padding:9px 14px;
+  border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer;
+  box-shadow:0 3px 0 rgba(0,0,0,.18);transition:transform .12s ease, box-shadow .12s ease;white-space:nowrap}
+.install-box button:hover{transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.install-box button:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.install-help{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:none;
+  align-items:flex-end;justify-content:center}
+.install-help.show{display:flex}
+.install-help .ih-card{background:var(--surface);border-radius:20px 20px 0 0;padding:22px 22px calc(22px + env(safe-area-inset-bottom));
+  max-width:480px;width:100%;box-shadow:0 -8px 28px rgba(0,0,0,.28)}
+.install-help h3{font-family:var(--serif);font-size:17px;margin:0 0 12px;color:var(--terra)}
+.install-help ol{margin:0 0 16px;padding-left:20px;font-size:14.5px;line-height:1.9}
+.install-help button{width:100%;font-family:var(--sans);font-weight:700;font-size:14px;padding:11px;
+  border-radius:999px;border:none;background:var(--surface2);color:var(--text);cursor:pointer}
+.update-banner{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:960;
+  background:var(--text);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:90vw}
+.update-banner.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.update-banner button{background:none;border:none;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px}
+.update-banner button.ub-go{color:var(--rose)}
+.update-banner button.ub-later{color:inherit;opacity:.6}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased;
   background-image:radial-gradient(var(--terra-dim) 1.5px, transparent 1.5px);
@@ -213,6 +246,22 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   <div class="disclaimer">
     Цей текст писала Катя за допомогою ШІ, тому формулювання можуть бути не ідеальними — суть перевірена нею особисто.
     Список ролей і деталі можуть змінюватись ближче до дати, це не завжди найсвіжіша версія — за фінальними деталями пишіть Каті напряму.
+  </div>
+
+  <div class="install-box" id="installBox">
+    <div class="ib-txt"><b>📲 Додай на головний екран</b>Щоб відкривати одним тапом, без пошуку в чаті — і сторінка завжди підтягує свіжі дані.</div>
+    <button type="button" id="installBtn">Додати</button>
+  </div>
+  <div class="install-help" id="installHelp">
+    <div class="ih-card">
+      <h3>📲 Додати на головний екран</h3>
+      <ol>
+        <li>Натисни кнопку «Поділитись» <b>⬆️</b> внизу екрана Safari</li>
+        <li>Прокрути список і обери «На початковий екран»</li>
+        <li>Натисни «Додати» — з'явиться іконка 💗</li>
+      </ol>
+      <button type="button" id="installHelpClose">Зрозуміло</button>
+    </div>
   </div>
 
   <table class="roles-table">
@@ -464,6 +513,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 
   <footer>з любов'ю, Катя & Діма · 06.09.2026</footer>
 </div>
+<div class="update-banner" id="updateBanner" role="status" aria-live="polite"><span>Є оновлення сторінки</span><button class="ub-go" id="updateBannerGo" type="button">Оновити</button><button class="ub-later" id="updateBannerLater" type="button">Пізніше</button></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -767,6 +817,67 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     }catch(e){ el.innerHTML=seasonal; }
   }
   loadWeather();
+})();
+/* ── PWA: додати на головний екран + банер оновлення (той самий патерн, що в основному
+   застосунку — мережа-спочатку для HTML, щоб дружки завжди бачили свіжі дані) ── */
+(function(){
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const box=document.getElementById('installBox');
+  const btn=document.getElementById('installBtn');
+  const help=document.getElementById('installHelp');
+  const helpClose=document.getElementById('installHelpClose');
+  if(!isStandalone && box){
+    box.classList.add('show');
+    let deferredPrompt=null;
+    window.addEventListener('beforeinstallprompt', e=>{
+      e.preventDefault();
+      deferredPrompt=e;
+    });
+    btn.onclick=async ()=>{
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt=null;
+      }else{
+        help.classList.add('show');
+      }
+    };
+    if(helpClose) helpClose.onclick=()=>help.classList.remove('show');
+    if(help) help.onclick=e=>{ if(e.target===help) help.classList.remove('show'); };
+  }
+  window.addEventListener('appinstalled', ()=>{ if(box) box.classList.remove('show'); });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('sw.js').then(reg=>{
+        let waitingWorker=null;
+        const showUpdateBanner=worker=>{
+          waitingWorker=worker;
+          document.getElementById('updateBanner').classList.add('show');
+        };
+        if(reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+        reg.addEventListener('updatefound',()=>{
+          const nw=reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange',()=>{
+            if(nw.state==='installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
+          });
+        });
+        document.getElementById('updateBannerGo').onclick=()=>{
+          if(waitingWorker) waitingWorker.postMessage('SKIP_WAITING');
+        };
+        document.getElementById('updateBannerLater').onclick=()=>{
+          document.getElementById('updateBanner').classList.remove('show');
+        };
+        let reloaded=false;
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+          if(reloaded) return;
+          reloaded=true;
+          window.location.reload();
+        });
+      }).catch(()=>{});
+    });
+  }
 })();
 (function(){
   const btn=document.getElementById('themeToggle');

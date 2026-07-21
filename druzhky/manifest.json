@@ -1,0 +1,15 @@
+{
+  "name": "Дружки — Катя & Діма, весілля 06.09.2026",
+  "short_name": "Дружки",
+  "description": "Спільна сторінка для дружок: завдання, зустрічі, декор, дрес-код.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFE3F3",
+  "theme_color": "#FF1DA6",
+  "icons": [
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
