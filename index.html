@@ -3072,6 +3072,11 @@ document.getElementById('capInput').addEventListener('input',e=>{
   budgetCap=Number(e.target.value)||0; saveJSON('wed-cap',budgetCap); renderBudget();
 });
 function renderBudget(){
+  // не рвемо фокус/клавіатуру, поки вона вводить суму в "Заплановано"/"Сплачено" — той самий
+  // клас бага, що й з дедлайном завдань: budgetList.innerHTML='' на кожен фоновий Firestore-снапшот
+  // знищував інпут посеред набору цифр
+  const listElGuard=document.getElementById('budgetList');
+  if(isTextEntryFocused(listElGuard)) return;
   const vbudget = budget;
   const {planned, paid, remaining, capDiff} = computeBudgetTotals(vbudget, budgetCap);
   document.getElementById('sumPlanned').textContent=fmtMoney(planned);
