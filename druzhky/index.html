@@ -236,6 +236,16 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dc-suggest-list{display:flex;flex-wrap:wrap;gap:12px}
 .dc-suggest-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);max-width:64px;text-align:center}
 .dc-suggest-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);box-shadow:var(--shadow-sm)}
+/* липке меню-навігація зверху */
+.topnav{position:sticky;top:0;z-index:400;display:flex;gap:7px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 52px 10px 14px;margin:0 -18px 20px;background:var(--bg);
+  border-bottom:2px dashed var(--terra-dim);scrollbar-width:none}
+.topnav::-webkit-scrollbar{display:none}
+.topnav button{flex:0 0 auto;font-family:var(--sans);font-weight:700;font-size:13px;white-space:nowrap;
+  padding:8px 13px;border-radius:999px;border:2px solid var(--line);background:var(--surface);color:var(--terra);
+  cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.10)}
+.topnav button:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.10)}
+.roles-block,.contacts-box,.tasks-box,.schedule-box,.notes-box,.links-box{scroll-margin-top:60px}
 /* згортабельні розділи */
 .sec-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;position:relative;padding-right:42px}
 .sec-head::after{content:'▾';position:absolute;right:0;top:50%;transform:translateY(-50%);
@@ -245,7 +255,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .sec-head:active::after{transform:translateY(-50%) scale(.9)}
 .sec-collapsed > .sec-head::after,.roles-block.sec-collapsed > .sec-head::after{transform:translateY(-50%) rotate(-90deg)}
 .sec-collapsed > .sec-head:active::after,.roles-block.sec-collapsed > .sec-head:active::after{transform:translateY(-50%) rotate(-90deg) scale(.9)}
-.sec-collapsed > :not(.sec-head){display:none !important}
+.sec-collapsed > :not(.sec-head):not(.contacts-head){display:none !important}
 .roles-block{margin-bottom:30px}
 .roles-block > .sec-head{font-family:var(--serif);font-size:16px;margin:0 0 14px;color:var(--terra)}
 .roles-block.sec-collapsed .roles-table{margin-bottom:0}
@@ -292,6 +302,8 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     <div class="hero-weather" id="heroWeather"></div>
   </header>
 
+  <nav class="topnav" id="topnav" aria-label="Розділи сторінки"></nav>
+
   <div class="disclaimer">
     Цей текст писала Катя за допомогою ШІ, тому формулювання можуть бути не ідеальними — суть перевірена нею особисто.
     Список ролей і деталі можуть змінюватись ближче до дати, це не завжди найсвіжіша версія — за фінальними деталями пишіть Каті напряму.
@@ -314,7 +326,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="roles-block">
-  <h2 class="sec-head">👯 Дружки та їхні ролі</h2>
+  <h2 class="sec-head" data-nav="👯 Дружки">👯 Дружки та їхні ролі</h2>
   <table class="roles-table">
     <tr><th>Хто</th><th>Головна зона</th><th>Контакт</th></tr>
     <tr><td><a href="#maria">Марія</a></td><td>Координаторка — Софі</td><td><a href="https://t.me/mariiyka_ua" target="_blank" rel="noopener">@mariiyka_ua</a></td></tr>
@@ -471,7 +483,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 
   <div class="contacts-box" id="contactsBox">
     <div class="contacts-head">
-      <h2 class="sec-head">📇 Корисні контакти</h2>
+      <h2 class="sec-head" data-nav="📇 Контакти">📇 Корисні контакти</h2>
       <button type="button" class="contacts-lock" id="contactsLock" title="Редагування для нареченої">🔒</button>
     </div>
     <p class="contacts-hint">Кому писати/дзвонити в день Х. Наповнює й редагує Катя — дівчата бачать лише для читання.</p>
@@ -484,7 +496,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="tasks-box">
-    <h2 class="sec-head">✅ Спільні завдання та зустрічі</h2>
+    <h2 class="sec-head" data-nav="✅ Завдання">✅ Спільні завдання та зустрічі</h2>
     <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
     <div class="mini-cal" id="dtaskCal"></div>
     <div class="dtask-form">
@@ -510,7 +522,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box">
-    <h2 class="sec-head">🕐 Орієнтовний розклад дня</h2>
+    <h2 class="sec-head" data-nav="🕐 Розклад">🕐 Орієнтовний розклад дня</h2>
     <p class="schedule-hint">Орієнтовно, часи можуть зміститись на місці. Це скелет для координації —
     конкретний зміст активностей і сюрпризи навмисно тут не розписані, щоб не спойлерити.</p>
     <div class="sched-venue">
@@ -532,7 +544,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box">
-    <h2 class="sec-head">🎒 Що взяти з собою в день Х</h2>
+    <h2 class="sec-head" data-nav="🎒 Взяти">🎒 Що взяти з собою в день Х</h2>
     <p class="schedule-hint">Загальне на всіх — незалежно від ролі. Розписані завдання дивись у своїй картці нижче.</p>
     <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8">
       <li>Зручне взуття для довгого дня (можна змінне на вечір)</li>
@@ -544,13 +556,13 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box" id="decorDressBox">
-    <h2 class="sec-head">🎨 Декор</h2>
+    <h2 class="sec-head" data-nav="🎨 Декор">🎨 Декор</h2>
     <p class="schedule-hint">Тягнеться прямо з нашого спільного застосунку — завжди актуальне, оновлювати вручну не треба.</p>
     <div id="decorSummary"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
   <div class="schedule-box" id="dcSuggestBox">
-    <h2 class="sec-head">🎨 Дрес-код — запропонуй колір</h2>
+    <h2 class="sec-head" data-nav="🌈 Дрес-код">🎨 Дрес-код — запропонуй колір</h2>
     <p class="schedule-hint">Катя ще підбирає фінальну палітру — накидай сюди кольори, які подобаються, вона перегляне й вирішить.</p>
     <div class="dc-suggest-form">
       <input type="color" id="dcSuggestColor" value="#FF1DA6" aria-label="Обрати колір">
@@ -561,7 +573,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="links-box">
-    <h2 class="sec-head">🔗 Корисні посилання для всіх</h2>
+    <h2 class="sec-head" data-nav="🔗 Посилання">🔗 Корисні посилання для всіх</h2>
     <ul>
       <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
       <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
@@ -571,7 +583,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="notes-box">
-    <h2 class="sec-head">✍️ Маєш щось корисне для нас?</h2>
+    <h2 class="sec-head" data-nav="✍️ Написати">✍️ Маєш щось корисне для нас?</h2>
     <p class="notes-hint">Ідея, фото-знахідка, нагадування, питання — залиш тут, Катя й Дiма це бачать.
     Список нижче видно всім дружкам (прозоро, не приватно).</p>
     <div class="notes-form">
@@ -1085,8 +1097,9 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   let saved={};
   try{ saved=JSON.parse(localStorage.getItem('druzhky-collapsed')||'{}'); }catch(e){}
   function persist(){ try{ localStorage.setItem('druzhky-collapsed', JSON.stringify(saved)); }catch(e){} }
+  const BOXSEL='.roles-block,.contacts-box,.tasks-box,.schedule-box,.notes-box,.links-box';
   document.querySelectorAll('.sec-head').forEach(h=>{
-    const box=h.parentElement;
+    const box=h.closest(BOXSEL)||h.parentElement;
     const key=(h.textContent||'').trim().slice(0,40);
     if(saved[key]) box.classList.add('sec-collapsed');
     h.setAttribute('role','button');
@@ -1098,6 +1111,22 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     };
     h.addEventListener('click',toggle);
     h.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  });
+})();
+/* ── меню-навігація зверху: перехід до розділу + автоматичне розгортання ── */
+(function(){
+  const nav=document.getElementById('topnav'); if(!nav) return;
+  const BOXSEL='.roles-block,.contacts-box,.tasks-box,.schedule-box,.notes-box,.links-box';
+  document.querySelectorAll('.sec-head[data-nav]').forEach(h=>{
+    const box=h.closest(BOXSEL)||h.parentElement;
+    const b=document.createElement('button');
+    b.type='button'; b.textContent=h.getAttribute('data-nav');
+    b.onclick=()=>{
+      box.classList.remove('sec-collapsed');   // якщо було згорнуто — розгортаємо
+      try{ const saved=JSON.parse(localStorage.getItem('druzhky-collapsed')||'{}'); delete saved[(h.textContent||'').trim().slice(0,40)]; localStorage.setItem('druzhky-collapsed',JSON.stringify(saved)); }catch(e){}
+      box.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    nav.appendChild(b);
   });
 })();
 (function(){
