@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Краса — план підготовки, Катя</title>
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%90%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Ctext%20y%3D%27.9em%27%20font-size%3D%2790%27%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#A8505F">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Краса">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Ctext%20y%3D%27.9em%27%20font-size%3D%2790%27%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -168,6 +173,45 @@ footer a{color:var(--terra)}
 .drive-btns button{font-family:var(--sans);font-weight:700;font-size:15px;padding:11px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer}
 .drive-btns button.plus{background:var(--terra);border-color:var(--terra);color:#fff}
 .drive-btns button:active{transform:scale(.96)}
+.drive-goal{font-size:13px;color:var(--muted);text-align:center;margin-bottom:14px}
+.drive-goal b{color:var(--terra)}
+.drive-exam{background:var(--terra-dim);border-radius:12px;padding:11px 14px;font-size:13.5px;text-align:center;margin-bottom:16px}
+.drive-exam b{color:var(--terra)}
+/* ── сьогодні ── */
+.today-hero{background:linear-gradient(135deg,var(--terra),var(--gold));border-radius:var(--r);padding:24px 18px;text-align:center;color:#fff;box-shadow:var(--shadow-sm)}
+.today-days{font-family:var(--serif);font-size:52px;font-weight:800;line-height:1}
+.today-days-lbl{font-size:13.5px;opacity:.92;margin-top:4px}
+.daily-ticks{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.daily-tick{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;cursor:pointer;box-shadow:var(--shadow-sm);font-weight:600;font-size:14.5px;color:var(--text)}
+.daily-tick .tk-ic{font-size:20px}
+.daily-tick .tk-box{margin-left:auto;width:24px;height:24px;border-radius:8px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff}
+.daily-tick.on{border-color:var(--done);background:var(--done-dim)}
+.daily-tick.on .tk-box{background:var(--done);border-color:var(--done)}
+.daily-tick:active{transform:scale(.98)}
+.today-plan-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.today-plan-row:first-child{border-top:none}
+.today-empty{font-size:13.5px;color:var(--muted);font-style:italic;padding:6px 0}
+.today-sleep{margin-top:18px}
+.today-sleep .callout{margin:0}
+/* ── план: галочка виконано ── */
+.plan-row.pdone .plan-cat,.plan-row.pdone span{opacity:.5}
+.plan-row.pdone .pnote{text-decoration:line-through}
+.plan-check{width:20px;height:20px;flex:0 0 auto;accent-color:var(--done);cursor:pointer}
+.plan-repeat{font-size:12.5px;color:var(--muted)}
+/* ── сон: графік ── */
+.sleep-chart{display:flex;align-items:flex-end;gap:4px;height:88px;margin:4px 0 16px;padding:0 2px}
+.sleep-bar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
+.sleep-bar .bar{width:100%;max-width:22px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--terra),var(--gold));min-height:3px}
+.sleep-bar .bar.short{background:var(--muted)}
+.sleep-bar .bl{font-size:9.5px;color:var(--muted);white-space:nowrap}
+.sleep-goal-form{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.sleep-goal-form input{width:64px;font-family:var(--sans);font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+/* ── добавки: streak + сьогодні ── */
+.supp-streak{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.supp-streak .ss-num{font-family:var(--serif);font-size:38px;font-weight:800;color:var(--terra);line-height:1}
+.supp-streak .ss-tx{flex:1;font-size:13.5px;color:var(--muted)}
+.supp-streak button{font-family:var(--sans);font-weight:700;font-size:13.5px;padding:11px 15px;border-radius:12px;border:1.5px solid var(--done);background:var(--done);color:#fff;cursor:pointer;white-space:nowrap}
+.supp-streak button.done{background:var(--done-dim);color:var(--done);border-color:var(--done)}
 </style>
 </head>
 <body>
@@ -180,7 +224,8 @@ footer a{color:var(--terra)}
   </header>
 
   <div class="tabbar" id="tabbar">
-    <button type="button" data-ktab="plan" class="active">📅 План</button>
+    <button type="button" data-ktab="today" class="active">🌞 Сьогодні</button>
+    <button type="button" data-ktab="plan">📅 План</button>
     <button type="button" data-ktab="care">💄 Догляд</button>
     <button type="button" data-ktab="sleep">😴 Сон</button>
     <button type="button" data-ktab="supp">💊 Добавки</button>
@@ -188,7 +233,19 @@ footer a{color:var(--terra)}
     <button type="button" data-ktab="diary">🌿 Щоденник</button>
   </div>
 
-  <div class="kpanel" data-kpanel="plan">
+  <div class="kpanel" data-kpanel="today">
+    <div class="today-hero">
+      <div class="today-days" id="todayDays">—</div>
+      <div class="today-days-lbl">днів до весілля · 6 вересня</div>
+    </div>
+    <div class="grp-label" style="margin-top:18px">✅ Сьогодні відмічай одним дотиком</div>
+    <div class="daily-ticks" id="dailyTicks"></div>
+    <div class="grp-label" style="margin-top:20px">📅 Заплановано на сьогодні</div>
+    <div id="todayPlans"></div>
+    <div class="today-sleep" id="todaySleep"></div>
+  </div><!-- /today -->
+
+  <div class="kpanel" data-kpanel="plan" hidden>
   <div class="grp-label" style="margin-top:0">📅 Мій календар планів</div>
   <div class="kcal"><div id="planCal"></div></div>
   <div class="plan-form">
@@ -200,6 +257,13 @@ footer a{color:var(--terra)}
       <option value="other">✨ Інше</option>
     </select>
     <input type="date" id="planDate">
+    <select id="planRepeat" title="Повторювати">
+      <option value="none">↻ Без повтору</option>
+      <option value="daily">Щодня (4 тижні)</option>
+      <option value="mwf">Пн/Ср/Пт (4 тижні)</option>
+      <option value="weekdays">По буднях (4 тижні)</option>
+      <option value="weekly">Щотижня (8 разів)</option>
+    </select>
     <input type="text" id="planNote" placeholder="Що саме (необовʼязково)…">
     <button type="button" id="planAdd">Додати</button>
   </div>
@@ -272,16 +336,23 @@ footer a{color:var(--terra)}
       <button type="button" id="sleepAddManual">Додати</button>
     </div>
     <div class="diary-stats" id="sleepStats"></div>
+    <div class="sleep-goal-form">🎯 Моя ціль сну: <input type="number" id="sleepGoal" step="0.5" min="4" max="12"> год/ніч</div>
+    <div class="grp-label">📊 Останні ночі</div>
+    <div class="sleep-chart" id="sleepChart"></div>
+    <div class="grp-label">📖 Історія</div>
     <div class="sleep-list" id="sleepList"></div>
   </div>
 
   <div class="kpanel" data-kpanel="supp" hidden>
-    <div class="grp-label" style="margin-top:0">💊 Добавки — що варто розглянути</div>
+    <div class="grp-label" style="margin-top:0">🔥 Мій streak</div>
+    <div class="supp-streak" id="suppStreak"></div>
+    <div class="grp-label" style="margin-top:20px">💊 Добавки — що варто розглянути</div>
     <div id="suppList"></div>
     <div class="callout" style="margin-top:14px">Це не медична порада — перед новими добавками звір з лікарем, особливо залізо (тільки за аналізом). І не починай багато нового одразу перед весіллям: додавай по одному, щоб бачити реакцію. Галочка = «приймаю» (для себе).</div>
   </div>
 
   <div class="kpanel" data-kpanel="drive" hidden>
+    <div class="drive-exam" id="driveExam"></div>
     <div class="grp-label" style="margin-top:0">🚗 Години за кермом</div>
     <div class="drive-counter">
       <div class="drive-num" id="driveNum">0</div>
@@ -294,7 +365,16 @@ footer a{color:var(--terra)}
         <button type="button" class="plus" data-dinc="2">+2</button>
       </div>
     </div>
-    <div class="callout gold">Тисни «+» після кожного заняття з водіння. Рахунок зберігається в цьому браузері. Нагадування: іспит з водіння — дедлайн 24.08.</div>
+    <div class="drive-goal" id="driveGoal"></div>
+    <div class="grp-label">🗓 Записати заняття з датою (зʼявиться в календарі)</div>
+    <div class="plan-form">
+      <input type="date" id="driveLogDate">
+      <input type="number" id="driveLogHours" step="0.5" min="0" placeholder="год" style="max-width:80px">
+      <input type="text" id="driveLogNote" placeholder="Нотатка (необовʼязково)…">
+      <button type="button" id="driveLogAdd">Записати</button>
+    </div>
+    <div class="plan-list" id="driveLogList"></div>
+    <div class="callout gold" style="margin-top:12px">Швидкі «+» — після будь-якого заняття. Або запиши заняття з датою — воно додасться до годин і зʼявиться крапкою в календарі планів.</div>
   </div>
 
   <div class="kpanel" data-kpanel="diary" hidden>
@@ -320,10 +400,19 @@ footer a{color:var(--terra)}
   </details>
   </div><!-- /diary -->
 
-  <footer>з любов'ю до себе · <a href="../">до застосунку</a> · <a href="../menu/">усі сторінки</a></footer>
+  <footer>з любов'ю до себе · <a href="../">до застосунку</a> · <a href="../menu/">усі сторінки</a>
+  <div id="syncStatus" style="margin-top:8px;font-size:11.5px;color:var(--muted)">💾 зберігається на цьому пристрої</div>
+</footer>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* хук синхронізації: усі save-функції кличуть ks() — модуль синхронізації нижче підмінює window.__ksync */
+function ks(){ try{ if(window.__ksync) window.__ksync(); }catch(e){} }
+const WED_DATE='2026-09-06', EXAM_DATE='2026-08-24', DRIVE_GOAL=30;
+function daysUntil(iso){ const t=new Date(iso+'T00:00:00').getTime(); return Math.ceil((t-Date.now())/86400000); }
 const WEEKS = [
   {
     id: 'w1', title: 'Тиждень 1', dates: '20–26 липня', focus: 'Старт: стоматолог, база, нічого нового',
@@ -492,7 +581,7 @@ const CRAVING_TIPS = {
 };
 
 function loadDiary(){ try{ return JSON.parse(localStorage.getItem('krasa-diary')||'[]'); }catch(e){ return []; } }
-function saveDiary(d){ try{ localStorage.setItem('krasa-diary', JSON.stringify(d)); }catch(e){} }
+function saveDiary(d){ try{ localStorage.setItem('krasa-diary', JSON.stringify(d)); }catch(e){} ks(); }
 let diary = loadDiary();
 
 function daysSince(ts){
@@ -525,7 +614,7 @@ function renderDiary(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function loadDone(){ try{ return JSON.parse(localStorage.getItem('krasa-done')||'{}'); }catch(e){ return {}; } }
-function saveDone(d){ try{ localStorage.setItem('krasa-done', JSON.stringify(d)); }catch(e){} }
+function saveDone(d){ try{ localStorage.setItem('krasa-done', JSON.stringify(d)); }catch(e){} ks(); }
 let done = loadDone();
 
 function updateProgress(){
@@ -624,7 +713,7 @@ function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 /* ── календар-планер ── */
 const PLAN_CATS={sport:{ic:'🏃',lbl:'Спорт',c:'#5C93A8'},teeth:{ic:'🦷',lbl:'Зуби',c:'#B58A2E'},face:{ic:'🧖',lbl:'Фейсбілдінг',c:'#A8505F'},drive:{ic:'🚗',lbl:'Водіння',c:'#4E8A6B'},other:{ic:'✨',lbl:'Інше',c:'#6E7484'}};
 function loadPlans(){ try{return JSON.parse(localStorage.getItem('krasa-plans')||'[]');}catch(e){return[];} }
-function savePlans(p){ try{localStorage.setItem('krasa-plans',JSON.stringify(p));}catch(e){} }
+function savePlans(p){ try{localStorage.setItem('krasa-plans',JSON.stringify(p));}catch(e){} ks(); }
 let plans=loadPlans(); let planViewOffset=0, planSelDate=null;
 function renderPlanCal(){
   const el=document.getElementById('planCal'); if(!el) return;
@@ -634,6 +723,7 @@ function renderPlanCal(){
   const daysInMonth=new Date(y,m+1,0).getDate();
   const todayIso=isoDate(now);
   const byDay={}; plans.forEach(p=>{ (byDay[p.date]=byDay[p.date]||[]).push(p); });
+  try{ driveLog.forEach(s=>{ if(s.date) (byDay[s.date]=byDay[s.date]||[]).push({cat:'drive'}); }); }catch(e){}
   const monthLbl=base.toLocaleDateString('uk-UA',{month:'long',year:'numeric'});
   let grid='';
   ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].forEach(d=>grid+=`<div class="kcal-dow">${d}</div>`);
@@ -658,26 +748,43 @@ function renderPlanList(){
     const lbl=dObj.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'long'});
     return `<div class="plan-daygrp"><div class="plan-dayh">${lbl}</div>`+byDay[date].sort((a,b)=>a.ts-b.ts).map(p=>{
       const cat=PLAN_CATS[p.cat]||PLAN_CATS.other;
-      return `<div class="plan-row"><span class="plan-cat" style="background:${cat.c}22;color:${cat.c}">${cat.ic} ${cat.lbl}</span><span>${p.note?esc(p.note):''}</span><button class="pdel" data-plandel="${p.id}">✕</button></div>`;
+      return `<div class="plan-row${p.done?' pdone':''}"><input type="checkbox" class="plan-check" data-plandone="${p.id}" ${p.done?'checked':''}><span class="plan-cat" style="background:${cat.c}22;color:${cat.c}">${cat.ic} ${cat.lbl}</span><span class="pnote">${p.note?esc(p.note):''}</span><button class="pdel" data-plandel="${p.id}">✕</button></div>`;
     }).join('')+`</div>`;
   }).join('');
-  el.querySelectorAll('[data-plandel]').forEach(b=>b.onclick=()=>{ plans=plans.filter(x=>x.id!==b.dataset.plandel); savePlans(plans); renderPlanCal(); renderPlanList(); });
+  el.querySelectorAll('[data-plandone]').forEach(cb=>cb.onchange=()=>{ const p=plans.find(x=>x.id===cb.dataset.plandone); if(p){ p.done=cb.checked; savePlans(plans); renderPlanList(); renderToday(); } });
+  el.querySelectorAll('[data-plandel]').forEach(b=>b.onclick=()=>{ plans=plans.filter(x=>x.id!==b.dataset.plandel); savePlans(plans); renderPlanCal(); renderPlanList(); renderToday(); });
 }
 { const da=document.getElementById('planDate'); if(da) da.value=isoDate(new Date()); }
+function planDates(startIso, mode){
+  const out=[startIso];
+  if(mode==='none'||!mode) return out;
+  const start=new Date(startIso+'T00:00:00'); out.length=0;
+  if(mode==='weekly'){ for(let i=0;i<8;i++){ const d=new Date(start); d.setDate(d.getDate()+i*7); out.push(isoDate(d)); } return out; }
+  // daily / mwf / weekdays — на 4 тижні (28 днів) від дати старту
+  for(let i=0;i<28;i++){ const d=new Date(start); d.setDate(d.getDate()+i); const dow=d.getDay(); // 0=Нд..6=Сб
+    if(mode==='daily') out.push(isoDate(d));
+    else if(mode==='mwf'){ if(dow===1||dow===3||dow===5) out.push(isoDate(d)); }
+    else if(mode==='weekdays'){ if(dow>=1&&dow<=5) out.push(isoDate(d)); }
+  }
+  return out.length?out:[startIso];
+}
 { const pa=document.getElementById('planAdd'); if(pa) pa.onclick=()=>{
   const cat=document.getElementById('planCat').value;
   const date=document.getElementById('planDate').value;
   const note=document.getElementById('planNote').value.trim();
+  const repeat=(document.getElementById('planRepeat')||{}).value||'none';
   if(!date){ alert('Обери дату'); return; }
-  plans.push({id:'p'+Date.now(),cat,date,note,ts:Date.now()});
+  const dates=planDates(date,repeat); const base=Date.now();
+  dates.forEach((dt,i)=>plans.push({id:'p'+base+'_'+i,cat,date:dt,note,done:false,ts:base+i}));
   savePlans(plans); document.getElementById('planNote').value='';
-  renderPlanCal(); renderPlanList();
+  if(document.getElementById('planRepeat')) document.getElementById('planRepeat').value='none';
+  renderPlanCal(); renderPlanList(); renderToday();
 }; }
 renderPlanCal(); renderPlanList();
 
 /* ── сон ── */
 function loadSleep(){ try{return JSON.parse(localStorage.getItem('krasa-sleep')||'[]');}catch(e){return[];} }
-function saveSleep(s){ try{localStorage.setItem('krasa-sleep',JSON.stringify(s));}catch(e){} }
+function saveSleep(s){ try{localStorage.setItem('krasa-sleep',JSON.stringify(s));}catch(e){} ks(); }
 let sleep=loadSleep();
 function hhmm(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function fmtDur(h){ const H=Math.floor(h), M=Math.round((h-H)*60); return H+' год'+(M?' '+M+' хв':''); }
@@ -687,10 +794,31 @@ function renderSleepPending(){
   if(pend){ el.style.display='block'; el.innerHTML=`😴 Заснула о <b>${hhmm(new Date(pend.ts))}</b> — тисни «Прокинулась зараз», коли встанеш.`; }
   else { el.style.display='none'; el.innerHTML=''; }
 }
+function loadSleepGoal(){ try{return parseFloat(localStorage.getItem('krasa-sleep-goal')||'7.5')||7.5;}catch(e){return 7.5;} }
+function saveSleepGoal(g){ try{localStorage.setItem('krasa-sleep-goal',String(g));}catch(e){} ks(); }
+let sleepGoal=loadSleepGoal();
 function renderSleep(){
   const el=document.getElementById('sleepList'); const st=document.getElementById('sleepStats');
   const sorted=[...sleep].sort((a,b)=>b.ts-a.ts);
-  if(st){ const last=sorted[0]; st.innerHTML=`<div class="diary-stat"><b>${last?fmtDur(last.hours):'—'}</b><span>останній сон</span></div><div class="diary-stat"><b>${sleep.length}</b><span>записів</span></div>`; }
+  const last7=sorted.slice(0,7);
+  const avg7=last7.length?last7.reduce((s,x)=>s+x.hours,0)/last7.length:null;
+  const hitGoal=last7.filter(x=>x.hours>=sleepGoal-0.01).length;
+  if(st){ st.innerHTML=`<div class="diary-stat"><b>${sorted[0]?fmtDur(sorted[0].hours):'—'}</b><span>останній сон</span></div><div class="diary-stat"><b>${avg7!=null?fmtDur(avg7):'—'}</b><span>середнє (7 ночей)</span></div><div class="diary-stat"><b>${last7.length?hitGoal+'/'+last7.length:'—'}</b><span>ночей ≥ цілі</span></div>`; }
+  const gi=document.getElementById('sleepGoal'); if(gi && document.activeElement!==gi) gi.value=sleepGoal;
+  const ch=document.getElementById('sleepChart');
+  if(ch){
+    const recent=sorted.slice(0,14).reverse();
+    if(!recent.length){ ch.innerHTML='<div class="diary-empty" style="height:auto">Ще нема даних для графіка.</div>'; }
+    else{
+      const maxH=Math.max(sleepGoal, ...recent.map(x=>x.hours), 8);
+      ch.innerHTML=recent.map(x=>{
+        const d=new Date(x.ts); const dl=d.toLocaleDateString('uk-UA',{day:'numeric',month:'numeric'});
+        const pct=Math.max(4,Math.round(x.hours/maxH*100));
+        const short=x.hours<sleepGoal-0.01;
+        return `<div class="sleep-bar" title="${fmtDur(x.hours)}"><div class="bar${short?' short':''}" style="height:${pct}%"></div><span class="bl">${dl}</span></div>`;
+      }).join('');
+    }
+  }
   if(!el) return;
   if(!sorted.length){ el.innerHTML='<div class="diary-empty">Поки нічого. Тисни «Заснула»/«Прокинулась» або додай вручну.</div>'; return; }
   el.innerHTML=sorted.map(s=>{
@@ -721,6 +849,7 @@ function addSleep(asleepTs,wakeTs){
   document.getElementById('sleepAsleep').value=''; document.getElementById('sleepWake').value='';
 }; }
 { const sd=document.getElementById('sleepDate'); if(sd) sd.value=isoDate(new Date()); }
+{ const gi=document.getElementById('sleepGoal'); if(gi){ gi.value=sleepGoal; gi.onchange=()=>{ const v=parseFloat(gi.value); if(v>=4&&v<=12){ sleepGoal=v; saveSleepGoal(sleepGoal); renderSleep(); } }; } }
 renderSleepPending(); renderSleep();
 
 /* ── добавки ── */
@@ -734,20 +863,186 @@ const SUPPLEMENTS=[
   {id:'iron',n:'Залізо / феритин',d:'⚠️ ТІЛЬКИ за аналізом (феритин у крові). Наосліп не пити. Але якщо низький — це прямо про енергію, колір обличчя й випадіння волосся.'},
 ];
 function loadSupp(){ try{return JSON.parse(localStorage.getItem('krasa-supp')||'{}');}catch(e){return{};} }
-function saveSupp(s){ try{localStorage.setItem('krasa-supp',JSON.stringify(s));}catch(e){} }
+function saveSupp(s){ try{localStorage.setItem('krasa-supp',JSON.stringify(s));}catch(e){} ks(); }
 let suppState=loadSupp();
 SUPPLEMENTS.forEach(s=>{ if(suppState[s.id]===undefined && s.taken) suppState[s.id]=true; });
-{ const el=document.getElementById('suppList'); if(el){
-  el.innerHTML=SUPPLEMENTS.map(s=>`<div class="supp"><input type="checkbox" id="supp_${s.id}" ${suppState[s.id]?'checked':''}><div class="supp-b"><div class="sn">${esc(s.n)}${s.taken?'<span class="tag">вже пʼю</span>':''}</div><div class="sd">${s.d}</div></div></div>`).join('');
-  el.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{ suppState[cb.id.replace('supp_','')]=cb.checked; saveSupp(suppState); });
-} }
+function loadSuppLog(){ try{return JSON.parse(localStorage.getItem('krasa-supp-log')||'{}');}catch(e){return{};} }
+function saveSuppLog(l){ try{localStorage.setItem('krasa-supp-log',JSON.stringify(l));}catch(e){} ks(); }
+let suppLog=loadSuppLog();
+function suppStreakCount(){
+  let n=0; const d=new Date(); d.setHours(0,0,0,0);
+  // якщо сьогодні ще не відмічено — рахуємо streak до вчора (щоб не показувати 0 зранку)
+  if(!suppLog[isoDate(d)]) d.setDate(d.getDate()-1);
+  while(suppLog[isoDate(d)]){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function renderSuppStreak(){
+  const el=document.getElementById('suppStreak'); if(!el) return;
+  const today=isoDate(new Date()); const doneToday=!!suppLog[today]; const n=suppStreakCount();
+  el.innerHTML=`<div class="ss-num">${n}</div><div class="ss-tx">${n?`днів поспіль з добавками 🔥`:'почни сьогодні — відмічай щодня'}</div><button type="button" id="suppTodayBtn" class="${doneToday?'done':''}">${doneToday?'✓ прийнято сьогодні':'💊 прийняла сьогодні'}</button>`;
+  const b=document.getElementById('suppTodayBtn'); if(b) b.onclick=()=>{ if(suppLog[today]) delete suppLog[today]; else suppLog[today]=true; saveSuppLog(suppLog); renderSuppStreak(); renderToday(); };
+}
+function renderSupp(){
+  const el=document.getElementById('suppList'); if(el){
+    el.innerHTML=SUPPLEMENTS.map(s=>`<div class="supp"><input type="checkbox" id="supp_${s.id}" ${suppState[s.id]?'checked':''}><div class="supp-b"><div class="sn">${esc(s.n)}${s.taken?'<span class="tag">вже пʼю</span>':''}</div><div class="sd">${s.d}</div></div></div>`).join('');
+    el.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{ suppState[cb.id.replace('supp_','')]=cb.checked; saveSupp(suppState); });
+  }
+  renderSuppStreak();
+}
+renderSupp();
 
-/* ── водіння: години ── */
+/* ── водіння: години + журнал + іспит ── */
 function loadDriveH(){ try{return parseFloat(localStorage.getItem('krasa-drive-hours')||'0')||0;}catch(e){return 0;} }
+function saveDriveH(){ try{localStorage.setItem('krasa-drive-hours',String(driveH));}catch(e){} ks(); }
 let driveH=loadDriveH();
-function renderDrive(){ const el=document.getElementById('driveNum'); if(el) el.textContent=(Math.round(driveH*10)/10).toString().replace('.',','); }
-document.querySelectorAll('[data-dinc]').forEach(b=>b.onclick=()=>{ driveH=Math.max(0, Math.round((driveH+parseFloat(b.dataset.dinc))*10)/10); try{localStorage.setItem('krasa-drive-hours',String(driveH));}catch(e){} renderDrive(); });
+function loadDriveLog(){ try{return JSON.parse(localStorage.getItem('krasa-drive-log')||'[]');}catch(e){return[];} }
+function saveDriveLog(l){ try{localStorage.setItem('krasa-drive-log',JSON.stringify(l));}catch(e){} ks(); }
+let driveLog=loadDriveLog();
+function fmtH(h){ return (Math.round(h*10)/10).toString().replace('.',','); }
+function renderDrive(){
+  const el=document.getElementById('driveNum'); if(el) el.textContent=fmtH(driveH);
+  const ex=document.getElementById('driveExam');
+  if(ex){ const d=daysUntil(EXAM_DATE); ex.innerHTML=d>0?`🚦 До іспиту <b>${d}</b> ${d===1?'день':(d<5?'дні':'днів')} · 24 серпня`:(d===0?'🚦 <b>Іспит сьогодні</b> — ти зможеш 💪':'🚦 Іспит 24.08 позаду 🎉'); }
+  const g=document.getElementById('driveGoal');
+  if(g){ const left=Math.max(0,DRIVE_GOAL-driveH); g.innerHTML=left>0?`Ціль ~<b>${DRIVE_GOAL}</b> год · лишилось <b>${fmtH(left)}</b>`:`Ціль <b>${DRIVE_GOAL}</b> год досягнута 🎉`; }
+  const ll=document.getElementById('driveLogList');
+  if(ll){
+    const sorted=[...driveLog].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    ll.innerHTML=sorted.length?sorted.map(s=>{
+      const dObj=new Date((s.date||isoDate(new Date()))+'T00:00:00');
+      const lbl=dObj.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'});
+      return `<div class="plan-row"><span class="plan-cat" style="background:#4E8A6B22;color:#4E8A6B">🚗 ${fmtH(s.hours)} год</span><span>${lbl}${s.note?' · '+esc(s.note):''}</span><button class="pdel" data-drivedel="${s.id}">✕</button></div>`;
+    }).join(''):'';
+    ll.querySelectorAll('[data-drivedel]').forEach(b=>b.onclick=()=>{
+      const row=driveLog.find(x=>x.id===b.dataset.drivedel); if(row){ driveH=Math.max(0,Math.round((driveH-(row.hours||0))*10)/10); saveDriveH(); }
+      driveLog=driveLog.filter(x=>x.id!==b.dataset.drivedel); saveDriveLog(driveLog); renderDrive(); renderPlanCal();
+    });
+  }
+}
+document.querySelectorAll('[data-dinc]').forEach(b=>b.onclick=()=>{ driveH=Math.max(0, Math.round((driveH+parseFloat(b.dataset.dinc))*10)/10); saveDriveH(); renderDrive(); });
+{ const dl=document.getElementById('driveLogDate'); if(dl) dl.value=isoDate(new Date()); }
+{ const b=document.getElementById('driveLogAdd'); if(b) b.onclick=()=>{
+  const date=document.getElementById('driveLogDate').value||isoDate(new Date());
+  const hours=parseFloat(document.getElementById('driveLogHours').value)||0;
+  const note=document.getElementById('driveLogNote').value.trim();
+  if(hours<=0){ alert('Впиши, скільки годин'); return; }
+  driveLog.push({id:'dl'+Date.now(),date,hours,note,ts:Date.now()});
+  driveH=Math.round((driveH+hours)*10)/10;
+  saveDriveLog(driveLog); saveDriveH();
+  document.getElementById('driveLogHours').value=''; document.getElementById('driveLogNote').value='';
+  renderDrive(); renderPlanCal(); renderPlanList();
+}; }
 renderDrive();
+
+/* ── СЬОГОДНІ: дашборд + щоденні галочки ── */
+const DAILY_TICKS=[
+  {k:'water',ic:'💧',lbl:'Вода'},
+  {k:'spf',ic:'☀️',lbl:'SPF'},
+  {k:'supp',ic:'💊',lbl:'Добавки'},
+  {k:'face',ic:'🧖',lbl:'Фейсбілдінг'},
+];
+function loadDaily(){ try{return JSON.parse(localStorage.getItem('krasa-daily')||'{}');}catch(e){return{};} }
+function saveDaily(d){ try{localStorage.setItem('krasa-daily',JSON.stringify(d));}catch(e){} ks(); }
+let daily=loadDaily();
+function renderToday(){
+  const today=isoDate(new Date());
+  const dd=document.getElementById('todayDays');
+  if(dd){ const n=daysUntil(WED_DATE); dd.textContent=n>0?n:(n===0?'0':'🎉'); }
+  const dl=document.getElementById('todayDays') && document.querySelector('.today-days-lbl');
+  if(dl){ const n=daysUntil(WED_DATE); dl.textContent=n>0?`днів до весілля · 6 вересня`:(n===0?'сьогодні наш день! · 6 вересня':'ми одружились 🎉'); }
+  const dt=document.getElementById('dailyTicks');
+  if(dt){
+    const day=daily[today]||{};
+    dt.innerHTML=DAILY_TICKS.map(t=>{
+      const on=t.k==='supp'?!!suppLog[today]:!!day[t.k];
+      return `<div class="daily-tick${on?' on':''}" data-tick="${t.k}"><span class="tk-ic">${t.ic}</span><span>${t.lbl}</span><span class="tk-box">${on?'✓':''}</span></div>`;
+    }).join('');
+    dt.querySelectorAll('[data-tick]').forEach(el=>el.onclick=()=>{
+      const k=el.dataset.tick;
+      if(k==='supp'){ if(suppLog[today]) delete suppLog[today]; else suppLog[today]=true; saveSuppLog(suppLog); if(typeof renderSuppStreak==='function') renderSuppStreak(); }
+      else { daily[today]=daily[today]||{}; daily[today][k]=!daily[today][k]; saveDaily(daily); }
+      renderToday();
+    });
+  }
+  const tp=document.getElementById('todayPlans');
+  if(tp){
+    const list=plans.filter(p=>p.date===today);
+    tp.innerHTML=list.length?list.map(p=>{
+      const cat=PLAN_CATS[p.cat]||PLAN_CATS.other;
+      return `<div class="today-plan-row${p.done?' pdone':''}"><input type="checkbox" class="plan-check" data-todaydone="${p.id}" ${p.done?'checked':''}><span class="plan-cat" style="background:${cat.c}22;color:${cat.c}">${cat.ic} ${cat.lbl}</span><span class="pnote">${p.note?esc(p.note):''}</span></div>`;
+    }).join(''):'<div class="today-empty">На сьогодні планів нема. Можеш додати у вкладці «План» 🙂</div>';
+    tp.querySelectorAll('[data-todaydone]').forEach(cb=>cb.onchange=()=>{ const p=plans.find(x=>x.id===cb.dataset.todaydone); if(p){ p.done=cb.checked; savePlans(plans); renderToday(); if(typeof renderPlanList==='function') renderPlanList(); } });
+  }
+  const tsl=document.getElementById('todaySleep');
+  if(tsl){
+    let pend=null; try{ pend=JSON.parse(localStorage.getItem('krasa-sleep-pending')||'null'); }catch(e){}
+    const lastWakeToday=[...sleep].sort((a,b)=>b.ts-a.ts).find(s=>isoDate(new Date(s.ts))===today);
+    if(pend) tsl.innerHTML=`<div class="callout">😴 Ти позначила, що заснула о <b>${hhmm(new Date(pend.ts))}</b>. Відкрий вкладку «Сон» і тисни «Прокинулась», коли встанеш.</div>`;
+    else if(lastWakeToday) tsl.innerHTML=`<div class="callout gold">😴 Сьогодні ти спала <b>${fmtDur(lastWakeToday.hours)}</b>. ${lastWakeToday.hours>=sleepGoal-0.01?'Ціль виконана 🌟':'Трохи менше цілі — надолужиш увечері 💛'}</div>`;
+    else tsl.innerHTML=`<div class="callout">😴 Ще не відмічала сон за сьогодні — зроби це у вкладці «Сон».</div>`;
+  }
+}
+renderToday();
+
+/* ── СИНХРОНІЗАЦІЯ: одна колекція 'comments' (tab:'krasa-state'), latest-wins цілим блоком.
+   Той самий rule-safe анонімний патерн, що вже вживається у дружках — лише .add() у comments. ── */
+(function(){
+  const KRASA_KEYS=['krasa-plans','krasa-sleep','krasa-sleep-goal','krasa-diary','krasa-supp','krasa-supp-log','krasa-drive-hours','krasa-drive-log','krasa-done','krasa-daily'];
+  const statusEl=document.getElementById('syncStatus');
+  function setStatus(t){ if(statusEl) statusEl.textContent=t; }
+  if(typeof firebase==='undefined'){ setStatus('💾 зберігається на цьому пристрої'); return; }
+  const cfg={ apiKey:"AIzaSyAtHp8tsubQ_v4iSi2zkfCZTgKKMjm2VGA", authDomain:"wedding-6e47f.firebaseapp.com", projectId:"wedding-6e47f", storageBucket:"wedding-6e47f.firebasestorage.app", messagingSenderId:"87093437583", appId:"1:87093437583:web:d1ec82c0bca2f0334f3cfa" };
+  let COMMENTS=null, auth=null, ready=false, pushTimer=null;
+  function localVer(){ try{ return parseFloat(localStorage.getItem('krasa-sync-ver')||'0')||0; }catch(e){ return 0; } }
+  function setLocalVer(v){ try{ localStorage.setItem('krasa-sync-ver',String(v)); }catch(e){} }
+  function snapshot(){ const o={}; KRASA_KEYS.forEach(k=>{ try{ const v=localStorage.getItem(k); if(v!=null) o[k]=v; }catch(e){} }); return o; }
+  function anyInputFocused(){ const el=document.activeElement; return el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT'); }
+  function hydrate(){
+    try{
+      diary=loadDiary(); if(typeof renderDiary==='function') renderDiary();
+      done=loadDone(); if(typeof render==='function') render();
+      plans=loadPlans(); if(typeof renderPlanCal==='function'){ renderPlanCal(); renderPlanList(); }
+      sleep=loadSleep(); sleepGoal=loadSleepGoal(); if(typeof renderSleep==='function'){ renderSleep(); renderSleepPending(); }
+      suppState=loadSupp(); suppLog=loadSuppLog(); if(typeof renderSupp==='function') renderSupp();
+      driveH=loadDriveH(); driveLog=loadDriveLog(); if(typeof renderDrive==='function') renderDrive();
+      daily=loadDaily(); if(typeof renderToday==='function') renderToday();
+    }catch(e){ console.warn('hydrate', e); }
+  }
+  function doPush(){
+    if(!ready||!COMMENTS) return;
+    const ver=Date.now(); setLocalVer(ver);
+    setStatus('☁️ зберігаю…');
+    COMMENTS.add({tab:'krasa-state', payload:JSON.stringify(snapshot()), ver, ts:ver, uid:(auth&&auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>setStatus('☁️ синхронізовано на всіх пристроях'))
+      .catch(e=>{ console.warn('krasa push', e); setStatus('💾 зберігається на цьому пристрої (хмара недоступна)'); });
+  }
+  window.__ksync=function(){ if(!ready) return; if(pushTimer) clearTimeout(pushTimer); pushTimer=setTimeout(doPush,1500); };
+  function adopt(doc){
+    if(!doc||typeof doc.payload!=='string') return;
+    if(!(doc.ver>localVer())) return;               // не старіше за наш стан і не власне відлуння
+    if(anyInputFocused()){ setTimeout(()=>adopt(doc),1200); return; }  // не перебивати, поки щось вводиться
+    let obj=null; try{ obj=JSON.parse(doc.payload); }catch(e){ return; }
+    if(!obj) return;
+    KRASA_KEYS.forEach(k=>{ try{ if(obj[k]!=null) localStorage.setItem(k,obj[k]); }catch(e){} });
+    setLocalVer(doc.ver); hydrate(); setStatus('☁️ синхронізовано на всіх пристроях');
+  }
+  function bind(){
+    if(!COMMENTS) return;
+    COMMENTS.where('tab','==','krasa-state').onSnapshot(snap=>{
+      let best=null; snap.docs.forEach(d=>{ const x=d.data(); if(x&&(!best||(x.ver||0)>(best.ver||0))) best=x; });
+      if(best) adopt(best);
+    }, err=>{ console.warn('krasa snapshot', err); });
+  }
+  try{
+    firebase.initializeApp(cfg); auth=firebase.auth(); COMMENTS=firebase.firestore().collection('comments');
+    setStatus('☁️ підключаюсь…');
+    auth.signInAnonymously().then(()=>{ ready=true; bind(); setStatus('☁️ синхронізується між пристроями'); })
+      .catch(e=>{ console.warn('krasa anon', e); setStatus('💾 зберігається на цьому пристрої (хмара недоступна)'); });
+  }catch(e){ console.warn('krasa firebase init', e); setStatus('💾 зберігається на цьому пристрої'); }
+})();
+
+/* ── PWA: на головний екран ── */
+if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
 
 (function(){
   const btn=document.getElementById('themeToggle');
