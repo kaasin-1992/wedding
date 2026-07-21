@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Для наших мам — Катя & Діма, 06.09.2026</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#8C6B4A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%90%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Свідомо одна тепла світла тема, великий шрифт, високий контраст — щоб мамам було легко читати,
+   і жодних кнопок/перемикачів, які можна випадково "наклацати". Тільки безпечні посилання (карта, дзвінок). */
+:root{
+  --bg:#FBF5EC; --surface:#FFFFFF; --surface2:#F3E9D8;
+  --ink:#3A2E22; --muted:#7A6A55;
+  --gold:#8C6B4A; --gold-soft:#B79B72; --blush:#C77E6A;
+  --line:#E6D8C2;
+  --serif:'Cormorant Garamond', Georgia, serif;
+  --sans:'Manrope', -apple-system, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:19px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 12% 8%, rgba(183,155,114,.10), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(199,126,106,.08), transparent 40%);}
+.wrap{max-width:600px;margin:0 auto;padding:34px 20px 70px}
+header{text-align:center;margin-bottom:34px}
+.eyebrow{font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px}
+header h1{font-family:var(--serif);font-weight:600;font-size:46px;line-height:1.1;margin:0 0 10px;color:var(--ink)}
+header .sub{font-size:19px;color:var(--muted);margin:0}
+.hero-date{display:inline-block;margin-top:18px;font-family:var(--serif);font-size:26px;font-weight:600;color:var(--gold);
+  border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line);padding:8px 22px}
+.card{background:var(--surface);border-radius:22px;padding:24px 24px;margin-bottom:22px;
+  box-shadow:0 6px 24px rgba(140,107,74,.10);border:1px solid var(--line)}
+.card h2{font-family:var(--serif);font-weight:600;font-size:29px;margin:0 0 14px;color:var(--gold);
+  display:flex;align-items:center;gap:10px;line-height:1.15}
+.card h2 .ic{font-size:26px}
+.venue{margin-bottom:20px}
+.venue:last-child{margin-bottom:0}
+.venue h3{font-size:21px;font-weight:700;margin:0 0 4px;color:var(--ink)}
+.venue .addr{color:var(--muted);margin:0 0 4px}
+.venue .when{color:var(--blush);font-weight:600;margin:0 0 12px}
+.map-btn{display:block;text-align:center;background:var(--gold);color:#fff;text-decoration:none;
+  font-weight:700;font-size:18px;padding:15px 18px;border-radius:14px;box-shadow:0 4px 0 rgba(90,66,40,.25)}
+.map-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(90,66,40,.25)}
+.sched{list-style:none;padding:0;margin:0}
+.sched li{display:flex;gap:14px;padding:11px 0;border-top:1px solid var(--line);align-items:baseline}
+.sched li:first-child{border-top:none}
+.sched .t{flex:0 0 92px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;font-size:18px}
+.sched .d{flex:1}
+.venue-label{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--blush);margin:18px 0 6px}
+.venue-label:first-child{margin-top:0}
+.checklist{list-style:none;padding:0;margin:8px 0 0}
+.checklist li{position:relative;padding:9px 0 9px 34px;border-top:1px solid var(--line)}
+.checklist li:first-child{border-top:none}
+.checklist li::before{content:'🤍';position:absolute;left:0;top:9px}
+.checklist li b{color:var(--ink)}
+.note-soft{background:var(--surface2);border-radius:14px;padding:14px 16px;font-size:17px;color:var(--muted);
+  margin-top:14px;line-height:1.55}
+.contact-line{display:flex;flex-direction:column;gap:2px;padding:13px 0;border-top:1px solid var(--line)}
+.contact-line:first-of-type{border-top:none}
+.contact-line .who{font-weight:700;font-size:19px}
+.contact-line .role{color:var(--muted);font-size:16px}
+.contact-line a{color:var(--gold);font-weight:600;text-decoration:none;font-size:18px;margin-top:3px;
+  display:inline-block;border-bottom:2px solid var(--gold-soft);width:fit-content}
+.tips{list-style:none;padding:0;margin:0}
+.tips li{padding:10px 0 10px 32px;position:relative;border-top:1px solid var(--line)}
+.tips li:first-child{border-top:none}
+.tips li::before{content:'☘️';position:absolute;left:0;top:10px}
+.closing{text-align:center;font-family:var(--serif);font-size:25px;line-height:1.4;color:var(--gold);
+  margin:34px 12px 6px;font-weight:600}
+footer{text-align:center;color:var(--muted);font-size:16px;margin-top:22px}
+.tbd{font-style:italic;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">💐 З любов'ю для вас</div>
+    <h1>Наші любі мами</h1>
+    <p class="sub">Усе головне про день весілля — зручно й в одному місці</p>
+    <div class="hero-date">6 вересня 2026 · субота</div>
+  </header>
+
+  <div class="card">
+    <h2><span class="ic">📍</span>Коли і де</h2>
+    <div class="venue">
+      <h3>☀️ Церемонія — «Бути Софі»</h3>
+      <p class="addr">Софійська площа, Київ</p>
+      <p class="when">Збір гостей об 11:30 · церемонія близько 13:00</p>
+      <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">🗺️ Відкрити на карті</a>
+    </div>
+    <div class="venue">
+      <h3>🌙 Святкування — «Хвильовий»</h3>
+      <p class="addr">вул. Нижньоюрківська, Київ</p>
+      <p class="when">Гості збираються з 16:20 · молоді приїжджають близько 18:00</p>
+      <a class="map-btn" href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">🗺️ Відкрити на карті</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="ic">🕐</span>Розклад дня</h2>
+    <div class="venue-label">☀️ Софі (день)</div>
+    <ul class="sched">
+      <li><span class="t">11:30</span><span class="d">Збір гостей</span></li>
+      <li><span class="t">~13:00</span><span class="d">Церемонія</span></li>
+      <li><span class="t">~14:00</span><span class="d">Обід</span></li>
+      <li><span class="t">~14:45</span><span class="d">Танці й спільні активності</span></li>
+      <li><span class="t">~16:00</span><span class="d">Виїзд до «Хвильового»</span></li>
+    </ul>
+    <div class="venue-label">🌙 Хвильовий (вечір)</div>
+    <ul class="sched">
+      <li><span class="t">16:20</span><span class="d">Гості збираються, щоб зустріти молодих</span></li>
+      <li><span class="t">~18:00</span><span class="d">Приїзд молодих</span></li>
+      <li><span class="t">Вечір</span><span class="d">Банкет, тости, перший танець</span></li>
+      <li><span class="t">Пізніше</span><span class="d">Торт</span></li>
+      <li><span class="t">~23:30</span><span class="d">Завершення</span></li>
+    </ul>
+    <div class="note-soft">Часи орієнтовні — можуть трохи зміститись у сам день. Не хвилюйтесь, поруч будуть координаторки, які всім підкажуть.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="ic">🕊️</span>Що підготувати</h2>
+    <p style="margin:0 0 4px;color:var(--muted)">Традиційні речі для благословення й обрядів. Хто саме з мам що бере на себе — Катя уточнить окремо, поки що просто щоб було під рукою:</p>
+    <ul class="checklist">
+      <li><b>Рушник</b> — вишитий, для благословення молодих</li>
+      <li><b>Ікона</b> — для батьківського благословення</li>
+      <li><b>Коровай або весільний хліб</b> — якщо вирішимо за традицією</li>
+      <li><b>Хліб-сіль</b> — зустріч молодих</li>
+      <li><b>Кілька теплих слів</b> — благословення від серця 🤍</li>
+    </ul>
+    <div class="note-soft">Це орієнтир, а не суворий список — фінально узгодимо з Катею, що саме й хто готує. Нічого зайвого й на бігу.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="ic">👗</span>Що вдягнути</h2>
+    <p style="margin:0 0 4px">Ошатно й святково, у чому вам комфортно й гарно. Врахуйте, що день довгий: удень на Софі надворі, ввечері на Хвильовому може похолодати — тепла накидка не завадить.</p>
+    <div class="note-soft">Точну кольорову гаму (дрес-код) Катя ще підбирає — щойно визначиться, підкаже вам особисто. <span class="tbd">поки уточнюється</span></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="ic">📞</span>Кому телефонувати</h2>
+    <p style="margin:0 0 8px;color:var(--muted)">Якщо в день весілля щось незрозуміло — не соромтесь питати:</p>
+    <div class="contact-line">
+      <span class="who">Катя і Діма</span>
+      <span class="role">за будь-якими питаннями (але в сам день ми можемо бути зайняті 🙂)</span>
+    </div>
+    <div class="contact-line">
+      <span class="who">Марія</span>
+      <span class="role">координаторка на Софі (день) — усе про церемонію, розсадку, час</span>
+      <a href="https://t.me/mariiyka_ua" target="_blank" rel="noopener">Написати в Telegram →</a>
+    </div>
+    <div class="contact-line">
+      <span class="who">Аліса</span>
+      <span class="role">координаторка на Хвильовому (вечір) — усе про святкування</span>
+      <a href="https://t.me/AlisaKisaa" target="_blank" rel="noopener">Написати в Telegram →</a>
+    </div>
+    <div class="note-soft">Катя допише сюди номери телефонів, якщо буде зручніше дзвонити.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="ic">☘️</span>Кілька порад</h2>
+    <ul class="tips">
+      <li>Зручне взуття — день довгий (можна змінне на вечір)</li>
+      <li>Тепла накидка на вечір надворі</li>
+      <li>Заряджений телефон і, якщо є, павербанк — на фото</li>
+      <li>І головне — розслабтесь і насолоджуйтесь святом. Про організацію є кому подбати 🤍</li>
+    </ul>
+  </div>
+
+  <div class="closing">Дякуємо вам за все.<br>Цей день — і ваш теж. 💐</div>
+  <footer>Катя &amp; Діма · 6 вересня 2026</footer>
+</div>
+</body>
+</html>
