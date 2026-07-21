@@ -179,11 +179,20 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
 .dtask-kind-toggle button.active{background:var(--terra);border-color:var(--terra);color:#fff}
 .dtask-form input{font-family:var(--sans);font-size:15px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+/* нативний календар дати має підхопити тему, щоб текст обраної дати був видимий у темному режимі */
+.dtask-form input[type="date"]{color-scheme:light}
+@media (prefers-color-scheme: dark){ .dtask-form input[type="date"]{color-scheme:dark} }
+:root[data-theme="dark"] .dtask-form input[type="date"]{color-scheme:dark}
+:root[data-theme="light"] .dtask-form input[type="date"]{color-scheme:light}
 .dtask-form .row2{display:flex;gap:8px}
 .dtask-form .row2 input{flex:1;min-width:0}
 .dtask-form button.dtask-submit{align-self:flex-end;font-family:var(--sans);font-weight:700;font-size:14px;padding:9px 18px;border-radius:999px;border:none;background:var(--terra);color:var(--surface);cursor:pointer}
 .dtask-form button.dtask-submit:disabled{opacity:.6}
 .dtask-err{font-size:12.5px;color:var(--rose);display:none}
+.dtask-filter{display:flex;gap:6px;margin-bottom:12px}
+.dtask-filter button{flex:1;font-family:var(--sans);font-size:12.5px;font-weight:700;padding:8px 6px;
+  border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.dtask-filter button.active{background:var(--rose);border-color:var(--rose);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.18)}
 .dtask-list{display:flex;flex-direction:column;gap:2px}
 .dtask-row{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--line);padding:10px 0;font-size:14px}
 .dtask-row:first-child{border-top:none;padding-top:0}
@@ -228,13 +237,45 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dc-suggest-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);max-width:64px;text-align:center}
 .dc-suggest-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);box-shadow:var(--shadow-sm)}
 /* згортабельні розділи */
-.sec-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;position:relative;padding-right:24px}
-.sec-head::after{content:'▾';position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:14px;color:var(--terra);transition:transform .2s ease}
+.sec-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;position:relative;padding-right:42px}
+.sec-head::after{content:'▾';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;background:var(--terra);border-radius:50%;
+  box-shadow:0 2px 0 rgba(0,0,0,.18);transition:transform .2s ease}
+.sec-head:active::after{transform:translateY(-50%) scale(.9)}
 .sec-collapsed > .sec-head::after,.roles-block.sec-collapsed > .sec-head::after{transform:translateY(-50%) rotate(-90deg)}
+.sec-collapsed > .sec-head:active::after,.roles-block.sec-collapsed > .sec-head:active::after{transform:translateY(-50%) rotate(-90deg) scale(.9)}
 .sec-collapsed > :not(.sec-head){display:none !important}
 .roles-block{margin-bottom:30px}
 .roles-block > .sec-head{font-family:var(--serif);font-size:16px;margin:0 0 14px;color:var(--terra)}
 .roles-block.sec-collapsed .roles-table{margin-bottom:0}
+/* корисні контакти */
+.contacts-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px;border:3px dashed var(--terra-dim)}
+.contacts-box h2{font-family:var(--serif);font-size:16px;margin:0 0 4px;color:var(--terra)}
+.contacts-hint{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.contacts-list{display:flex;flex-direction:column;gap:2px}
+.contact-row{border-top:1px solid var(--line);padding:11px 0;font-size:14px}
+.contact-row:first-child{border-top:none}
+.contact-lbl{font-weight:700;color:var(--text);margin-bottom:2px}
+.contact-val a{color:var(--terra);font-weight:600;text-decoration:none;border-bottom:1px solid var(--terra)}
+.contact-val .cval-empty{color:var(--muted);font-style:italic;font-weight:400}
+.contact-note{font-size:12px;color:var(--rose);margin-top:3px}
+.contact-note::before{content:'⚠️ ';font-style:normal}
+/* режим редагування (лише для нареченої) */
+.contacts-lock{margin-left:auto;font-size:12px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--muted);font-family:var(--sans);font-weight:600}
+.contacts-head{display:flex;align-items:center;gap:8px}
+.contacts-editbar{display:none;background:var(--terra-dim);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--text);margin-bottom:12px;align-items:center;gap:10px;flex-wrap:wrap}
+.contacts-box.editing .contacts-editbar{display:flex}
+.contacts-editbar button{font-family:var(--sans);font-weight:700;font-size:12px;padding:5px 12px;border-radius:999px;border:none;background:var(--surface);color:var(--terra);cursor:pointer}
+.contact-edit{display:none;flex-direction:column;gap:6px;margin-top:8px}
+.contacts-box.editing .contact-edit{display:flex}
+.contact-edit input{font-family:var(--sans);font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.contact-edit-row{display:flex;gap:6px}
+.contact-edit-row button{flex:none;font-family:var(--sans);font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+.ce-save{background:var(--terra);color:#fff}
+.ce-del{background:var(--surface2);color:var(--muted)}
+.contacts-addbtn{display:none;margin-top:12px;font-family:var(--sans);font-weight:700;font-size:13px;padding:9px 16px;border-radius:999px;border:2px dashed var(--terra);background:transparent;color:var(--terra);cursor:pointer;width:100%}
+.contacts-box.editing .contacts-addbtn{display:block}
 </style>
 </head>
 <body>
@@ -428,6 +469,20 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </section>
   </div>
 
+  <div class="contacts-box" id="contactsBox">
+    <div class="contacts-head">
+      <h2 class="sec-head">📇 Корисні контакти</h2>
+      <button type="button" class="contacts-lock" id="contactsLock" title="Редагування для нареченої">🔒</button>
+    </div>
+    <p class="contacts-hint">Кому писати/дзвонити в день Х. Наповнює й редагує Катя — дівчата бачать лише для читання.</p>
+    <div class="contacts-editbar" id="contactsEditbar">
+      ✏️ Режим редагування (бачиш лише ти)
+      <button type="button" id="contactsLockOff">Готово</button>
+    </div>
+    <div class="contacts-list" id="contactsList"><div class="notes-empty">Завантаження…</div></div>
+    <button type="button" class="contacts-addbtn" id="contactsAdd">＋ Додати контакт</button>
+  </div>
+
   <div class="tasks-box">
     <h2 class="sec-head">✅ Спільні завдання та зустрічі</h2>
     <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
@@ -445,6 +500,11 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       </div>
       <div class="dtask-err" id="dtaskErr">Вкажи дату — без дати не збережеться.</div>
       <button type="button" class="dtask-submit" id="dtaskSend">Додати</button>
+    </div>
+    <div class="dtask-filter" id="dtaskFilter">
+      <button type="button" data-df="all" class="active">Все</button>
+      <button type="button" data-df="task">✅ Завдання</button>
+      <button type="button" data-df="meeting">📅 Зустрічі</button>
     </div>
     <div class="dtask-list" id="dtaskList"><div class="notes-empty">Завантаження…</div></div>
   </div>
@@ -578,7 +638,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   }
 
   if(auth){
-    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindMainDocSync(); bindDcSuggestSync(); }).catch(err=>{
+    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindMainDocSync(); bindDcSuggestSync(); bindContactsSync(); }).catch(err=>{
       console.warn('anon sign-in', err);
       listEl.innerHTML='<div class="notes-empty">Не вдалося увійти — спробуй оновити сторінку.</div>';
     });
@@ -603,7 +663,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
      теж ОКРЕМИЙ додатковий документ-подія {tab:'druzhky-task-done', taskId, done, ts}, а
      поточний стан рахуємо як НАЙСВІЖІШУ подію для цього taskId (event-sourcing) — так можна
      перемикати галочку туди-сюди, не потребуючи права редагувати чужий документ. */
-  let dtasks=[], dtaskEvents=[], dtaskKind='task', dtaskMonthOffset=0;
+  let dtasks=[], dtaskEvents=[], dtaskKind='task', dtaskMonthOffset=0, dtaskFilter='all';
   const calEl=document.getElementById('dtaskCal');
   const listElT=document.getElementById('dtaskList');
   const kindTaskBtn=document.getElementById('dtaskKindTask');
@@ -620,6 +680,11 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   kindTaskBtn.onclick=()=>{ dtaskKind='task'; kindTaskBtn.classList.add('active'); kindMeetingBtn.classList.remove('active'); dtaskPlaceEl.style.display='none'; };
   kindMeetingBtn.onclick=()=>{ dtaskKind='meeting'; kindMeetingBtn.classList.add('active'); kindTaskBtn.classList.remove('active'); dtaskPlaceEl.style.display=''; };
   dtaskDateEl.addEventListener('input',()=>{ dtaskErrEl.style.display='none'; });
+  document.querySelectorAll('#dtaskFilter button').forEach(b=>b.onclick=()=>{
+    dtaskFilter=b.dataset.df;
+    document.querySelectorAll('#dtaskFilter button').forEach(x=>x.classList.toggle('active', x===b));
+    renderDtaskList();
+  });
 
   function fmtShortDate(iso){
     if(!iso) return '';
@@ -663,7 +728,9 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     if(!listElT) return;
     if(!dtasks.length){ listElT.innerHTML='<div class="notes-empty">Поки нічого — додай перше завдання чи зустріч 🙂</div>'; return; }
     const dm=doneMap();
-    const sorted=dtasks.slice().sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999') || ((a.ts||0)-(b.ts||0)));
+    const filtered=dtasks.filter(t=>dtaskFilter==='all' || (t.kind||'task')===dtaskFilter);
+    if(!filtered.length){ listElT.innerHTML='<div class="notes-empty">'+(dtaskFilter==='meeting'?'Зустрічей поки немає 🙂':'Завдань поки немає 🙂')+'</div>'; return; }
+    const sorted=filtered.slice().sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999') || ((a.ts||0)-(b.ts||0)));
     listElT.innerHTML=sorted.map(t=>{
       const isDone=t.kind==='task' && dm[t.id];
       const checkbox=t.kind==='task'
@@ -788,6 +855,128 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       .then(()=>{ dtaskTextEl.value=''; dtaskDateEl.value=''; dtaskPlaceEl.value=''; dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; })
       .catch(e=>{ console.warn('add dtask', e); dtaskSendBtn.disabled=false; dtaskSendBtn.textContent=old; alert('Не вдалося додати, спробуй ще раз'); });
   };
+
+  /* ════ КОРИСНІ КОНТАКТИ (редагує лише наречена за секретним кодом) ════
+     Дівчата бачать лише для читання. Редагування зʼявляється, тільки коли сторінку
+     розблоковано кодом (кнопка 🔒 або посилання ?edit=КОД) — код зберігається в localStorage.
+     Це НЕ криптографічний захист (код лежить у клієнтському коді), а той самий "рівень
+     застосунку", що вже прийнятий для решти: практично дівчата не побачать форму редагування.
+     Дані — той самий rule-safe патерн: лише ДОДАВАННЯ подій у колекцію 'comments' (tab
+     'druzhky-contact'), поточний стан = НАЙСВІЖІША подія на кожен cid (event-sourcing),
+     видалення — подія {deleted:true}. Слоти, які Катя назвала, пре-створені як дефолти. */
+  const EDIT_CODE='kalyna';   // ← секретний код нареченої (можна змінити на будь-який)
+  const DEFAULT_CONTACTS=[
+    {cid:'dima',        label:'Діма (наречений)',                 note:''},
+    {cid:'mama-katya',  label:'Мама Каті',                        note:'турбувати тільки по важливому'},
+    {cid:'ceremony-sofia', label:'Церемонія — Софі (веде подруга)', note:''},
+    {cid:'host-wave',   label:'Ведуча — Хвильовий',               note:''},
+    {cid:'venue-sofia', label:'Локація «Бути Софі»',              note:''},
+    {cid:'venue-wave',  label:'Локація «Хвильовий»',              note:''},
+    {cid:'music-sofia', label:'Музиканти — Софі',                 note:''},
+    {cid:'music-wave',  label:'Музиканти — Хвильовий',            note:''},
+    {cid:'photo',       label:'Фотограф',                         note:''},
+  ];
+  let contactEvents=[], contactsEditing=false;
+  const cListEl=document.getElementById('contactsList');
+  const cBox=document.getElementById('contactsBox');
+  const cLock=document.getElementById('contactsLock');
+  const cLockOff=document.getElementById('contactsLockOff');
+  const cAddBtn=document.getElementById('contactsAdd');
+
+  // розблокування редагування: ?edit=КОД у посиланні, або збережений прапорець, або кнопка 🔒
+  try{
+    const p=new URLSearchParams(location.search);
+    if(p.get('edit')===EDIT_CODE){ localStorage.setItem('druzhky-editor','1'); }
+    if(localStorage.getItem('druzhky-editor')==='1') contactsEditing=true;
+  }catch(e){}
+
+  function contactState(){
+    // дефолти + найсвіжіша подія на кожен cid
+    const byCid={};
+    DEFAULT_CONTACTS.forEach(d=>{ byCid[d.cid]={cid:d.cid,label:d.label,value:'',note:d.note,ts:0,order:DEFAULT_CONTACTS.indexOf(d)}; });
+    const latest={};
+    contactEvents.forEach(e=>{ if(!e.cid) return; if(!latest[e.cid]||(e.ts||0)>(latest[e.cid].ts||0)) latest[e.cid]=e; });
+    Object.values(latest).forEach(e=>{
+      if(e.deleted){ delete byCid[e.cid]; return; }
+      const base=byCid[e.cid]||{cid:e.cid,order:900};
+      byCid[e.cid]={cid:e.cid,label:e.label!=null?e.label:base.label,value:e.value!=null?e.value:base.value,note:e.note!=null?e.note:base.note,ts:e.ts||0,order:base.order};
+    });
+    return Object.values(byCid).sort((a,b)=>(a.order-b.order)||(a.ts-b.ts));
+  }
+  function fmtContactVal(v){
+    v=(v||'').trim();
+    if(!v) return '<span class="cval-empty">— ще не додано —</span>';
+    const tg=v.match(/^@([\w\d_]+)$/)||v.match(/t\.me\/([\w\d_]+)/);
+    if(tg) return `<a href="https://t.me/${esc(tg[1])}" target="_blank" rel="noopener">@${esc(tg[1])}</a>`;
+    const phone=v.replace(/[\s\-()]/g,'');
+    if(/^\+?\d{7,15}$/.test(phone)) return `<a href="tel:${esc(phone)}">${esc(v)}</a>`;
+    return esc(v);
+  }
+  function renderContacts(){
+    if(!cListEl) return;
+    cBox.classList.toggle('editing', contactsEditing);
+    if(cLock) cLock.textContent=contactsEditing?'🔓':'🔒';
+    const list=contactState();
+    const readOnlyList=list.filter(c=>(c.value||'').trim() || (contactsEditing));
+    if(!contactsEditing && !readOnlyList.length){ cListEl.innerHTML='<div class="notes-empty">Контакти зʼявляться ближче до дати 🙂</div>'; return; }
+    cListEl.innerHTML=(contactsEditing?list:readOnlyList).map(c=>{
+      const noteHtml=c.note?`<div class="contact-note">${esc(c.note)}</div>`:'';
+      const edit=contactsEditing?`
+        <div class="contact-edit" data-cedit="${esc(c.cid)}">
+          <input type="text" data-cf="label" value="${esc(c.label||'')}" placeholder="Назва (напр. Фотограф)">
+          <input type="text" data-cf="value" value="${esc(c.value||'')}" placeholder="Телефон / @телеграм">
+          <input type="text" data-cf="note" value="${esc(c.note||'')}" placeholder="Примітка (напр. тільки по ділу)">
+          <div class="contact-edit-row">
+            <button type="button" class="ce-save" data-csave="${esc(c.cid)}">Зберегти</button>
+            <button type="button" class="ce-del" data-cdel="${esc(c.cid)}">Прибрати</button>
+          </div>
+        </div>`:'';
+      return `<div class="contact-row">
+        <div class="contact-lbl">${esc(c.label||'Контакт')}</div>
+        <div class="contact-val">${fmtContactVal(c.value)}</div>
+        ${noteHtml}${edit}</div>`;
+    }).join('');
+    if(contactsEditing){
+      cListEl.querySelectorAll('[data-csave]').forEach(b=>b.onclick=()=>{
+        const cid=b.dataset.csave;
+        const wrap=cListEl.querySelector(`[data-cedit="${CSS.escape(cid)}"]`);
+        const g=f=>wrap.querySelector(`[data-cf="${f}"]`).value.trim();
+        saveContact(cid, g('label'), g('value'), g('note'), false, b);
+      });
+      cListEl.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>{
+        if(!confirm('Прибрати цей контакт?')) return;
+        saveContact(b.dataset.cdel,'','','',true,b);
+      });
+    }
+  }
+  function saveContact(cid,label,value,note,deleted,btn){
+    if(!ready||!COMMENTS){ alert('Ще підключаюсь до бази, спробуй за кілька секунд'); return; }
+    if(btn){ btn.disabled=true; }
+    COMMENTS.add({tab:'druzhky-contact', cid, label, value, note, deleted:!!deleted, ts:Date.now(), uid:(auth.currentUser?auth.currentUser.uid:'')})
+      .then(()=>{ if(btn) btn.disabled=false; })
+      .catch(e=>{ console.warn('save contact', e); if(btn) btn.disabled=false; alert('Не вдалося зберегти, спробуй ще раз'); });
+  }
+  function bindContactsSync(){
+    if(!COMMENTS) return;
+    COMMENTS.where('tab','==','druzhky-contact').onSnapshot(snap=>{
+      contactEvents=snap.docs.map(d=>d.data());
+      renderContacts();
+    }, err=>{ console.warn('contacts snapshot', err); if(cListEl) cListEl.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>'; });
+  }
+  if(cLock) cLock.onclick=()=>{
+    if(contactsEditing){ contactsEditing=false; try{localStorage.removeItem('druzhky-editor');}catch(e){} renderContacts(); return; }
+    const code=prompt('Код для редагування (лише для нареченої):');
+    if(code===null) return;
+    if(code.trim()===EDIT_CODE){ contactsEditing=true; try{localStorage.setItem('druzhky-editor','1');}catch(e){} renderContacts(); }
+    else alert('Невірний код');
+  };
+  if(cLockOff) cLockOff.onclick=()=>{ contactsEditing=false; try{localStorage.removeItem('druzhky-editor');}catch(e){} renderContacts(); };
+  if(cAddBtn) cAddBtn.onclick=()=>{
+    const label=prompt('Назва контакту (напр. «Водій», «Флорист»):');
+    if(!label||!label.trim()) return;
+    saveContact('c'+Date.now(), label.trim(), '', '', false, null);
+  };
+  renderContacts();
 })();
 /* ── ЛІЧИЛЬНИК ДНІВ + ПОГОДА (та сама логіка, що в основному застосунку) ── */
 (function(){
