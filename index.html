@@ -617,6 +617,10 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .cmt-open:active{transform:scale(.95);}
 .cmt-count{min-width:16px;height:16px;line-height:16px;text-align:center;font-size:11px;border-radius:9px;background:transparent;color:var(--muted);}
 .cmt-count.has{background:var(--terra);color:#fff;padding:0 5px;}
+.wishpicks-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.wishpicks-list a{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--terra);background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-decoration:none;}
+.wishpicks-list a:active{transform:scale(.97);}
+.wishpicks-top-lbl{font-weight:700;font-size:13px;color:var(--muted);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em;}
 .druzhky-notes-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:var(--sans);font-weight:700;font-size:15px;color:var(--terra);background:var(--surface2);border:1.5px dashed var(--terra);border-radius:14px;padding:12px 16px;margin-bottom:16px;cursor:pointer;}
 .druzhky-notes-btn:active{transform:scale(.98);}
 .cmt-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,20,18,.5);display:flex;align-items:flex-end;justify-content:center;}
@@ -1471,6 +1475,28 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- IDEAS / LOOK -->
 <div class="panel" id="tab-ideas">
+  <details class="add-section wishpicks-box" style="margin-bottom:14px;">
+    <summary>🤍 Мої вішлісти (все біле)</summary>
+    <div style="padding:10px 4px;font-size:14px;line-height:1.65;">
+      <p style="margin:0 0 8px;">Тут я збираю все біле підряд, що потім за можливості міряю або шукаю дешевше.</p>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:13px;">Тут усе — українські бренди. Ціна підтягнулась не всюди адекватно, тому не лякайтесь взуттю за 25000 грн 🙂</p>
+      <div class="wishpicks-list">
+        <a href="https://wishpicks.com/wishlist/1c682b0d-faaa-453c-a44d-7193873cae4a" target="_blank" rel="noopener">👒 На голову</a>
+        <a href="https://wishpicks.com/wishlist/4487442d-b838-4960-92b6-5e8ec07d0c74" target="_blank" rel="noopener">👗 Сукні</a>
+        <a href="https://wishpicks.com/wishlist/8ec35177-b490-47a9-bdfa-703fcf2f3d8c" target="_blank" rel="noopener">👚 Біле на верх</a>
+        <a href="https://wishpicks.com/wishlist/ca56d097-ed16-49fb-a0a6-19f6874b432e" target="_blank" rel="noopener">👖 Біле на низ</a>
+        <a href="https://wishpicks.com/wishlist/0528cf16-3673-411e-9d03-709c60c4de15" target="_blank" rel="noopener">🩲 Нижня білизна</a>
+        <a href="https://wishpicks.com/wishlist/baae03fd-7e8f-474a-98ec-adcbd3b48010" target="_blank" rel="noopener">🎀 Приколи-аксесуари</a>
+        <a href="https://wishpicks.com/wishlist/88098f8e-7819-4939-9518-dbbf73aba5d3" target="_blank" rel="noopener">💍 Прикраси</a>
+        <a href="https://wishpicks.com/wishlist/54be5766-c958-48cf-805a-1c7866bc2497" target="_blank" rel="noopener">👠 Взуття</a>
+      </div>
+      <div class="wishpicks-top-lbl">⭐ Топ-луки (фінальні образи)</div>
+      <div class="wishpicks-list">
+        <a href="https://wishpicks.com/wishlist/87991e54-a1cb-4190-9cc5-96c14f940eac" target="_blank" rel="noopener">☀️ ТОП ЛУК — Софі</a>
+        <a href="https://wishpicks.com/wishlist/ab7d7fe6-c670-49da-9e6b-e0517e2844fd" target="_blank" rel="noopener">🌙 ТОП ЛУК — Хвильовий</a>
+      </div>
+    </div>
+  </details>
   <button class="moodboard-btn" data-moodboard="cloth">🎨 Мудборд одягу</button>
   <div class="add-section shoplist">
   <details>
