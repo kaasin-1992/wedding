@@ -227,6 +227,14 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dc-suggest-list{display:flex;flex-wrap:wrap;gap:12px}
 .dc-suggest-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);max-width:64px;text-align:center}
 .dc-suggest-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);box-shadow:var(--shadow-sm)}
+/* згортабельні розділи */
+.sec-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;position:relative;padding-right:24px}
+.sec-head::after{content:'▾';position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:14px;color:var(--terra);transition:transform .2s ease}
+.sec-collapsed > .sec-head::after,.roles-block.sec-collapsed > .sec-head::after{transform:translateY(-50%) rotate(-90deg)}
+.sec-collapsed > :not(.sec-head){display:none !important}
+.roles-block{margin-bottom:30px}
+.roles-block > .sec-head{font-family:var(--serif);font-size:16px;margin:0 0 14px;color:var(--terra)}
+.roles-block.sec-collapsed .roles-table{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -264,6 +272,8 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     </div>
   </div>
 
+  <div class="roles-block">
+  <h2 class="sec-head">👯 Дружки та їхні ролі</h2>
   <table class="roles-table">
     <tr><th>Хто</th><th>Головна зона</th><th>Контакт</th></tr>
     <tr><td><a href="#maria">Марія</a></td><td>Координаторка — Софі</td><td><a href="https://t.me/mariiyka_ua" target="_blank" rel="noopener">@mariiyka_ua</a></td></tr>
@@ -416,9 +426,10 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       <div class="contact"><span class="tbd">деталі уточнюються</span></div>
     </div>
   </section>
+  </div>
 
   <div class="tasks-box">
-    <h2>✅ Спільні завдання та зустрічі</h2>
+    <h2 class="sec-head">✅ Спільні завдання та зустрічі</h2>
     <p class="tasks-hint">Спільний список на всіх дружок — став завдання з дедлайном або конкретну зустріч (дата обовʼязкова), і відмічай коли зроблено. Видно всім, хто заходить на цю сторінку.</p>
     <div class="mini-cal" id="dtaskCal"></div>
     <div class="dtask-form">
@@ -439,7 +450,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box">
-    <h2>🕐 Орієнтовний розклад дня</h2>
+    <h2 class="sec-head">🕐 Орієнтовний розклад дня</h2>
     <p class="schedule-hint">Орієнтовно, часи можуть зміститись на місці. Це скелет для координації —
     конкретний зміст активностей і сюрпризи навмисно тут не розписані, щоб не спойлерити.</p>
     <div class="sched-venue">
@@ -461,7 +472,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box">
-    <h2>🎒 Що взяти з собою в день Х</h2>
+    <h2 class="sec-head">🎒 Що взяти з собою в день Х</h2>
     <p class="schedule-hint">Загальне на всіх — незалежно від ролі. Розписані завдання дивись у своїй картці нижче.</p>
     <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8">
       <li>Зручне взуття для довгого дня (можна змінне на вечір)</li>
@@ -473,13 +484,13 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="schedule-box" id="decorDressBox">
-    <h2>🎨 Декор</h2>
+    <h2 class="sec-head">🎨 Декор</h2>
     <p class="schedule-hint">Тягнеться прямо з нашого спільного застосунку — завжди актуальне, оновлювати вручну не треба.</p>
     <div id="decorSummary"><div class="notes-empty">Завантаження…</div></div>
   </div>
 
   <div class="schedule-box" id="dcSuggestBox">
-    <h2>🎨 Дрес-код — запропонуй колір</h2>
+    <h2 class="sec-head">🎨 Дрес-код — запропонуй колір</h2>
     <p class="schedule-hint">Катя ще підбирає фінальну палітру — накидай сюди кольори, які подобаються, вона перегляне й вирішить.</p>
     <div class="dc-suggest-form">
       <input type="color" id="dcSuggestColor" value="#FF1DA6" aria-label="Обрати колір">
@@ -490,7 +501,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="links-box">
-    <h2>🔗 Корисні посилання для всіх</h2>
+    <h2 class="sec-head">🔗 Корисні посилання для всіх</h2>
     <ul>
       <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
       <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
@@ -500,7 +511,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   </div>
 
   <div class="notes-box">
-    <h2>✍️ Маєш щось корисне для нас?</h2>
+    <h2 class="sec-head">✍️ Маєш щось корисне для нас?</h2>
     <p class="notes-hint">Ідея, фото-знахідка, нагадування, питання — залиш тут, Катя й Дiма це бачать.
     Список нижче видно всім дружкам (прозоро, не приватно).</p>
     <div class="notes-form">
@@ -878,6 +889,26 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
       }).catch(()=>{});
     });
   }
+})();
+/* ── згортання розділів (стан запам'ятовується на цьому пристрої) ── */
+(function(){
+  let saved={};
+  try{ saved=JSON.parse(localStorage.getItem('druzhky-collapsed')||'{}'); }catch(e){}
+  function persist(){ try{ localStorage.setItem('druzhky-collapsed', JSON.stringify(saved)); }catch(e){} }
+  document.querySelectorAll('.sec-head').forEach(h=>{
+    const box=h.parentElement;
+    const key=(h.textContent||'').trim().slice(0,40);
+    if(saved[key]) box.classList.add('sec-collapsed');
+    h.setAttribute('role','button');
+    h.setAttribute('tabindex','0');
+    const toggle=()=>{
+      const now=box.classList.toggle('sec-collapsed');
+      if(now) saved[key]=1; else delete saved[key];
+      persist();
+    };
+    h.addEventListener('click',toggle);
+    h.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  });
 })();
 (function(){
   const btn=document.getElementById('themeToggle');
