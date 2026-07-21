@@ -555,12 +555,6 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     </ul>
   </div>
 
-  <div class="schedule-box" id="decorDressBox">
-    <h2 class="sec-head" data-nav="🎨 Декор">🎨 Декор</h2>
-    <p class="schedule-hint">Тягнеться прямо з нашого спільного застосунку — завжди актуальне, оновлювати вручну не треба.</p>
-    <div id="decorSummary"><div class="notes-empty">Завантаження…</div></div>
-  </div>
-
   <div class="schedule-box" id="dcSuggestBox">
     <h2 class="sec-head" data-nav="🌈 Дрес-код">🎨 Дрес-код — запропонуй колір</h2>
     <p class="schedule-hint">Катя ще підбирає фінальну палітру — накидай сюди кольори, які подобаються, вона перегляне й вирішить.</p>
@@ -650,7 +644,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   }
 
   if(auth){
-    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindMainDocSync(); bindDcSuggestSync(); bindContactsSync(); }).catch(err=>{
+    auth.signInAnonymously().then(()=>{ ready=true; bindSync(); bindTasksSync(); bindDcSuggestSync(); bindContactsSync(); }).catch(err=>{
       console.warn('anon sign-in', err);
       listEl.innerHTML='<div class="notes-empty">Не вдалося увійти — спробуй оновити сторінку.</div>';
     });
@@ -776,43 +770,6 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     }, err=>{ console.warn('dtask events snapshot', err); });
   }
   renderMiniCal();
-
-  /* ════ ДЕКОР — ЖИВИЙ READ-ONLY СИНК З ОСНОВНОГО ЗАСТОСУНКУ ════
-     Читаємо ТОЙ САМИЙ документ 'wedding/state', що й основний застосунок — лише читання,
-     жодного нового Firestore-правила не потрібно: анонімний гостьовий вхід в основному
-     застосунку (?guest) уже читає цей самий документ цим самим шляхом, отже правило вже
-     дозволяє анонімне читання. Важкі картинки (base64) свідомо НЕ підтягуємо сюди — лише
-     легкі текстові поля (назви, статус), щоб не роздувати трафік і код. Кольори дрес-коду
-     свідомо НЕ показуємо тут — вони ще не фінальні, показувати неактуальні кольори гірше,
-     ніж не показувати нічого. */
-  function renderDecorSummary(decorArr){
-    const el=document.getElementById('decorSummary'); if(!el) return;
-    const items=(Array.isArray(decorArr)?decorArr:[]).filter(d=>d && d.cat!=='cake');
-    if(!items.length){ el.innerHTML='<div class="notes-empty">Декор ще не додано.</div>'; return; }
-    const groups={sofia:[],wave:[]};
-    items.forEach(d=>{ (groups[d.venue==='wave'?'wave':'sofia']).push(d); });
-    const rowHtml=d=>{
-      const status=d.taken?'✅ Беремо':'💭 Розглядаємо';
-      const diy=d.diy?' · 🧵 DIY':'';
-      const place=d.place?` · 📍 ${esc(d.place)}`:'';
-      return `<div class="decor-row">${esc(d.title||'Декор')} — ${status}${diy}${place}</div>`;
-    };
-    el.innerHTML=[
-      groups.sofia.length?`<div class="decor-venue-h">☀️ Софі</div>${groups.sofia.map(rowHtml).join('')}`:'',
-      groups.wave.length?`<div class="decor-venue-h">🌙 Хвильовий</div>${groups.wave.map(rowHtml).join('')}`:''
-    ].join('');
-  }
-  function bindMainDocSync(){
-    try{
-      firebase.firestore().collection('wedding').doc('state').onSnapshot(snap=>{
-        const d=snap.data()||{};
-        renderDecorSummary(d.decor);
-      }, err=>{
-        console.warn('main doc snapshot', err);
-        const el=document.getElementById('decorSummary'); if(el) el.innerHTML='<div class="notes-empty">Не вдалося завантажити — спробуй оновити сторінку.</div>';
-      });
-    }catch(e){ console.warn('main doc read', e); }
-  }
 
   /* ════ ЗАПРОПОНОВАНІ КОЛЬОРИ ДРЕС-КОДУ ════
      Додатковий, неофіційний шар поверх дрес-коду в основному застосунку — дружки накидають
