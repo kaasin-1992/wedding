@@ -617,6 +617,8 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .cmt-open:active{transform:scale(.95);}
 .cmt-count{min-width:16px;height:16px;line-height:16px;text-align:center;font-size:11px;border-radius:9px;background:transparent;color:var(--muted);}
 .cmt-count.has{background:var(--terra);color:#fff;padding:0 5px;}
+.druzhky-notes-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:var(--sans);font-weight:700;font-size:15px;color:var(--terra);background:var(--surface2);border:1.5px dashed var(--terra);border-radius:14px;padding:12px 16px;margin-bottom:16px;cursor:pointer;}
+.druzhky-notes-btn:active{transform:scale(.98);}
 .cmt-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,20,18,.5);display:flex;align-items:flex-end;justify-content:center;}
 .cmt-box{width:100%;max-width:560px;max-height:84vh;background:var(--bg);border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.3);}
 .cmt-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);font-family:var(--serif);font-size:17px;color:var(--text);}
@@ -1428,6 +1430,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <!-- NOTES -->
 <div class="panel" id="tab-notes">
+  <button class="druzhky-notes-btn" id="druzhkyNotesBtn" type="button">💬 Поради від дружок <span class="cmt-count" data-cmtcount="druzhky"></span></button>
   <details class="add-section" id="linksBox" style="margin-bottom:16px;">
     <summary>🔗 Усі посилання</summary>
     <div style="padding:12px 4px;font-size:14px;line-height:1.7;">
@@ -8487,6 +8490,8 @@ setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpys
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
+TAB_LABELS['druzhky']='Поради від дружок';
+{ const dnb=document.getElementById('druzhkyNotesBtn'); if(dnb) dnb.onclick=()=>openComments('druzhky'); }
 function startCommentsSync(){
   if(!COMMENTS) return; commentsBound=true;
   COMMENTS.onSnapshot(snap=>{
