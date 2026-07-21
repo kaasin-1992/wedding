@@ -524,16 +524,10 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .inspo-note{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.4;white-space:pre-wrap;}
 .inspo-open{display:inline-block;margin-top:6px;font-size:11px;color:var(--terra);text-decoration:none;}
 .inspo-empty{text-align:center;color:var(--muted);font-size:13px;padding:24px 0;}
-/* вечірки: загальний коментар, празькі позначки, групи */
+/* вечірки: загальний коментар */
 .party-general{margin:0 0 14px;}
 .party-general-lbl{display:block;font-size:13px;color:var(--text);margin-bottom:5px;}
 .party-general-note{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:9px 11px;border-radius:11px;border:1px solid var(--line);background:var(--surface2);color:var(--text);resize:vertical;}
-.party-legend{font-size:11.5px;color:var(--muted);background:var(--surface2);border-radius:9px;padding:7px 9px;margin:4px 0 10px;line-height:1.5;}
-.party-group-h{font-size:12.5px;font-weight:600;color:var(--text);margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--line);}
-.party-row .party-prague{flex:none;font-size:11px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;white-space:nowrap;}
-.party-prague.pg-always{background:rgba(76,175,80,.16);border-color:rgba(76,175,80,.5);}
-.party-prague.pg-ifNobody{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.55);}
-.party-prague.pg-ifStay{background:rgba(33,150,243,.16);border-color:rgba(33,150,243,.5);}
 .party-note[contenteditable="true"]{outline:none;cursor:text;min-height:1em;border-radius:6px;padding:1px 3px;margin:-1px -3px;}
 .party-note[contenteditable="true"]:hover{background:var(--surface2);}
 .party-note[contenteditable="true"]:focus{background:var(--surface2);box-shadow:0 0 0 2px var(--line);}
@@ -5825,11 +5819,6 @@ function renderPartyPick(){
     wrap.appendChild(chip);
   });
 }
-// Празька позначка (тільки дівич-вечір): хто цікавить за яких умов — щоб дружка бачила сортування
-const PRAGUE_ORDER=['always','ifNobody','ifStay',''];
-const PRAGUE_NEXT={'':'always',always:'ifNobody',ifNobody:'ifStay',ifStay:''};
-const PRAGUE_LBL={always:'🟢 У будь-якому разі', ifNobody:'🟡 Якщо в Прагу не буде кому', ifStay:'🔵 Якщо НЕ їдемо в Прагу', '':'⚪ Без позначки'};
-const PRAGUE_SHORT={always:'🟢 будь-як', ifNobody:'🟡 нема кому', ifStay:'🔵 не їдемо', '':'⚪ Прага?'};
 function renderParties(){
   renderPartyPick();
   const isHer=activeParty==='her';
@@ -5845,29 +5834,14 @@ function renderParties(){
   cnt.textContent=arr.length?`Людей у списку: ${arr.length}`:'';
   listEl.appendChild(cnt);
   if(!arr.length){ const e=document.createElement('div'); e.className='empty-state'; e.innerHTML='Список порожній.<br>Обери гостей зверху або додай вручну 🥳'; listEl.appendChild(e); return; }
-  if(isHer) listEl.insertAdjacentHTML('beforeend','<div class="party-legend">🇨🇿 Прага: тапни позначку біля людини. 🟢 — у будь-якому разі · 🟡 — лише якщо в Прагу не буде кому їхати · 🔵 — лише якщо не їдемо в Прагу.</div>');
   const rowHTML=p=>{
-    const tag=isHer?`<button class="party-prague pg-${p.prague||'none'}" data-pprag="${p.id}" title="Празька позначка — тапни, щоб змінити">${PRAGUE_SHORT[p.prague||'']}</button>`:'';
     const note=`<div class="party-note" data-pnote="${p.id}" contenteditable="${IS_GUEST?'false':'true'}" spellcheck="false">${esc(p.note||'')}</div>`;
     const whoBadge=IS_GUEST?'':whoSelectHTML('pwho',p.id,p.who,'party-who');
     return `<button class="del-x" data-pdel="${p.id}" aria-label="Прибрати">✕</button>
-      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${note}${whoBadge}</div>${tag}`;
+      <div class="party-info"><div class="party-name">${p.gid?'👥 ':''}${esc(p.name)}</div>${note}${whoBadge}</div>`;
   };
-  if(isHer){
-    const groups={}; arr.forEach(p=>{ const k=p.prague||''; (groups[k]=groups[k]||[]).push(p); });
-    PRAGUE_ORDER.forEach(k=>{
-      const g=groups[k]; if(!g||!g.length) return;
-      const h=document.createElement('div'); h.className='party-group-h'; h.textContent=`${PRAGUE_LBL[k]} · ${g.length}`; listEl.appendChild(h);
-      g.forEach(p=>{ const row=document.createElement('div'); row.className='party-row'; row.innerHTML=rowHTML(p); listEl.appendChild(row); });
-    });
-  }else{
-    arr.forEach(p=>{ const row=document.createElement('div'); row.className='party-row'; row.innerHTML=rowHTML(p); listEl.appendChild(row); });
-  }
+  arr.forEach(p=>{ const row=document.createElement('div'); row.className='party-row'; row.innerHTML=rowHTML(p); listEl.appendChild(row); });
   listEl.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>delUndo(partyKey(),b.dataset.pdel,'Прибрано'));
-  listEl.querySelectorAll('[data-pprag]').forEach(b=>b.onclick=()=>{
-    const cur=partyRef(); const p=cur.find(x=>x.id===b.dataset.pprag); if(!p) return;
-    p.prague=PRAGUE_NEXT[p.prague||'']; saveJSON(partyKey(),cur); renderParties();
-  });
   listEl.querySelectorAll('[data-pnote]').forEach(el=>{
     const save=()=>{ const cur=partyRef(); const p=cur.find(x=>x.id===el.dataset.pnote); if(!p) return; const v=el.textContent.trim(); if(v===(p.note||'')) return; p.note=v; saveJSON(partyKey(),cur); };
     el.addEventListener('blur',save);
