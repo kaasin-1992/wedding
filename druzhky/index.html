@@ -5,61 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Дружки — Катя & Діма, 06.09.2026</title>
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%9B%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%97%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* ═══ Y2K / рання Брітні: бабблгам-рожевий + хром удень, неоновий клаб-кід уночі ═══ */
 :root{
-  --bg:#EBEBE3;--surface:#F8F8F3;--surface2:#E1E1D5;
-  --text:#222633;--muted:#6E7484;
-  --terra:#1E4E8A;--terra-dim:#DBE5F1;
-  --rose:#A8505F;--rose-dim:#F0DEE1;
-  --gold:#B58A2E;
-  --line:#D5D4C7;
-  --serif:'Unbounded','Manrope',sans-serif;
-  --sans:'Manrope',-apple-system,sans-serif;
-  --r:16px;
-  --shadow-sm:0 2px 10px rgba(74,65,56,.08);
+  --bg:#FFE3F3;--surface:#FFFFFF;--surface2:#FFD6EC;
+  --text:#4A0E36;--muted:#B0679A;
+  --terra:#FF1DA6;--terra-dim:#FFD1EC;
+  --rose:#3FBFEE;--rose-dim:#E0F5FF;
+  --gold:#FFC400;
+  --line:#FF9AD6;
+  --serif:'Bungee','Baloo 2',sans-serif;
+  --sans:'Baloo 2',-apple-system,sans-serif;
+  --r:20px;
+  --shadow-sm:0 3px 0 rgba(255,29,166,.35), 0 8px 18px rgba(255,29,166,.16);
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#15171E;--surface:#1E212A;--surface2:#272B36;
-    --text:#ECEAE0;--muted:#9AA0AE;
-    --terra:#6FA3E0;--terra-dim:#1E2A3C;
-    --rose:#D58597;--rose-dim:#34232A;
-    --gold:#DCB85E;
-    --line:#313644;
-    --shadow-sm:0 2px 10px rgba(0,0,0,.32);
+    --bg:#0B0417;--surface:#180A28;--surface2:#241238;
+    --text:#FDEFFF;--muted:#C79ADB;
+    --terra:#FF2FB0;--terra-dim:#3A0F35;
+    --rose:#00E5FF;--rose-dim:#052A30;
+    --gold:#FFEE00;
+    --line:#FF2FB0;
+    --shadow-sm:0 0 0 1px rgba(255,47,176,.45), 0 0 22px rgba(255,47,176,.32);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#15171E;--surface:#1E212A;--surface2:#272B36;
-  --text:#ECEAE0;--muted:#9AA0AE;
-  --terra:#6FA3E0;--terra-dim:#1E2A3C;
-  --rose:#D58597;--rose-dim:#34232A;
-  --gold:#DCB85E;
-  --line:#313644;
-  --shadow-sm:0 2px 10px rgba(0,0,0,.32);
+  --bg:#0B0417;--surface:#180A28;--surface2:#241238;
+  --text:#FDEFFF;--muted:#C79ADB;
+  --terra:#FF2FB0;--terra-dim:#3A0F35;
+  --rose:#00E5FF;--rose-dim:#052A30;
+  --gold:#FFEE00;
+  --line:#FF2FB0;
+  --shadow-sm:0 0 0 1px rgba(255,47,176,.45), 0 0 22px rgba(255,47,176,.32);
 }
 :root[data-theme="light"]{
-  --bg:#EBEBE3;--surface:#F8F8F3;--surface2:#E1E1D5;
-  --text:#222633;--muted:#6E7484;
-  --terra:#1E4E8A;--terra-dim:#DBE5F1;
-  --rose:#A8505F;--rose-dim:#F0DEE1;
-  --gold:#B58A2E;
-  --line:#D5D4C7;
-  --shadow-sm:0 2px 10px rgba(74,65,56,.08);
+  --bg:#FFE3F3;--surface:#FFFFFF;--surface2:#FFD6EC;
+  --text:#4A0E36;--muted:#B0679A;
+  --terra:#FF1DA6;--terra-dim:#FFD1EC;
+  --rose:#3FBFEE;--rose-dim:#E0F5FF;
+  --gold:#FFC400;
+  --line:#FF9AD6;
+  --shadow-sm:0 3px 0 rgba(255,29,166,.35), 0 8px 18px rgba(255,29,166,.16);
 }
-.theme-toggle{position:fixed;top:14px;right:14px;width:42px;height:42px;border-radius:50%;
-  border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow-sm);cursor:pointer;
-  font-size:18px;display:flex;align-items:center;justify-content:center;z-index:500}
+.theme-toggle{position:fixed;top:14px;right:14px;width:44px;height:44px;border-radius:50%;
+  border:2px solid var(--terra);background:var(--surface);box-shadow:var(--shadow-sm);cursor:pointer;
+  font-size:18px;display:flex;align-items:center;justify-content:center;z-index:500;
+  transition:transform .15s ease}
+.theme-toggle:hover{transform:scale(1.1) rotate(-8deg)}
+.theme-toggle:active{transform:scale(.94)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(var(--terra-dim) 1.5px, transparent 1.5px);
+  background-size:26px 26px;}
 .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
 header{text-align:center;margin-bottom:22px}
-header .eyebrow{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-header h1{font-family:var(--serif);font-weight:800;font-size:26px;margin:0 0 8px;letter-spacing:-.01em}
-header p{color:var(--muted);font-size:14.5px;margin:0}
+header .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--rose);font-weight:700;margin-bottom:8px}
+header h1{font-family:var(--serif);font-weight:400;font-size:36px;margin:0 0 10px;letter-spacing:.01em;
+  background:linear-gradient(90deg, var(--terra), var(--gold), var(--rose), var(--terra));
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:y2kShine 7s linear infinite;
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,.08));}
+@keyframes y2kShine{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+@media (prefers-reduced-motion: reduce){ header h1{animation:none} }
+header p{color:var(--muted);font-size:15px;font-weight:600;margin:0}
 .disclaimer{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);margin:18px 0 26px;line-height:1.55}
 .links-box{background:var(--surface);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-sm);margin-bottom:26px}
 .links-box h2{font-family:var(--serif);font-size:15px;margin:0 0 10px;color:var(--terra)}
@@ -144,14 +156,31 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 .dtask-meta{font-size:12px;color:var(--muted)}
 .dtask-tag-meeting{display:inline-block;font-size:10.5px;color:var(--rose);background:var(--rose-dim);border-radius:999px;padding:1px 8px;margin-right:6px}
 .dtask-date{font-variant-numeric:tabular-nums;font-weight:600;color:var(--terra)}
+
+/* ═══ Y2K флюр: наліпкові картки, глянцеві кнопки, хром-заголовки ═══ */
+.links-box,.card,.schedule-box,.notes-box,.tasks-box{border:3px dashed var(--terra-dim)}
+.links-box h2,.card h2,.schedule-box h2,.notes-box h2,.tasks-box h2{
+  font-size:16px;letter-spacing:.01em;line-height:1.35}
+.roles-table th{background:var(--terra);color:#fff;font-weight:700}
+.roles-table tr:hover td{background:var(--surface2)}
+.card .tag{background:linear-gradient(90deg, var(--terra-dim), var(--rose-dim));font-weight:700;letter-spacing:.02em}
+.notes-form button,.dtask-form button.dtask-submit{
+  box-shadow:0 3px 0 rgba(0,0,0,.18);transition:transform .12s ease, box-shadow .12s ease;text-transform:uppercase;letter-spacing:.03em}
+.notes-form button:hover:not(:disabled),.dtask-form button.dtask-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.notes-form button:active:not(:disabled),.dtask-form button.dtask-submit:active:not(:disabled){transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.dtask-kind-toggle button{border-width:2px}
+.dtask-kind-toggle button.active{box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.dtask-check{border-width:2px;border-radius:50%}
+.mini-cal-day.has-item{border-radius:50%;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.mini-cal-head button{border-radius:50%;font-weight:700}
 </style>
 </head>
 <body>
 <button class="theme-toggle" id="themeToggle" aria-label="Перемкнути тему" title="Перемкнути тему">🌙</button>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Weддінг · 06.09.2026</div>
-    <h1>Дружки 💛</h1>
+    <div class="eyebrow">✨ Weддінг · 06.09.2026 ✨</div>
+    <h1>Дружки 💗</h1>
     <p>Софі (день) + Хвильовий (вечір) — хто за що відповідає</p>
   </header>
 
@@ -163,7 +192,6 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
   <div class="links-box">
     <h2>🔗 Корисні посилання для всіх</h2>
     <ul>
-      <li>Наш сайт (весь застосунок): <a href="https://весілля.лютевесілля.укр/" target="_blank" rel="noopener">весілля.лютевесілля.укр</a></li>
       <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
       <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
       <li>Приєднатись до спільного чату: <a href="https://t.me/+wFqTDj3OYmkyN2Ey" target="_blank" rel="noopener">запрошення в групу</a></li>
