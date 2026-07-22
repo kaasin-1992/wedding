@@ -923,14 +923,15 @@ document.querySelectorAll('[data-dinc]').forEach(b=>b.onclick=()=>{ driveH=Math.
 { const dl=document.getElementById('driveLogDate'); if(dl) dl.value=isoDate(new Date()); }
 { const b=document.getElementById('driveLogAdd'); if(b) b.onclick=()=>{
   const date=document.getElementById('driveLogDate').value||isoDate(new Date());
-  const hours=parseFloat(document.getElementById('driveLogHours').value)||0;
+  const hours=parseFloat(String(document.getElementById('driveLogHours').value||'').replace(',','.'))||0;
   const note=document.getElementById('driveLogNote').value.trim();
-  if(hours<=0){ alert('Впиши, скільки годин'); return; }
+  if(hours<=0){ alert('Впиши, скільки годин (наприклад 2 або 1.5)'); return; }
   driveLog.push({id:'dl'+Date.now(),date,hours,note,ts:Date.now()});
   driveH=Math.round((driveH+hours)*10)/10;
   saveDriveLog(driveLog); saveDriveH();
   document.getElementById('driveLogHours').value=''; document.getElementById('driveLogNote').value='';
   renderDrive(); renderPlanCal(); renderPlanList();
+  const old=b.textContent; b.textContent='✓ Записано'; b.disabled=true; setTimeout(()=>{ b.textContent=old; b.disabled=false; }, 1300);
 }; }
 renderDrive();
 
@@ -1016,7 +1017,11 @@ renderToday();
       .then(()=>setStatus('☁️ синхронізовано на всіх пристроях'))
       .catch(e=>{ console.warn('krasa push', e); setStatus('💾 зберігається на цьому пристрої (хмара недоступна)'); });
   }
-  window.__ksync=function(){ if(!ready) return; if(pushTimer) clearTimeout(pushTimer); pushTimer=setTimeout(doPush,1500); };
+  window.__ksync=function(){ if(!ready) return; if(pushTimer) clearTimeout(pushTimer); pushTimer=setTimeout(()=>{ pushTimer=null; doPush(); },700); };
+  function flushPush(){ if(pushTimer){ clearTimeout(pushTimer); pushTimer=null; doPush(); } }
+  // якщо вийти/згорнути додаток до того, як спрацював відкладений запис — доштовхнути в хмару одразу
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushPush(); });
+  window.addEventListener('pagehide', flushPush);
   function adopt(doc){
     if(!doc||typeof doc.payload!=='string') return;
     if(!(doc.ver>localVer())) return;               // не старіше за наш стан і не власне відлуння
