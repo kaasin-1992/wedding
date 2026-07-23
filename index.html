@@ -645,6 +645,9 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .guest-banner{display:none;background:var(--terra);color:#fff;text-align:center;font-size:12.5px;padding:7px 14px;line-height:1.4;}
 body.guest .guest-banner{display:block;}
 body.guest .guest-link-btn{display:none;}
+.hero-menu-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:var(--terra);color:#fff;border-radius:99px;font-size:13px;font-weight:700;padding:9px 16px;text-decoration:none;box-shadow:0 4px 14px rgba(140,80,90,.18);}
+.hero-menu-btn:active{transform:scale(.97);}
+body.guest .hero-menu-btn{display:none;}
 /* гість — тільки читання: ховаємо створення/видалення/ШІ, лишаємо коментарі та посилання */
 body.guest [data-tab="budget"],body.guest #tab-budget{display:none !important;}
 body.guest .panel > *:not(.cmt-bar){pointer-events:none;}
@@ -1216,6 +1219,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <span class="cnt-lbl" id="cntLbl">днів залишилось</span>
   </div>
   <div class="hero-weather" id="heroWeather"></div>
+  <div><a class="hero-menu-btn" id="heroMenuBtn" href="menu/">☰ Усі наші сторінки</a></div>
 </div>
 
 <div class="tabs-bar-wrap">
