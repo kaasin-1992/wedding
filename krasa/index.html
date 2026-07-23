@@ -193,6 +193,16 @@ footer a{color:var(--terra)}
 .today-empty{font-size:13.5px;color:var(--muted);font-style:italic;padding:6px 0}
 .today-sleep{margin-top:18px}
 .today-sleep .callout{margin:0}
+.daytask{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+.daytask.done{border-color:var(--done);background:var(--done-dim)}
+.daytask .dt-top{display:flex;align-items:center;gap:10px}
+.daytask .dt-ic{font-size:22px}
+.daytask .dt-ttl{font-weight:700;font-size:15.5px;flex:1}
+.daytask .dt-btn{flex:0 0 auto;font-family:var(--sans);font-weight:700;font-size:13px;padding:8px 13px;border-radius:999px;border:1.5px solid var(--done);background:var(--done);color:#fff;cursor:pointer}
+.daytask.done .dt-btn{background:var(--done-dim);color:var(--done)}
+.daytask .dt-body{font-size:13.5px;color:var(--muted);line-height:1.55;margin-top:8px;white-space:pre-line}
+.daytask .dt-peek{font-size:12px;color:var(--muted);margin-top:2px}
+.workouts-ref .recipe h4{color:var(--terra)}
 /* ── план: галочка виконано ── */
 .plan-row.pdone .plan-cat,.plan-row.pdone span{opacity:.5}
 .plan-row.pdone .pnote{text-decoration:line-through}
@@ -240,6 +250,8 @@ footer a{color:var(--terra)}
     </div>
     <div class="grp-label" style="margin-top:18px">✅ Сьогодні відмічай одним дотиком</div>
     <div class="daily-ticks" id="dailyTicks"></div>
+    <div class="grp-label" style="margin-top:22px">🎯 Завдання дня <span style="font-weight:500;text-transform:none;letter-spacing:0">· кожен день сам по собі, без звʼязку з учора</span></div>
+    <div id="dayTasks"></div>
     <div class="grp-label" style="margin-top:20px">📅 Заплановано на сьогодні</div>
     <div id="todayPlans"></div>
     <div class="today-sleep" id="todaySleep"></div>
@@ -400,7 +412,7 @@ footer a{color:var(--terra)}
   </details>
   </div><!-- /diary -->
 
-  <footer>з любов'ю до себе · <a href="../">до застосунку</a> · <a href="../menu/">усі сторінки</a>
+  <footer>з любов'ю до себе · <a href="../">до застосунку</a> · <a href="../garderob/">гардероб</a> · <a href="../menu/">усі сторінки</a>
   <div id="syncStatus" style="margin-top:8px;font-size:11.5px;color:var(--muted)">💾 зберігається на цьому пристрої</div>
 </footer>
 </div>
@@ -945,6 +957,40 @@ const DAILY_TICKS=[
 function loadDaily(){ try{return JSON.parse(localStorage.getItem('krasa-daily')||'{}');}catch(e){return{};} }
 function saveDaily(d){ try{localStorage.setItem('krasa-daily',JSON.stringify(d));}catch(e){} ks(); }
 let daily=loadDaily();
+// Завдання дня — незалежні від учора: рахуємо за номером дня (детерміновано), не за прогресом.
+function dayIndex(){ const d=new Date(); return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000); }
+const CARE_TASKS=[
+  'гуаша або масаж обличчя 5 хв (миттєво знімає набряк)',
+  'випий 1.5–2 л води за день',
+  'SPF зранку, навіть якщо похмуро',
+  'сьогодні лягай до 23:30 — сон найбільше впливає на шкіру',
+  '5 хв фейсбілдінгу (вправи у вкладці «Догляд»)',
+  'маска для обличчя — будь-яка твоя улюблена',
+  '10 хв без телефона перед сном',
+  'замість пізньої кави — чай ромашка+мʼята',
+  'контрастне вмивання: тепла → прохолодна вода',
+  'похвали себе за щось одне сьогодні 💛',
+];
+const WORKOUTS=[
+  {ic:'🏃',t:'Біг',d:'Розминка 5 хв швидка ходьба.\nБіг 25–30 хв у розмовному темпі (щоб могла говорити не задихаючись).\nЗаминка 5 хв ходьба + розтяжка литок і стегон.\nВажко бігти? Чергуй 2 хв біг / 1 хв ходьба.'},
+  {ic:'🏋️',t:'Гиря 12 кг',d:'~20 хв, відпочинок 45–60 сек між підходами:\n• Махи (свінги) 4×15\n• Присід-гоблет 4×12\n• Тяга в нахилі 3×10 на руку\n• Жим стоячи 3×8 на руку\n• Румунська тяга на одній нозі 3×8\n• Планка 3×30 сек'},
+  {ic:'🧘',t:'Йога',d:'Для спини й розслаблення, 20–25 хв:\n• Кіт-корова 8 разів\n• Сонячне привітання 3 кола\n• Собака мордою вниз 3×5 вдихів\n• Голуб (стегна) по 1 хв на бік\n• Поза дитини 1 хв\n• Скручування лежачи по 1 хв\n• Шавасана 3–5 хв'},
+  {ic:'🚶',t:'Легкий день',d:'Відновлення теж дає результат:\nпрогулянка 30–40 хв + 10 хв розтяжки.\nАбо просто відпочинь без вини 💛'},
+];
+function renderDayTasks(){
+  const el=document.getElementById('dayTasks'); if(!el) return;
+  const today=isoDate(new Date()), di=dayIndex();
+  const care=CARE_TASKS[((di%CARE_TASKS.length)+CARE_TASKS.length)%CARE_TASKS.length];
+  const w=WORKOUTS[((di%WORKOUTS.length)+WORKOUTS.length)%WORKOUTS.length];
+  const wNext=WORKOUTS[(((di+1)%WORKOUTS.length)+WORKOUTS.length)%WORKOUTS.length];
+  const day=daily[today]||{}; const cd=!!day.careDone, wd=!!day.workoutDone;
+  el.innerHTML=
+    `<div class="daytask${cd?' done':''}"><div class="dt-top"><span class="dt-ic">🌸</span><span class="dt-ttl">Догляд: ${esc(care)}</span><button class="dt-btn" data-daydone="careDone">${cd?'✓':'зробила'}</button></div></div>`+
+    `<div class="daytask${wd?' done':''}"><div class="dt-top"><span class="dt-ic">${w.ic}</span><span class="dt-ttl">Тренування: ${esc(w.t)}</span><button class="dt-btn" data-daydone="workoutDone">${wd?'✓':'зробила'}</button></div><div class="dt-body">${esc(w.d)}</div><div class="dt-peek">завтра: ${wNext.ic} ${esc(wNext.t)}</div></div>`;
+  el.querySelectorAll('[data-daydone]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.daydone; daily[today]=daily[today]||{}; daily[today][k]=!daily[today][k]; saveDaily(daily); renderDayTasks();
+  });
+}
 function renderToday(){
   const today=isoDate(new Date());
   const dd=document.getElementById('todayDays');
@@ -982,8 +1028,11 @@ function renderToday(){
     else if(lastWakeToday) tsl.innerHTML=`<div class="callout gold">😴 Сьогодні ти спала <b>${fmtDur(lastWakeToday.hours)}</b>. ${lastWakeToday.hours>=sleepGoal-0.01?'Ціль виконана 🌟':'Трохи менше цілі — надолужиш увечері 💛'}</div>`;
     else tsl.innerHTML=`<div class="callout">😴 Ще не відмічала сон за сьогодні — зроби це у вкладці «Сон».</div>`;
   }
+  renderDayTasks();
 }
 renderToday();
+// концентровані описи тренувань у вкладці «Догляд» → Спорт (додаємо після визначення WORKOUTS)
+{ const sb=document.getElementById('sportBody'); if(sb){ sb.innerHTML += '<div class="grp-label" style="margin-top:16px">💪 Конкретні комплекси (щодня ротація: біг → гиря → йога → легкий день)</div>' + '<div class="workouts-ref">' + WORKOUTS.map(w=>`<div class="recipe"><h4>${w.ic} ${w.t}</h4><p style="white-space:pre-line">${esc(w.d)}</p></div>`).join('') + '</div>'; } }
 
 /* ── СИНХРОНІЗАЦІЯ: одна колекція 'comments' (tab:'krasa-state'), latest-wins цілим блоком.
    Той самий rule-safe анонімний патерн, що вже вживається у дружках — лише .add() у comments. ── */
