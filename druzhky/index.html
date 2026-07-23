@@ -587,6 +587,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     <ul>
       <li>Церемонія: «Бути Софі» (Софійська площа), збір об 11:30 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%91%D1%83%D1%82%D0%B8%20%D0%A1%D0%BE%D1%84%D1%96%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
       <li>Вечірня частина: «Хвильовий» (вул. Нижньоюрківська) — гості з 16:20, молоді приїжджають орієнтовно о 18:00 — <a href="https://www.google.com/maps/search/?api=1&query=%D0%A5%D0%B2%D0%B8%D0%BB%D1%8C%D0%BE%D0%B2%D0%B8%D0%B9%20%D0%9D%D0%B8%D0%B6%D0%BD%D1%8C%D0%BE%D1%8E%D1%80%D0%BA%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0%20%D0%9A%D0%B8%D1%97%D0%B2" target="_blank" rel="noopener">на карті</a></li>
+      <li>Катин вішліст (її образ + ідеї подарунків): <a href="../garderob/">👗 гардероб</a></li>
       <li>Приєднатись до спільного чату: <a href="https://t.me/+wFqTDj3OYmkyN2Ey" target="_blank" rel="noopener">запрошення в групу</a></li>
       <li>Гілки спільного чату: <a href="https://t.me/c/3974464697/1" target="_blank" rel="noopener">дженерал</a> · <a href="https://t.me/c/3974464697/8" target="_blank" rel="noopener">балачка</a> · <a href="https://t.me/c/3974464697/5" target="_blank" rel="noopener">зустріч</a> · <a href="https://t.me/c/3974464697/6" target="_blank" rel="noopener">софі</a> · <a href="https://t.me/c/3974464697/7" target="_blank" rel="noopener">хвлв</a> · <a href="https://t.me/c/3974464697/2" target="_blank" rel="noopener">декор що вже є</a> · <a href="https://t.me/c/3974464697/4" target="_blank" rel="noopener">декор референси</a> · <a href="https://t.me/c/3974464697/3" target="_blank" rel="noopener">одяг зачіска</a></li>
     </ul>
@@ -1171,19 +1172,21 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
 })();
 /* ── згортання розділів (стан запам'ятовується на цьому пристрої) ── */
 (function(){
-  let saved={};
-  try{ saved=JSON.parse(localStorage.getItem('druzhky-collapsed')||'{}'); }catch(e){}
-  function persist(){ try{ localStorage.setItem('druzhky-collapsed', JSON.stringify(saved)); }catch(e){} }
+  // Розділи ЗВЕРНУТІ за замовчуванням, поки дружка сама їх не розгорне.
+  // Запамʼятовуємо саме РОЗГОРНУТІ (druzhky-expanded), щоб не плутати зі старим ключем.
+  let expanded={};
+  try{ expanded=JSON.parse(localStorage.getItem('druzhky-expanded')||'{}'); }catch(e){}
+  function persist(){ try{ localStorage.setItem('druzhky-expanded', JSON.stringify(expanded)); }catch(e){} }
   const BOXSEL='.roles-block,.contacts-box,.tasks-box,.schedule-box,.notes-box,.links-box';
   document.querySelectorAll('.sec-head').forEach(h=>{
     const box=h.closest(BOXSEL)||h.parentElement;
     const key=(h.textContent||'').trim().slice(0,40);
-    if(saved[key]) box.classList.add('sec-collapsed');
+    if(!expanded[key]) box.classList.add('sec-collapsed');   // за замовчуванням згорнуто
     h.setAttribute('role','button');
     h.setAttribute('tabindex','0');
     const toggle=()=>{
-      const now=box.classList.toggle('sec-collapsed');
-      if(now) saved[key]=1; else delete saved[key];
+      const collapsedNow=box.classList.toggle('sec-collapsed');
+      if(collapsedNow) delete expanded[key]; else expanded[key]=1;
       persist();
     };
     h.addEventListener('click',toggle);
@@ -1200,7 +1203,7 @@ footer{text-align:center;margin-top:36px;color:var(--muted);font-size:12.5px}
     b.type='button'; b.textContent=h.getAttribute('data-nav');
     b.onclick=()=>{
       box.classList.remove('sec-collapsed');   // якщо було згорнуто — розгортаємо
-      try{ const saved=JSON.parse(localStorage.getItem('druzhky-collapsed')||'{}'); delete saved[(h.textContent||'').trim().slice(0,40)]; localStorage.setItem('druzhky-collapsed',JSON.stringify(saved)); }catch(e){}
+      try{ const ex=JSON.parse(localStorage.getItem('druzhky-expanded')||'{}'); ex[(h.textContent||'').trim().slice(0,40)]=1; localStorage.setItem('druzhky-expanded',JSON.stringify(ex)); }catch(e){}
       box.scrollIntoView({behavior:'smooth', block:'start'});
     };
     nav.appendChild(b);
