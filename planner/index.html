@@ -1226,16 +1226,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="hero-weather" id="heroWeather"></div>
 </div>
 
-<nav class="site-nav" id="siteNav" aria-label="Наші сторінки">
+<nav class="site-nav" id="siteNav" aria-label="Навігація">
+  <a href="../">← Всі сторінки</a>
   <button type="button" class="sync-now" id="syncNowBtn" title="Підтягнути останнє з хмари">🔄 Оновити дані</button>
-  <a href="../">🏠 Всі сторінки</a>
-  <a href="../druzhky/">💃 Дружки</a>
-  <a href="../mamy/">💐 Мами</a>
-  <a href="../tata/">🥂 Тата</a>
-  <a href="../krasa/">🌿 Краса</a>
-  <a href="../garderob/">👗 Гардероб</a>
-  <a href="?guest">👀 Гостьовий</a>
-  <a class="game" href="https://лютевесілля.укр" target="_blank" rel="noopener">🎮 Гра</a>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -1777,7 +1770,6 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <!-- ДРЕС-КОД (палітра кольорів + муд-референси + ШІ-візуалізація) -->
 <div class="panel" id="tab-dresscode">
   <div class="section-hint">✅ Дрес-код ми <b>вже обрали — нео-етно</b>: сучасне святкове вбрання з українською ноткою (вишиванка, етно-принт, вишивка, льон, українські бренди — не костюмований етно й не сувора чорна класика). Нижче закидай муд-референси стилю (посилання на фото), обери палітру кольорів — і ШІ намалює візуалізацію саме в цих кольорах.</div>
-  <div class="dc-presets" id="dcPresets"></div>
   <div class="dc-colors" id="dcColors"></div>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
@@ -2182,7 +2174,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-seed':'gamesSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2614,7 +2606,7 @@ let selfCareSeeded = loadJSON('wed-selfcare-seed', false); // чи вже дод
 let selfCare2Seeded = loadJSON('wed-selfcare2-seed', false); // чи вже додано ортодонтку 29.07 (раз, окремо — перший seed уже пройшов)
 let budgetExtraSeeded = loadJSON('wed-budget-extra-seed', false); // чи вже додано витрати Каті (камери/вази/банери/сайт/домен/друк) (раз)
 let temuSpentSeeded = loadJSON('wed-temu-spent-seed', false); // чи вже внесено куплені деталі декору/прикрас/образу з Temu у витрачений бюджет (раз)
-let gamesSeeded = loadJSON('wed-games-seed', false); // чи вже додано ідеї ігор/конкурсів + вірменську традицію в беклог сценарію (раз)
+let gamesRemoved = loadJSON('wed-games-removed', false); // чи вже прибрано зайві ідеї ігор + вірменську традицію, які були помилково додані (раз)
 let wishpicksSeeded = loadJSON('wed-wishpicks-seed', false); // чи вже додано 5 посилань Wishpicks в Одяг (раз) — фото підтягнуться через "Обробити все" (мій сервер не може достукатись до wishpicks.com, але microlink з ЇЇ сесії — може)
 let orphanMediaCleaned = loadJSON('wed-orphan-media-cleaned', false); // чи вже прибрано осиротілі m_idea_* документи давно видалених ідей (раз)
 let hotels      = loadJSON('wed-hotels', []);
@@ -5434,26 +5426,18 @@ function seedTraditions(){
   saveJSON('wed-trad-seed',true);
   renderScripts();
 }
-// одноразовий seed: ідеї ігор/конкурсів (у беклог Хвильового) + вірменська традиція (у беклог Софі).
-// Це просто ідеї на вибір — лежать у беклозі сценарію без часу, звідти можна вписати в таймлайн або видалити.
-const PARTY_GAMES=[
-  '🎲 Гра «Хто краще»: пара сидить спиною, піднімає черевик у відповідь на «хто краще готує / хто перший засинає…»',
-  '🎲 Весільне бінго: картки-передбачення («наречена заплаче на клятвах», «хтось проллє вино») — гості відмічають протягом вечора',
-  '🎲 Фотопошук для дітей: картки-завдання «знайди бабусю, що танцює» — заразом лагідно зайняти малих',
-  '🎲 Сліпа дегустація вина: вгадати колір / країну / рік наосліп',
-  '🎲 QR-фотобудка: гості сканують QR, фото одразу летять у спільний альбом і показуються на екрані',
-  '🎲 Караоке-станція',
-  '🎲 BubbleBalls — надувні кулі-костюми, жартівливі естафети (дуже яскраво на відео)'
-];
-function seedGamesTrad(){
-  if(gamesSeeded || IS_GUEST) return;
-  gamesSeeded=true;
-  const base=Date.now();
-  PARTY_GAMES.forEach((t,i)=>scriptWave.push({id:'game'+base+'_'+i, time:'', text:t, loc:'Бар «Хвильовий»', trad:true}));
-  scriptSofia.push({id:'tradarm'+base, time:'', text:'🕯 Вірменська традиція: мати нареченого зустрічає молодят лавашем і медом — символ достатку й солодкого життя (короткий теплий момент на зустрічі гостей)', loc:'Бути Софі', trad:true});
-  saveJSON('wed-scriptS',scriptSofia);
-  saveJSON('wed-scriptW',scriptWave);
-  saveJSON('wed-games-seed',true);
+// одноразове прибирання: ідеї ігор + вірменська традиція були додані помилково (Катя їх не просила).
+// Прибираємо їх із беклогу Хвильового (id 'game…') і Софі (id 'tradarm…'). Українські традиції
+// ('trad…_i') НЕ чіпаємо — startsWith('tradarm') матчить лише вірменську.
+function cleanupGamesTrad(){
+  if(gamesRemoved || IS_GUEST) return;
+  gamesRemoved=true;
+  const wBefore=scriptWave.length, sBefore=scriptSofia.length;
+  scriptWave=scriptWave.filter(x=>!(x.id && String(x.id).startsWith('game')));
+  scriptSofia=scriptSofia.filter(x=>!(x.id && String(x.id).startsWith('tradarm')));
+  if(scriptWave.length!==wBefore) saveJSON('wed-scriptW',scriptWave);
+  if(scriptSofia.length!==sBefore) saveJSON('wed-scriptS',scriptSofia);
+  saveJSON('wed-games-removed',true);
   renderScripts();
 }
 // одноразове нагадування про офіційний розпис (окрема дата від дня вечірки) — додається в
@@ -8250,7 +8234,6 @@ function organizerContext(){
   const her=guests.filter(g=>g.side==='her' && g.status!=='declined').length;
   const his=guests.filter(g=>g.side==='his' && g.status!=='declined').length;
   const bt=computeBudgetTotals(budget, budgetCap);
-  const preset=DRESSCODE_PRESETS.find(p=>p.id===dresscode.presetId);
   const tDone=tasks.filter(t=>t.done).length;
   const qaAnswered=PLANNER_QUESTIONS.flatMap(g=>g.qs)
     .filter(q=>plannerQA[q.id] && plannerQA[q.id].trim())
@@ -8260,7 +8243,7 @@ function organizerContext(){
     `Церемонія: локація «Бути Софі». Вечірка (банкет/танці): локація «Хвильовий».`,
     `Гостей у списку: ${her+his} (Каті: ${her}, Діми: ${his}).`,
     `Бюджет: заплановано ${Math.round(bt.planned).toLocaleString('uk-UA')} ₴, сплачено ${Math.round(bt.paid).toLocaleString('uk-UA')} ₴${budgetCap?`, стеля ${Number(budgetCap).toLocaleString('uk-UA')} ₴`:''}.`,
-    `Дрес-код: ${preset?preset.label:'ще не обрано'}.`,
+    `Дрес-код: нео-етно (сучасне святкове вбрання з українською ноткою).`,
     `Завдань виконано: ${tDone}/${tasks.length}.`,
     qaAnswered?`Відповіді нареченої на опитування-інтейк:\n${qaAnswered}`:'',
   ].filter(Boolean).join('\n');
@@ -8460,7 +8443,7 @@ function startSync(){
     if(typeof d.selfCare2Seeded==='boolean') selfCare2Seeded=d.selfCare2Seeded;
     if(typeof d.budgetExtraSeeded==='boolean') budgetExtraSeeded=d.budgetExtraSeeded;
     if(typeof d.temuSpentSeeded==='boolean') temuSpentSeeded=d.temuSpentSeeded;
-    if(typeof d.gamesSeeded==='boolean') gamesSeeded=d.gamesSeeded;
+    if(typeof d.gamesRemoved==='boolean') gamesRemoved=d.gamesRemoved;
     if(typeof d.wishpicksSeeded==='boolean') wishpicksSeeded=d.wishpicksSeeded;
     if(typeof d.orphanMediaCleaned==='boolean') orphanMediaCleaned=d.orphanMediaCleaned;
     // одноразова міграція старих картинок зі state в окремі документи
@@ -8596,7 +8579,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesSeeded && !IS_GUEST) seedGamesTrad(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
