@@ -2851,6 +2851,11 @@ function openDatePicker(anchorEl, initialIso, onPick){
   // програна стороною commit(). preventDefault на mousedown лишає фокус на анкері, доки триває
   // взаємодія з попапом, тож click-хендлери нижче спрацьовують першими й коректно.
   pop.addEventListener('mousedown', e=>e.preventDefault());
+  // ТЕ САМЕ для дотику: на телефоні фокус знімається ще на touchstart, тобто blur→commit()
+  // встигав закрити редагування зі СТАРОЮ датою до того, як спрацює click по дню — саме тому
+  // «тисну дату, а вона не змінюється». preventDefault на touchstart лишає фокус на полі,
+  // тож click по дню відпрацьовує першим і вибір застосовується.
+  pop.addEventListener('touchstart', e=>e.preventDefault(), {passive:false});
   document.body.appendChild(pop);
   function renderCal(){
     const startDow=(new Date(viewY,viewM,1).getDay()+6)%7;   // Пн=0
@@ -2889,7 +2894,7 @@ function openTaskDeadlineEdit(id, el){
   inp.placeholder='ДД.ММ (напр. 17.06)';
   inp.value=task.deadline?fmtDate(task.deadline):'';
   el.replaceWith(inp);
-  let done=false;
+  let done=false, blurTimer=null;
   const commit=()=>{
     if(done) return; done=true;
     closeDatePicker();
@@ -2908,15 +2913,19 @@ function openTaskDeadlineEdit(id, el){
     renderTasks();
   };
   const pick=(iso)=>{
+    if(blurTimer){ clearTimeout(blurTimer); blurTimer=null; }   // вибір у календарі скасовує відкладений commit
     if(done) return;
     if(iso && iso!==task.deadline && new Date(iso)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); return; }
     done=true;
     task.deadline=iso||''; saveJSON('wed-tasks',tasks); renderTasks();
   };
-  inp.addEventListener('blur',commit);
+  // commit на blur — ВІДКЛАДЕНИЙ: на телефоні тап по дню в календарі спершу знімає фокус з поля,
+  // і негайний commit закривав редагування зі старою датою ще до того, як спрацює click по дню
+  // (звідси «обираю дату, а лишається попередня»). Затримка дає click встигнути й скасувати commit.
+  inp.addEventListener('blur',()=>{ blurTimer=setTimeout(()=>{ blurTimer=null; commit(); }, 220); });
   inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
-    else if(e.key==='Escape'){ e.preventDefault(); cancel(); }
+    if(e.key==='Enter'){ e.preventDefault(); if(blurTimer){clearTimeout(blurTimer);blurTimer=null;} commit(); }
+    else if(e.key==='Escape'){ e.preventDefault(); if(blurTimer){clearTimeout(blurTimer);blurTimer=null;} cancel(); }
   });
   inp.addEventListener('focus',()=>openDatePicker(inp, task.deadline, pick));
   inp.focus();
