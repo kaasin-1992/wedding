@@ -208,7 +208,30 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
   color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .org-inputbar button:disabled{opacity:.5;cursor:default;}
 .timeline{position:relative;}
-.timeline::before{content:'';position:absolute;top:0;bottom:0;left:9px;width:1px;background:var(--line);}
+/* ── дошка-канбан (як Трелло): Список / В роботі / Готово ── */
+.kb-board{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:820px){ .kb-board{grid-template-columns:repeat(3,1fr);align-items:start;} }
+.kb-col{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:12px;min-width:0;}
+.kb-col-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 10px;}
+.kb-col-t{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--terra);}
+.kb-col.doing .kb-col-t{color:var(--warn);}
+.kb-col.done .kb-col-t{color:var(--done);}
+.kb-count{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 9px;}
+.kb-cards{display:flex;flex-direction:column;gap:9px;}
+.kb-empty{font-size:13px;color:var(--muted);text-align:center;padding:14px 6px;border:1px dashed var(--line);border-radius:12px;}
+.kb-card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 12px;position:relative;}
+.kb-card.hot{background:var(--danger-dim);border-color:var(--danger);}
+.kb-card.warn{background:var(--warn-dim);border-color:var(--warn);}
+.kb-card.is-done{opacity:.65;}
+.kb-card.is-done .kb-text{text-decoration:line-through;color:var(--muted);}
+.kb-text{font-size:14px;line-height:1.4;padding-right:26px;}
+.kb-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+.kb-move{display:flex;gap:6px;margin-top:9px;}
+.kb-move button{flex:1;font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 6px;border-radius:9px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-height:34px;}
+.kb-move button:active{transform:scale(.97);}
+.kb-move button.fwd{background:var(--terra);color:#fff;border-color:var(--terra);}
+.kb-move button:disabled{opacity:.35;cursor:default;}
 .month-lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--terra);font-weight:600;padding:16px 0 9px 30px;}
 .task-row{display:flex;align-items:flex-start;gap:14px;padding:6px 0;}
 .task-dot{width:18px;height:18px;min-width:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);margin-top:4px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;}
@@ -1292,7 +1315,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <span>🚗 Водіння тепер в одному місці — у «Красі» → вкладка «Водіння» (журнал годин і занять)<b id="drivingCount" style="display:none">0</b></span>
     <span style="font-weight:700;color:var(--terra);white-space:nowrap;">Відкрити →</span>
   </a>
-  <div class="timeline" id="timeline"></div>
+  <div class="kb-board" id="timeline"></div>
 </div>
 
 <!-- GUESTS -->
@@ -2740,64 +2763,90 @@ function renderTasks(){
   document.getElementById('pbarFill').style.width=(total?Math.round(done/total*100):0)+'%';
   document.getElementById('pbarLabel').textContent=`${done} / ${total} виконано`;
 
-  const sorted=[...vtasks].sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999'));
-  const groups={};
-  sorted.forEach(t=>{
-    const key=t.deadline?`${MONTHS[+t.deadline.split('-')[1]]} ${t.deadline.split('-')[0]}`:'no-deadline';
-    (groups[key]=groups[key]||[]).push(t);
-  });
-
   const tl=document.getElementById('timeline');
   // не рвемо фокус/клавіатуру, поки вона вводить дедлайн — той самий інпут (openTaskDeadlineEdit)
-  // живе прямо всередині #timeline, і повне innerHTML='' на кожен фоновий Firestore-снапшот
+  // живе прямо всередині дошки, і повне innerHTML='' на кожен фоновий Firestore-снапшот
   // знищувало б поле саме в момент набору цифр, "з'їдаючи" натискання клавіш
   if(isTextEntryFocused(tl)) return;
   tl.innerHTML='';
-  Object.entries(groups).forEach(([month,mt])=>{
-    const grp=document.createElement('div');
-    const lbl=document.createElement('div'); lbl.className='month-lbl';
-    lbl.textContent=month==='no-deadline'?'Без дедлайну':month; grp.appendChild(lbl);
-    mt.forEach(task=>{
+
+  // всередині колонки — за дедлайном (найближчі зверху), без дедлайну — в кінець
+  const byDeadline=(a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999');
+  KB_STAGES.forEach(stage=>{
+    const col=document.createElement('div');
+    col.className='kb-col '+stage.id;
+    const list=vtasks.filter(t=>taskStage(t)===stage.id).sort(byDeadline);
+    col.innerHTML=`<div class="kb-col-h"><span class="kb-col-t">${stage.icon} ${stage.label}</span><span class="kb-count">${list.length}</span></div>`;
+    const wrap=document.createElement('div'); wrap.className='kb-cards';
+    if(!list.length){
+      const e=document.createElement('div'); e.className='kb-empty'; e.textContent=stage.empty; wrap.appendChild(e);
+    }
+    list.forEach(task=>{
       const st=getStatus(task), days=daysUntil(task.deadline);
-      const row=document.createElement('div'); row.className='task-row';
-      const dot=document.createElement('div');
-      dot.className=`task-dot ${st==='done'?'done':st==='hot'||st==='asap'?'hot':st==='warn'?'warn':''}`;
-      dot.onclick=()=>toggleTask(task.id);
+      const isDone=stage.id==='done';
       const card=document.createElement('div');
-      card.className=`task-card ${st==='done'?'done':st==='hot'||st==='asap'?'hot':st==='warn'?'warn':''}`;
-      card.onclick=()=>toggleTask(task.id);
-      const chipTxt=st==='done'?'Готово ✓':st==='asap'?'ASAP':st==='hot'&&days<0?'Прострочено':st==='hot'?'🔥 Горить':st==='warn'?'⚡ Скоро':'У часі';
+      card.className=`kb-card ${isDone?'is-done':(st==='hot'||st==='asap'?'hot':st==='warn'?'warn':'')}`;
       let dlSpan;
       if(task.deadline){
-        const dc=!task.done&&days!==null?(days<=7?'days-red':days<=21?'days-yellow':'days-green'):'';
-        const dl=!task.done&&days!==null?` · <span class="${dc}">${days<0?Math.abs(days)+' дн. тому':days===0?'Сьогодні!':days+' дн.'}</span>`:'';
+        const dc=!isDone&&days!==null?(days<=7?'days-red':days<=21?'days-yellow':'days-green'):'';
+        const dl=!isDone&&days!==null?` · <span class="${dc}">${days<0?Math.abs(days)+' дн. тому':days===0?'Сьогодні!':days+' дн.'}</span>`:'';
         dlSpan=`<span class="task-dl-edit" data-dledit="${task.id}" role="button" tabindex="0" title="Тицьни, щоб змінити дедлайн">до ${fmtDate(task.deadline)}</span>${dl}`;
       }else{
         dlSpan=`<span class="task-dl-edit add" data-dledit="${task.id}" role="button" tabindex="0">+ додати дедлайн</span>`;
       }
-      const whoBadge=whoSelectHTML('taskwho',task.id,task.who);
-      const metaHtml=`<div class="task-meta">${dlSpan}${whoBadge}</div>`;
+      const idx=KB_STAGES.findIndex(s=>s.id===stage.id);
+      const prev=KB_STAGES[idx-1], next=KB_STAGES[idx+1];
       card.innerHTML=`<button class="del-x" data-del="${task.id}" aria-label="Видалити завдання">✕</button>
-        <div class="task-top"><div class="task-text">${esc(task.text)}</div>
-        <span class="chip ${st==='asap'?'asap':st}">${chipTxt}</span></div>${metaHtml}`;
+        <div class="kb-text">${esc(task.text)}</div>
+        <div class="kb-meta">${dlSpan}${whoSelectHTML('taskwho',task.id,task.who)}</div>
+        <div class="kb-move">
+          <button type="button" data-mv="prev" ${prev?'':'disabled'} title="${prev?'У «'+prev.label+'»':''}">${prev?'← '+prev.short:'←'}</button>
+          <button type="button" class="fwd" data-mv="next" ${next?'':'disabled'} title="${next?'У «'+next.label+'»':''}">${next?next.short+' →':'✓'}</button>
+        </div>`;
       card.querySelector('[data-del]').addEventListener('click',e=>{
         e.stopPropagation(); delUndo('wed-tasks',task.id,'Завдання видалено');
       });
       card.querySelector('[data-dledit]').addEventListener('click',e=>{
         e.stopPropagation(); openTaskDeadlineEdit(task.id, e.currentTarget);
       });
+      card.querySelectorAll('[data-mv]').forEach(b=>b.addEventListener('click',e=>{
+        e.stopPropagation();
+        const to=KB_STAGES[idx+(b.dataset.mv==='next'?1:-1)];
+        if(to) moveTaskStage(task.id, to.id);
+      }));
       card.querySelector('[data-taskwho]').addEventListener('click',e=>e.stopPropagation());
       card.querySelector('[data-taskwho]').addEventListener('change',e=>{
         e.stopPropagation();
         task.who=e.target.value;
         saveJSON('wed-tasks',tasks); renderTasks();
       });
-      row.appendChild(dot); row.appendChild(card); grp.appendChild(row);
+      wrap.appendChild(card);
     });
-    tl.appendChild(grp);
+    col.appendChild(wrap);
+    tl.appendChild(col);
   });
 }
-function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){t.done=!t.done; t.updatedAt=Date.now(); saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks();} }
+// дошка-канбан: три колонки. Стадія зберігається в t.stage, але t.done лишається живим
+// (з ним працюють прогрес-бар, гейміфікація, декор-задачі й старі записи без stage) — тому
+// вони завжди тримаються синхронно: stage==='done' ⇔ done===true.
+const KB_STAGES=[
+  {id:'todo',  icon:'📋', label:'Список',   short:'В роботу', empty:'Тут поки порожньо'},
+  {id:'doing', icon:'⏳', label:'В роботі',  short:'Готово',   empty:'Нічого не в роботі'},
+  {id:'done',  icon:'✅', label:'Готово',    short:'',         empty:'Ще нічого не завершено'},
+];
+function taskStage(t){
+  if(!t) return 'todo';
+  if(t.done) return 'done';                     // старі записи без stage + будь-що позначене готовим
+  return t.stage==='doing' ? 'doing' : 'todo';
+}
+function moveTaskStage(id, stage){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  t.stage=stage;
+  t.done=(stage==='done');
+  t.updatedAt=Date.now();
+  saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks();
+}
+function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){ moveTaskStage(id, t.done?'todo':'done'); } }
 // розпізнає "ДД.ММ", "ДД.ММ.РРРР" чи "ДД.ММ.РР" (рік необовʼязковий — весілля все одно 2026);
 // повертає ISO-рядок YYYY-MM-DD або null, якщо не вдалось розібрати чи рік явно абсурдний
 function parseTaskDeadlineInput(str){
