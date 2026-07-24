@@ -122,6 +122,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* HEADER */
 .hero{padding:40px 24px 28px;text-align:center;position:relative;
   background:radial-gradient(circle at 50% 0%, var(--rose-dim) 0%, transparent 62%);}
+/* КОМПАКТНА ШАПКА на робочих вкладках: у повному вигляді вона з'їдала майже весь перший
+   екран телефона, і до списку завдань/бюджету доводилось щоразу довго гортати. На «Головній»
+   лишається як була — там вона доречна. */
+body.compact-hero .hero{padding:46px 12px 8px;}   /* 46px згори — щоб кнопки в кутах не налазили на текст */
+body.compact-hero .hero-eyebrow,
+body.compact-hero .hero-surname,
+body.compact-hero .hero-weather,
+body.compact-hero .hero-title{display:none;}      /* на робочій вкладці лишаємо тільки лічильник днів */
+body.compact-hero .hero-countdown{margin-top:4px;padding-top:0;border-top:none;gap:6px;}
+body.compact-hero .hero-countdown::before{display:none;}
+body.compact-hero .cnt-num{font-size:19px;}
+body.compact-hero .cnt-lbl{font-size:12px;}
+body.compact-hero .theme-toggle,
+body.compact-hero .guest-link-btn{top:8px;}
 .hero-eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--terra);font-weight:500;margin-bottom:14px;}
 .hero-title{font-family:var(--serif);font-weight:700;font-size:clamp(25px,6.6vw,42px);line-height:1.08;letter-spacing:-.01em;color:var(--text);}
 .hero-title em{font-style:normal;font-weight:800;background:linear-gradient(135deg,var(--terra),var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -257,7 +271,7 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .days-red{color:var(--danger);font-weight:600;}
 .days-yellow{color:var(--warn);font-weight:600;}
 .days-green{color:var(--done);font-weight:600;}
-.task-dl-edit{cursor:pointer;border-bottom:1px dashed var(--muted);padding-bottom:1px;}
+.task-dl-edit{cursor:pointer;border-bottom:1px dashed var(--muted);display:inline-block;padding:6px 3px 3px;}
 .task-dl-edit.add{color:var(--terra);font-weight:600;border-bottom-color:var(--terra);}
 .task-dl-inp{font:inherit;font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--terra);background:var(--surface2);color:var(--text);}
 .date-row{display:flex;gap:8px;align-items:stretch;}
@@ -342,7 +356,7 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .attr-chip.on.rl{background:var(--gold,#caa24a);border-color:var(--gold,#caa24a);color:#fff;}
 /* compact toggle chips (дружка / під питанням / діти) */
 .attr-row{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
-.attr-chip{font-size:11.5px;line-height:1;padding:8px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:.15s;opacity:.7;}
+.attr-chip{font-size:11.5px;line-height:1;padding:11px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:.15s;opacity:.7;}
 .attr-chip.on{opacity:1;}
 .attr-chip.on.wp{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
 .attr-chip.on.mb{background:var(--warn-dim);border-color:var(--warn);color:var(--warn);}
@@ -376,7 +390,7 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .venue-photo-frame{width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface2);border:1.5px dashed var(--line);overflow:hidden;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);cursor:pointer;}
 .venue-photo-lbl{font-size:12px;font-weight:600;margin:6px 0 5px;}
 .venue-photo-btns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;}
-.venue-photo-btn{font-size:10.5px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:4px 9px;cursor:pointer;font-weight:600;}
+.venue-photo-btn{font-size:10.5px;color:var(--terra);background:var(--terra-dim);border:1px solid var(--terra);border-radius:20px;padding:8px 12px;cursor:pointer;font-weight:600;}
 .dd-diy-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);flex:1;white-space:nowrap;}
 .decor-vis-row{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
 .decor-vis-btn{flex:1;min-width:120px;padding:8px;border-radius:9px;border:1px dashed var(--terra);background:var(--terra-dim);color:var(--terra);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);}
@@ -388,7 +402,7 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .badge.who-me{background:var(--rose-dim);color:var(--rose);}
 .badge.who-maids{background:var(--sage-dim);color:var(--sage);}
 .badge.who-vendor{background:var(--gold);color:#fff;}
-.who-select{font:inherit;font-size:10.5px;font-weight:500;padding:3px 20px 3px 9px;border-radius:99px;border:none;cursor:pointer;
+.who-select{font:inherit;font-size:10.5px;font-weight:500;padding:7px 20px 7px 10px;border-radius:99px;border:none;cursor:pointer;
   appearance:none;-webkit-appearance:none;max-width:150px;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
   background-position:calc(100% - 11px) center,calc(100% - 7px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
@@ -637,7 +651,7 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .cs-lightbox-stage .collage-cleaning-badge{width:30px;height:30px;font-size:16px;}
 /* ── коментарі ── */
 .cmt-bar{display:flex;justify-content:flex-end;margin-bottom:10px;}
-.cmt-open{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:12.5px;color:var(--terra);background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:5px 12px;cursor:pointer;}
+.cmt-open{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:12.5px;color:var(--terra);background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:9px 14px;cursor:pointer;}
 .cmt-open:active{transform:scale(.95);}
 .cmt-count{min-width:16px;height:16px;line-height:16px;text-align:center;font-size:11px;border-radius:9px;background:transparent;color:var(--muted);}
 .cmt-count.has{background:var(--terra);color:#fff;padding:0 5px;}
@@ -816,7 +830,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .shop-card-ig{font-size:11.5px;color:var(--muted);margin-bottom:8px;}
 .shop-card-ig a{color:var(--muted);}
 .shop-card-links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
-.shop-linkbtn{display:inline-flex;align-items:center;gap:5px;background:var(--rose-dim);color:var(--rose);border-radius:16px;padding:5px 11px;font-size:12px;font-weight:600;text-decoration:none;}
+.shop-linkbtn{display:inline-flex;align-items:center;gap:5px;background:var(--rose-dim);color:var(--rose);border-radius:16px;padding:8px 13px;font-size:12px;font-weight:600;text-decoration:none;}
 .shop-linkbtn.men{background:var(--terra-dim);color:var(--terra);}
 .shop-card-room{font-size:11.5px;color:var(--text);background:var(--surface);border-radius:8px;padding:7px 10px;margin-top:6px;}
 .shop-card-room b{color:var(--terra);}
@@ -886,7 +900,7 @@ body.guest .add-section,body.guest .del-x,body.guest .capInput,body.guest #capIn
 .team-row .tm-role{font-size:11.5px;color:var(--muted);}
 .team-row .tm-cnt{font-size:13px;color:var(--terra);font-weight:600;white-space:nowrap;}
 .team-loc{display:flex;gap:5px;}
-.team-loc button{font-size:10.5px;padding:3px 7px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;}
+.team-loc button{font-size:10.5px;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;}
 .team-loc button.on{background:var(--terra-dim);border-color:var(--terra);color:var(--terra);}
 .team-row .del-x{position:static;opacity:.5;margin-left:10px;padding:10px 12px;}
 .team-add{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
@@ -1027,7 +1041,9 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .update-banner.dark-text button.ub-go{color:var(--gold);}
 .update-banner button.ub-later{color:inherit;opacity:.6;}
 /* одноразова підказка про свайп */
-.swipe-hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:960;background:rgba(18,20,26,.9);color:#ECEAE0;
+/* знизу, а не посеред екрана: раніше підказка накривала саму панель вкладок,
+   про яку й розповідає, і виглядала як зависла помилка */
+.swipe-hint{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:960;background:rgba(18,20,26,.9);color:#ECEAE0;
   border-radius:14px;padding:16px 20px;font-size:14px;line-height:1.5;text-align:center;max-width:260px;box-shadow:0 10px 40px rgba(0,0,0,.3);
   opacity:0;pointer-events:none;transition:opacity .3s;}
 .swipe-hint.show{opacity:1;}
@@ -1238,7 +1254,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <div class="nokia-statusbar"><span>📶📶📶</span><span id="nokiaClock">--:--</span><span>🔋100%</span></div>
 
-<div class="hero">
+<div class="hero" id="hero">
   <button class="theme-toggle" id="themeBtn" title="Змінити тему" aria-label="Змінити тему">🌙</button>
   <button class="guest-link-btn" id="guestLinkBtn" title="Скопіювати лінк для гостей" aria-label="Лінк для гостей">🔗 Лінк для гостей</button>
   <div class="hero-eyebrow">6 вересня 2026 · Київ</div>
@@ -7896,6 +7912,9 @@ function activateTab(name){
   const panel=document.getElementById('tab-'+name); if(panel) panel.classList.add('active');
   const btn=btns.find(b=>b.dataset.tab===name);
   if(btn) btn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+  // на робочих вкладках стискаємо шапку — інакше на телефоні до самого списку треба гортати
+  // майже цілий екран щоразу; на «Головній» лишаємо повну (там вона й доречна)
+  document.body.classList.toggle('compact-hero', name!=='home');
   if(typeof renderMenu==='function') renderMenu();   // підсвітка активного розділу на головному екрані
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
