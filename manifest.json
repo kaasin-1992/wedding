@@ -1,13 +1,13 @@
 {
-  "name": "Катерина & Дмитро — весілля",
+  "name": "Катя & Діма — весілля",
   "short_name": "К&Д весілля",
-  "description": "Спільний планер весілля: завдання, гості, бюджет, контакти, нотатки.",
+  "description": "Усі сторінки нашого весілля: планер, краса, гардероб, дружки, гра-запрошення.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#EBEBE3",
-  "theme_color": "#EBEBE3",
+  "background_color": "#FBF3EF",
+  "theme_color": "#B0464E",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

@@ -1,0 +1,15 @@
+{
+  "name": "Планер весілля — Катя & Діма",
+  "short_name": "Планер",
+  "description": "Спільний планер весілля: завдання, гості, бюджет, контакти, декор, нотатки.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EBEBE3",
+  "theme_color": "#EBEBE3",
+  "icons": [
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
