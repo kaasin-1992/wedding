@@ -2881,17 +2881,27 @@ function parseTaskDeadlineInput(str){
    крапки) все одно виявився незручним. Це не заміна нативного <input type="date"> (той свідомо
    уникали через баг з роком на iOS, див. коментар нижче) — свій маленький попап-календарик,
    клік по дню замість набору цифр. Текстове поле поруч лишається робочим про всяк випадок. */
-let _dpEl=null, _dpAnchor=null;
+let _dpEl=null, _dpAnchor=null, _dpReposition=null, _dpOnClose=null;
 function _dpOutsideHandler(e){
   if(_dpEl && !_dpEl.contains(e.target) && _dpAnchor && !_dpAnchor.contains(e.target)) closeDatePicker();
 }
 function closeDatePicker(){
   if(_dpEl){ _dpEl.remove(); _dpEl=null; }
   document.removeEventListener('pointerdown', _dpOutsideHandler, true);
+  if(_dpReposition && window.visualViewport){
+    window.visualViewport.removeEventListener('resize', _dpReposition);
+    window.visualViewport.removeEventListener('scroll', _dpReposition);
+  }
+  _dpReposition=null;
+  // на телефоні поле не тримає фокус (клавіатуру навмисно не викликаємо), тож blur не спрацює
+  // й інлайн-поле лишилось би висіти на екрані після закриття календаря тапом повз нього
+  const cb=_dpOnClose; _dpOnClose=null;   // чистимо ПЕРЕД викликом — cb сам може викликати closeDatePicker
+  if(cb) cb();
 }
-function openDatePicker(anchorEl, initialIso, onPick){
+function openDatePicker(anchorEl, initialIso, onPick, onClose){
   closeDatePicker();
   _dpAnchor=anchorEl;
+  _dpOnClose=onClose||null;
   const tD=today();
   const todayIso=`${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
   const initDate = initialIso ? new Date(initialIso+'T00:00:00') : new Date();
@@ -2931,9 +2941,36 @@ function openDatePicker(anchorEl, initialIso, onPick){
     pop.querySelector('[data-dpclear]').onclick=()=>{ onPick(''); closeDatePicker(); };
   }
   renderCal();
-  const r=anchorEl.getBoundingClientRect();
-  pop.style.top=Math.min(r.bottom+6, window.innerHeight-280)+'px';
-  pop.style.left=Math.max(8, Math.min(r.left, window.innerWidth-256))+'px';
+  // позиціювання з урахуванням КЛАВІАТУРИ: на телефоні вона з'їдає низ екрана, і календар
+  // опинявся під нею — видимі лишались тільки минулі (недоступні) дні, тож здавалось, що
+  // "вибір дати висне". visualViewport дає реальну видиму висоту (без клавіатури), а фактичну
+  // висоту попапу міряємо, а не припускаємо — якщо знизу не влазить, показуємо НАД полем.
+  function placePop(){
+    if(!pop.isConnected) return;
+    const vv=window.visualViewport;
+    const visTop=vv?vv.offsetTop:0;
+    const visH=vv?vv.height:window.innerHeight;
+    const visW=vv?vv.width:window.innerWidth;
+    const r=anchorEl.getBoundingClientRect();
+    const ph=pop.offsetHeight||280, pw=pop.offsetWidth||248;
+    let top=r.bottom+6;
+    if(top+ph > visTop+visH-8){            // знизу не влазить — пробуємо над полем
+      const above=r.top-ph-6;
+      if(above >= visTop+8) top=above;
+    }
+    // ФІНАЛЬНИЙ clamp у видиму зону — головне: сама картка завдання може бути нижче/вище
+    // видимої частини (список довгий, або клавіатура підняла екран), і тоді навіть позиція
+    // "над полем" лишалась за межами екрана — календар було видно, але дні не натискались.
+    top = Math.max(visTop+8, Math.min(top, visTop+visH-ph-8));
+    pop.style.top=top+'px';
+    pop.style.left=Math.max(8, Math.min(r.left, visW-pw-8))+'px';
+  }
+  placePop();
+  _dpReposition=placePop;
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', placePop);
+    window.visualViewport.addEventListener('scroll', placePop);
+  }
   _dpEl=pop;
   setTimeout(()=>document.addEventListener('pointerdown', _dpOutsideHandler, true), 0);
 }
@@ -2983,8 +3020,16 @@ function openTaskDeadlineEdit(id, el){
     else if(e.key==='Escape'){ e.preventDefault(); if(blurTimer){clearTimeout(blurTimer);blurTimer=null;} cancel(); }
   });
   inp.addEventListener('focus',()=>openDatePicker(inp, task.deadline, pick));
-  inp.focus();
-  inp.select();
+  // На ТЕЛЕФОНІ не даємо фокус полю одразу: інакше вискакує системна клавіатура й накриває
+  // нижню половину календаря — а саме там і лежать доступні (майбутні) дні, тож виглядало,
+  // ніби вибір дати «висне». Показуємо одразу календар; захоче ввести цифрами — тапне поле,
+  // тоді й з'явиться клавіатура. На компʼютері поведінка як була (фокус + виділення тексту).
+  const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if(coarse){
+    // onClose: тап повз календар = скасувати редагування (інакше поле висіло б без blur)
+    openDatePicker(inp, task.deadline, pick, ()=>{ if(!done && document.activeElement!==inp) cancel(); });
+  }
+  else { inp.focus(); inp.select(); }
 }
 document.getElementById('addTaskBtn').onclick=()=>{
   const text=val('newTaskText'); if(!text)return;
