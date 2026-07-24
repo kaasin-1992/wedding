@@ -2922,11 +2922,12 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
   // програна стороною commit(). preventDefault на mousedown лишає фокус на анкері, доки триває
   // взаємодія з попапом, тож click-хендлери нижче спрацьовують першими й коректно.
   pop.addEventListener('mousedown', e=>e.preventDefault());
-  // ТЕ САМЕ для дотику: на телефоні фокус знімається ще на touchstart, тобто blur→commit()
-  // встигав закрити редагування зі СТАРОЮ датою до того, як спрацює click по дню — саме тому
-  // «тисну дату, а вона не змінюється». preventDefault на touchstart лишає фокус на полі,
-  // тож click по дню відпрацьовує першим і вибір застосовується.
-  pop.addEventListener('touchstart', e=>e.preventDefault(), {passive:false});
+  // ⚠️ ТУТ РАНІШЕ БУВ preventDefault на touchstart (щоб утримати фокус поля й не дати
+  // blur→commit випередити вибір дня). Він ГЛУШИВ усі похідні події миші, включно з click —
+  // тобто на телефоні тап по дню не спрацьовував узагалі («обираю дату, а вона не змінюється»).
+  // Тепер це не потрібно: на дотику ми взагалі не ставимо фокус на поле (клавіатура не вилазить),
+  // а гонку blur→commit і так знімає відкладений commit + скасування таймера у pick().
+  // Вибір дня нижче слухає і pointerup, і click — щоб працювало й пальцем, і мишею.
   document.body.appendChild(pop);
   function renderCal(){
     const startDow=(new Date(viewY,viewM,1).getDay()+6)%7;   // Пн=0
@@ -2941,10 +2942,25 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
       grid+=`<div class="dp-day${initialIso===iso?' sel':''}${isPast?' past':''}" ${isPast?'':`data-dpick="${iso}"`}>${d}</div>`;
     }
     pop.innerHTML=`<div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
-    pop.querySelector('[data-dpprev]').onclick=()=>{ viewM--; if(viewM<0){viewM=11;viewY--;} renderCal(); };
-    pop.querySelector('[data-dpnext]').onclick=()=>{ viewM++; if(viewM>11){viewM=0;viewY++;} renderCal(); };
-    pop.querySelectorAll('[data-dpick]').forEach(el=>el.onclick=()=>{ onPick(el.dataset.dpick); closeDatePicker(); });
-    pop.querySelector('[data-dpclear]').onclick=()=>{ onPick(''); closeDatePicker(); };
+    const bindNav=(el,step)=>{
+      let handled=false;
+      const go=()=>{ if(handled) return; handled=true; viewM+=step;
+        if(viewM<0){viewM=11;viewY--;} if(viewM>11){viewM=0;viewY++;} renderCal(); };
+      el.addEventListener('pointerup',go); el.addEventListener('click',go);
+    };
+    bindNav(pop.querySelector('[data-dpprev]'), -1);
+    bindNav(pop.querySelector('[data-dpnext]'), +1);
+    // pointerup + click: на телефоні браузер не завжди породжує click усередині попапу,
+    // тож покладатись лише на нього не можна. Прапорець не дає спрацювати двічі (мишею
+    // прилітають обидві події).
+    const bindPick=(el,iso)=>{
+      let handled=false;
+      const go=()=>{ if(handled) return; handled=true; onPick(iso); closeDatePicker(); };
+      el.addEventListener('pointerup',go);
+      el.addEventListener('click',go);
+    };
+    pop.querySelectorAll('[data-dpick]').forEach(el=>bindPick(el, el.dataset.dpick));
+    bindPick(pop.querySelector('[data-dpclear]'), '');
   }
   renderCal();
   // позиціювання з урахуванням КЛАВІАТУРИ: на телефоні вона з'їдає низ екрана, і календар
