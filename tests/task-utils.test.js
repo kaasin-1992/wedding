@@ -73,7 +73,7 @@ describe('stripGuestData (безпека: що гість НЕ повинен о
     const state = { tasks: [], scriptSofia: [], scriptWave: [] };
     expect(stripGuestData({ ...state, contacts: [{ id: 'c1', name: 'Фотограф Іван' }] }).contacts).toEqual([]);
   });
-  it('passes through tasks and scripts unchanged', () => {
+  it('passes tasks through but strips the day schedule (script) from guests', () => {
     const state = {
       tasks: [{ id: 't1', text: 'забронювати зал' }],
       scriptSofia: [{ id: 's1', text: 'вихід молодят' }],
@@ -81,8 +81,8 @@ describe('stripGuestData (безпека: що гість НЕ повинен о
     };
     const out = stripGuestData(state);
     expect(out.tasks.map(t => t.id)).toEqual(['t1']);
-    expect(out.scriptSofia.map(m => m.id)).toEqual(['s1']);
-    expect(out.scriptWave.map(m => m.id)).toEqual(['s3']);
+    expect(out.scriptSofia).toEqual([]);
+    expect(out.scriptWave).toEqual([]);
   });
   it('handles missing/undefined arrays gracefully', () => {
     const out = stripGuestData({});
