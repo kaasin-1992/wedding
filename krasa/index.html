@@ -717,7 +717,11 @@ document.getElementById('diaryAdd').onclick=()=>{
     panels.forEach(p=>{ p.hidden = p.dataset.kpanel!==t; });
   }
   tabs.forEach(b=>b.onclick=()=>{ show(b.dataset.ktab); try{localStorage.setItem('krasa-tab',b.dataset.ktab);}catch(e){} window.scrollTo({top:0,behavior:'smooth'}); });
-  try{ const last=localStorage.getItem('krasa-tab'); if(last && [...tabs].some(x=>x.dataset.ktab===last)) show(last); }catch(e){}
+  const valid=t=>[...tabs].some(x=>x.dataset.ktab===t);
+  const fromHash=(location.hash||'').replace('#','');
+  if(fromHash && valid(fromHash)){ show(fromHash); }
+  else { try{ const last=localStorage.getItem('krasa-tab'); if(last && valid(last)) show(last); }catch(e){} }
+  window.addEventListener('hashchange',()=>{ const h=(location.hash||'').replace('#',''); if(h && valid(h)) show(h); });
 })();
 
 function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }

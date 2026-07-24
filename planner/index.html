@@ -1293,13 +1293,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
     <div class="pbar-track"><div class="pbar-fill" id="pbarFill"></div></div>
     <span class="pbar-lbl" id="pbarLabel">0 / 0</span>
   </div>
-  <div class="driving-counter" id="drivingCounterBox">
-    <span>🚗 Занять з водіння: <b id="drivingCount">0</b></span>
-    <div class="driving-counter-btns">
-      <button type="button" id="drivingMinus" aria-label="Мінус одне заняття">−</button>
-      <button type="button" id="drivingPlus" aria-label="Плюс одне заняття">+1 заняття</button>
-    </div>
-  </div>
+  <a class="driving-counter" id="drivingCounterBox" href="../krasa/#drive" style="text-decoration:none;color:inherit;">
+    <span>🚗 Водіння тепер в одному місці — у «Красі» → вкладка «Водіння» (журнал годин і занять)<b id="drivingCount" style="display:none">0</b></span>
+    <span style="font-weight:700;color:var(--terra);white-space:nowrap;">Відкрити →</span>
+  </a>
   <div class="timeline" id="timeline"></div>
 </div>
 
@@ -2935,13 +2932,15 @@ document.getElementById('newTaskDateCal').onclick=()=>{
   const cur=parseTaskDeadlineInput(dateInp.value)||'';
   openDatePicker(dateInp, cur, iso=>{ dateInp.value=iso?fmtDate(iso):''; });
 };
-document.getElementById('drivingPlus').onclick=()=>{
+// Лічильник водіння переїхав у «Красу» → вкладка «Водіння» (журнал годин).
+// Кнопки +/− тут прибрано; guard лишаємо на випадок старого кешу.
+{ const dp=document.getElementById('drivingPlus'); if(dp) dp.onclick=()=>{
   drivingLessons++; saveJSON('wed-driving-lessons',drivingLessons); renderDrivingCounter();
-};
-document.getElementById('drivingMinus').onclick=()=>{
+}; }
+{ const dm=document.getElementById('drivingMinus'); if(dm) dm.onclick=()=>{
   if(drivingLessons<=0) return;
   drivingLessons--; saveJSON('wed-driving-lessons',drivingLessons); renderDrivingCounter();
-};
+}; }
 
 /* ════ GUESTS ════ */
 let activeFilters=new Set(['all']);
