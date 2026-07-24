@@ -252,7 +252,8 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;
   border-radius:8px;cursor:pointer;color:var(--text);}
 .dp-day.pad{visibility:hidden;cursor:default;}
-.dp-day:not(.pad):hover{background:var(--terra-dim);}
+.dp-day.past{opacity:.28;pointer-events:none;cursor:default;text-decoration:line-through;}
+.dp-day:not(.pad):not(.past):hover{background:var(--terra-dim);}
 .dp-day.sel{background:var(--terra);color:#fff;font-weight:700;}
 .dp-clear{width:100%;margin-top:8px;background:none;border:none;color:var(--muted);font-size:12px;
   cursor:pointer;text-decoration:underline;padding:4px;}
@@ -2833,8 +2834,13 @@ function closeDatePicker(){
 function openDatePicker(anchorEl, initialIso, onPick){
   closeDatePicker();
   _dpAnchor=anchorEl;
+  const tD=today();
+  const todayIso=`${tD.getFullYear()}-${String(tD.getMonth()+1).padStart(2,'0')}-${String(tD.getDate()).padStart(2,'0')}`;
   const initDate = initialIso ? new Date(initialIso+'T00:00:00') : new Date();
-  let viewY=initDate.getFullYear(), viewM=initDate.getMonth();
+  // якщо старий дедлайн прострочений — відкриваємо календар на ПОТОЧНОМУ місяці, а не в минулому,
+  // щоб одразу було видно доступні (майбутні) дні, а не місяць, повний закреслених дат
+  const viewBase = initDate < tD ? tD : initDate;
+  let viewY=viewBase.getFullYear(), viewM=viewBase.getMonth();
   const pop=document.createElement('div'); pop.className='dp-pop';
   // якщо анкер — текстове поле (напр. редагування дедлайну), звичайний клік по кнопці всередині
   // попапу спершу зрушує фокус (mousedown) → встигає відпрацювати blur/commit ЗІ СТАРИМ значенням
@@ -2852,7 +2858,8 @@ function openDatePicker(anchorEl, initialIso, onPick){
     for(let i=0;i<startDow;i++) grid+='<div class="dp-day pad"></div>';
     for(let d=1; d<=daysInMonth; d++){
       const iso=`${viewY}-${String(viewM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      grid+=`<div class="dp-day${initialIso===iso?' sel':''}" data-dpick="${iso}">${d}</div>`;
+      const isPast = iso < todayIso;   // минулі дні — некликабельні (дедлайн у минулому не має сенсу)
+      grid+=`<div class="dp-day${initialIso===iso?' sel':''}${isPast?' past':''}" ${isPast?'':`data-dpick="${iso}"`}>${d}</div>`;
     }
     pop.innerHTML=`<div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
     pop.querySelector('[data-dpprev]').onclick=()=>{ viewM--; if(viewM<0){viewM=11;viewY--;} renderCal(); };
