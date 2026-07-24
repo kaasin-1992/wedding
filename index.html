@@ -650,6 +650,8 @@ body.guest .guest-link-btn{display:none;}
 .site-nav a{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--line);border-radius:99px;font-size:13px;font-weight:700;color:var(--terra);padding:8px 14px;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(140,80,90,.06);}
 .site-nav a:active{transform:scale(.97);}
 .site-nav a.game{background:var(--terra);border-color:var(--terra);color:#fff;}
+.site-nav button.sync-now{flex:0 0 auto;font-family:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--gold,#B98A4B);border:1.5px solid var(--gold,#B98A4B);border-radius:99px;padding:8px 14px;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(140,80,90,.06);}
+.site-nav button.sync-now:active{transform:scale(.97);}
 body.guest .site-nav{display:none;}
 /* гість — тільки читання: ховаємо створення/видалення/ШІ, лишаємо коментарі та посилання */
 body.guest [data-tab="budget"],body.guest #tab-budget{display:none !important;}
@@ -1225,6 +1227,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 </div>
 
 <nav class="site-nav" id="siteNav" aria-label="Наші сторінки">
+  <button type="button" class="sync-now" id="syncNowBtn" title="Підтягнути останнє з хмари">🔄 Оновити дані</button>
   <a href="druzhky/">💃 Дружки</a>
   <a href="mamy/">💐 Мами</a>
   <a href="tata/">🥂 Тата</a>
@@ -2284,6 +2287,7 @@ function splitIdeas(arr){
   });
   return light;
 }
+var localEditSinceLoad=false;   // чи робив цей пристрій власну правку в цій сесії (див. mergeIncomingArray)
 function saveJSON(key, val){
   // автоматично проставляємо updatedAt на елементах, чиї поля реально змінились відносно
   // попередньо збереженої локальної версії — рятує ВСІ per-item редагування (десятки
@@ -2313,6 +2317,7 @@ function saveJSON(key, val){
   // реально потрібне (див. LOCAL_FULL_IMG_KEYS) — для решти прибираємо важкі картинки,
   // щоб не забивати обмежену квоту localStorage браузера роками накопичення фото.
   DB.set(key, JSON.stringify(LOCAL_FULL_IMG_KEYS.has(key) ? val : stripDataUrlsDeep(val)));
+  if(!applyingSnapshot && cloudReady) localEditSinceLoad=true;   // лише СПРАВЖНІ правки після першої синхронізації (не міграції/сіди під час завантаження) вмикають updatedAt-захист
   if(!(DOC && cloudReady && !applyingSnapshot && !IS_GUEST)) return;
   if(HEAVY_KEYS[key]){                               // фото пари/манекени/примірки → окремий документ
     mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
@@ -8330,6 +8335,13 @@ function flashSync(ok){
 // (generic FIELD-гілка saveJSON), симетричного захисту на ЧИТАННІ (тут) не було. Той самий принцип
 // порівняння updatedAt (відсутнє трактуємо як -Infinity), що вже рятує saveJSON — тепер і тут:
 // для кожного елемента з локальним updatedAt новішим за хмарний — лишаємо локальний, а не хмарний.
+// Поки на ЦЬОМУ пристрої в цій сесії не зроблено жодної власної правки — хмара є єдиним джерелом
+// істини (щойно відкрила телефон і нічого не чіпала → маєш бачити те, що змінила на компі, і навпаки).
+// updatedAt-захист (проти "клацнула і одразу розклацалось") вмикається ЛИШЕ після першої локальної
+// правки — коли справді є що берегти від фонового знімка. Це і є причина скарги "оновили на компі,
+// на телефоні не підтягнулось": раніше застаріле локальне значення з більшим updatedAt (напр. через
+// різницю годинників пристроїв) могло перемогти свіже хмарне навіть коли ти нічого не редагувала.
+// (localEditSinceLoad оголошено вище, поряд із saveJSON, через var — щоб уникнути TDZ.)
 function mergeIncomingArray(localArr, cloudArr){
   if(!Array.isArray(cloudArr)) return localArr;
   if(!Array.isArray(localArr)) return cloudArr;
@@ -8338,6 +8350,7 @@ function mergeIncomingArray(localArr, cloudArr){
     if(!cIt||cIt.id==null) return cIt;
     const lIt=localById.get(cIt.id);
     if(!lIt) return cIt;
+    if(!localEditSinceLoad) return cIt;   // жодних власних правок цієї сесії → повністю довіряємо хмарі
     const lTs=typeof lIt.updatedAt==='number'?lIt.updatedAt:-Infinity;
     const cTs=typeof cIt.updatedAt==='number'?cIt.updatedAt:-Infinity;
     return lTs>cTs ? lIt : cIt;
@@ -8660,6 +8673,13 @@ injectCmtButtons();
     const url=location.origin+location.pathname.replace(/index\.html$/,'')+'?guest';
     try{ await navigator.clipboard.writeText(url); showToast('Лінк для гостей скопійовано 🔗'); }
     catch(e){ showToast(url); }
+  };
+  const syncBtn=document.getElementById('syncNowBtn');
+  if(syncBtn) syncBtn.onclick=()=>{
+    // перезавантаження = гарантований чистий підтяг із хмари: на новому старті localEditSinceLoad=false,
+    // тож усі масиви беруться з хмари (див. mergeIncomingArray). Найнадійніший спосіб "побачити останнє".
+    syncBtn.textContent='🔄 Оновлюю…'; syncBtn.disabled=true;
+    location.reload();
   };
   const eb=document.getElementById('exportGuestsBtn');
   if(eb) eb.onclick=async()=>{
