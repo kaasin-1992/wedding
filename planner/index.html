@@ -2199,7 +2199,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-npshop-cost':'npshopCostDone','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2634,6 +2634,7 @@ let temuSpentSeeded = loadJSON('wed-temu-spent-seed', false); // чи вже в�
 let gamesRemoved = loadJSON('wed-games-removed', false); // чи вже прибрано зайві ідеї ігор + вірменську традицію, які були помилково додані (раз)
 let drivingBudgetDone = loadJSON('wed-driving-budget', false); // чи вже прибрано завдання про водіння і додано водіння в бюджет (25×1200) (раз)
 let realScheduleDone = loadJSON('wed-real-schedule', false); // чи вже вписано актуальний розклад дня (Софі+Хвильовий), замінивши чернетку (раз)
+let npshopCostDone = loadJSON('wed-npshop-cost', false); // чи вже проставлено суми замовлень NP Shopping (фотоапарати, банери) у бюджет (раз)
 let wishpicksSeeded = loadJSON('wed-wishpicks-seed', false); // чи вже додано 5 посилань Wishpicks в Одяг (раз) — фото підтягнуться через "Обробити все" (мій сервер не може достукатись до wishpicks.com, але microlink з ЇЇ сесії — може)
 let orphanMediaCleaned = loadJSON('wed-orphan-media-cleaned', false); // чи вже прибрано осиротілі m_idea_* документи давно видалених ідей (раз)
 let hotels      = loadJSON('wed-hotels', []);
@@ -5680,6 +5681,25 @@ function seedDrivingBudget(){
   renderTasks(); renderBudget();
 }
 
+// одноразово: проставити реальні суми замовлень з NP Shopping у бюджет, у гривні з доставкою.
+// Курс беремо з самих скрінів (там гарантія 1% показана і в $, і в ₴): ≈45,4 ₴/$.
+// • Фотоапарати: прострочені плівкові 2600 ₴ + Fujifilm QuickSnap 8-pack 149$ + доставка/гарантія 18,49$
+// • Банери: два весільні welcome-банери 156,88$ + доставка/гарантія 61,57$
+function seedNpshopCost(){
+  if(npshopCostDone || IS_GUEST) return;
+  npshopCostDone=true;
+  const set=(match,name,cat,sum)=>{
+    const row=budget.find(b=>b.name && b.name.includes(match));
+    if(row){ row.name=name; row.planned=sum; row.paid=sum; row.updatedAt=Date.now(); }
+    else budget.push({id:'np'+Date.now()+'_'+match.length, name, cat, planned:sum, paid:sum});
+  };
+  set('Фотоапарати одноразові','Фотоапарати одноразові (прострочені 2600 ₴ + Fujifilm 8-pack з доставкою)','Фото / Відео',10217);
+  set('Банери','Банери весільні (2 шт, Amazon) з доставкою','Декор / Флористика',9913);
+  saveJSON('wed-budget',budget);
+  saveJSON('wed-npshop-cost',true);
+  renderBudget();
+}
+
 // одноразово: вписати АКТУАЛЬНИЙ розклад дня (Софі + Хвильовий), який дала Катя, замінивши
 // стару чернетку таймлайну. Прибираємо всі старі ТАЙМОВАНІ пункти + залишки ігор ('game…') і
 // вірменської традиції ('tradarm…'), а українські традиції та інші беклог-нотатки лишаємо.
@@ -8568,6 +8588,7 @@ function startSync(){
     if(typeof d.gamesRemoved==='boolean') gamesRemoved=d.gamesRemoved;
     if(typeof d.drivingBudgetDone==='boolean') drivingBudgetDone=d.drivingBudgetDone;
     if(typeof d.realScheduleDone==='boolean') realScheduleDone=d.realScheduleDone;
+    if(typeof d.npshopCostDone==='boolean') npshopCostDone=d.npshopCostDone;
     if(typeof d.wishpicksSeeded==='boolean') wishpicksSeeded=d.wishpicksSeeded;
     if(typeof d.orphanMediaCleaned==='boolean') orphanMediaCleaned=d.orphanMediaCleaned;
     // одноразова міграція старих картинок зі state в окремі документи
@@ -8703,7 +8724,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
