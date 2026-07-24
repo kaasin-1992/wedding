@@ -1,15 +1,24 @@
-const CACHE = 'wedding-hub-v63';
+const CACHE = 'wedding-planner-v1';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-180.png',
-  './icon-192.png',
-  './icon-512.png'
+  '../icon-180.png',
+  '../icon-192.png',
+  '../icon-512.png',
+  '../lib/guest-utils.js',
+  '../lib/task-utils.js',
+  '../lib/budget-utils.js'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // не самоактивуємось одразу — чекаємо на команду SKIP_WAITING зі сторінки,
+  // щоб застосунок міг показати банер "є оновлення" перед перезавантаженням
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -22,10 +31,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // зовнішнє (Firebase, шрифти) — завжди в мережу, не кешуємо
   if (url.origin !== location.origin) return;
-  // не чіпаємо планер та інші під-сторінки — у них свої SW / свіжа мережа
-  if (url.pathname.startsWith('/planner/')) return;
 
+  // HTML-сторінку беремо з мережі (щоб була свіжа), офлайн — з кешу
   if (e.request.mode === 'navigate' || e.request.destination === 'document') {
     e.respondWith(
       fetch(e.request).then(res => {
@@ -37,6 +46,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // решта власних файлів — спершу кеш, потім мережа
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
       const copy = res.clone();
