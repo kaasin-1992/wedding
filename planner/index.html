@@ -2182,7 +2182,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -2613,6 +2613,7 @@ let julySeed3Seeded = loadJSON('wed-july-seed3-seed', false); // чи вже д�
 let selfCareSeeded = loadJSON('wed-selfcare-seed', false); // чи вже додано план підготовки нареченої (раз)
 let selfCare2Seeded = loadJSON('wed-selfcare2-seed', false); // чи вже додано ортодонтку 29.07 (раз, окремо — перший seed уже пройшов)
 let budgetExtraSeeded = loadJSON('wed-budget-extra-seed', false); // чи вже додано витрати Каті (камери/вази/банери/сайт/домен/друк) (раз)
+let temuSpentSeeded = loadJSON('wed-temu-spent-seed', false); // чи вже внесено куплені деталі декору/прикрас/образу з Temu у витрачений бюджет (раз)
 let wishpicksSeeded = loadJSON('wed-wishpicks-seed', false); // чи вже додано 5 посилань Wishpicks в Одяг (раз) — фото підтягнуться через "Обробити все" (мій сервер не може достукатись до wishpicks.com, але microlink з ЇЇ сесії — може)
 let orphanMediaCleaned = loadJSON('wed-orphan-media-cleaned', false); // чи вже прибрано осиротілі m_idea_* документи давно видалених ідей (раз)
 let hotels      = loadJSON('wed-hotels', []);
@@ -5658,6 +5659,28 @@ function seedBudgetExtra(){
   renderBudget();
 }
 
+// одноразовий seed: куплені деталі з Temu у ВИТРАЧЕНИЙ бюджет (як Катя писала — «внось що бачиш, в гривні»).
+// $-товари сконвертовано ~42 ₴/$; planned=paid, щоб рядок не виглядав як перевитрата. Чохол на айфон свідомо не вносимо (особисте).
+function seedTemuSpent(){
+  if(temuSpentSeeded || IS_GUEST) return;
+  temuSpentSeeded=true;
+  const base=Date.now();
+  const add=(i,name,cat,paid)=>budget.push({id:'tm'+base+'_'+i, name, cat, planned:paid, paid});
+  add(1,'Декор Temu: стрічки, тканина, скатертина, таблетки для квітів','Декор / Флористика',1510);
+  add(2,'Взуття: вінтажні чорні EU40 (Temu)','Вбрання',843);
+  add(3,'Пояс із квітів / ремінь (Temu)','Вбрання',246);
+  add(4,'Вишита етно-жилетка червона (Temu)','Вбрання',611);
+  add(5,'Сережки «риба кої» (Temu)','Вбрання',196);
+  add(6,'Набір бісер: намисто+сережки (Temu)','Вбрання',170);
+  add(7,'Шнурки + 2 перлинні бантики (Temu)','Вбрання',73);
+  add(8,'Сережки-медузи (Temu)','Вбрання',232);
+  add(9,'Сережки «Тюльпанчик» (Temu)','Вбрання',207);
+  add(10,'Намисто плетене квіткове (Temu)','Вбрання',310);
+  saveJSON('wed-budget',budget);
+  saveJSON('wed-temu-spent-seed',true);
+  renderBudget();
+}
+
 // одноразовий seed: 5 посилань Wishpicks в Одяг, БЕЗ фото (мій сервер не може дістати
 // wishpicks.com — заблоковано на рівні мого проксі, підтверджено окремо). Фото підтягнуться,
 // коли вона сама натисне "🪄 Обробити все одразу" — цей запит іде з ЇЇ браузера через
@@ -8408,6 +8431,7 @@ function startSync(){
     if(typeof d.selfCareSeeded==='boolean') selfCareSeeded=d.selfCareSeeded;
     if(typeof d.selfCare2Seeded==='boolean') selfCare2Seeded=d.selfCare2Seeded;
     if(typeof d.budgetExtraSeeded==='boolean') budgetExtraSeeded=d.budgetExtraSeeded;
+    if(typeof d.temuSpentSeeded==='boolean') temuSpentSeeded=d.temuSpentSeeded;
     if(typeof d.wishpicksSeeded==='boolean') wishpicksSeeded=d.wishpicksSeeded;
     if(typeof d.orphanMediaCleaned==='boolean') orphanMediaCleaned=d.orphanMediaCleaned;
     // одноразова міграція старих картинок зі state в окремі документи
@@ -8543,7 +8567,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
