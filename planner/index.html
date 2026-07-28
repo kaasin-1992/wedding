@@ -1261,6 +1261,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <a href="../">← Всі сторінки</a>
   <button type="button" class="sync-now" id="syncNowBtn" title="Підтягнути останнє з хмари">🔄 Оновити дані</button>
   <button type="button" id="copyTabLinkBtn" title="Скопіювати посилання на цю вкладку">🔗 Лінк на розділ</button>
+  <button type="button" id="freeSpaceBtn" title="Звільнити памʼять браузера (фото в хмарі не постраждають)">🧹 Звільнити памʼять</button>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -2236,16 +2237,38 @@ let _quotaWarnShown=false;
 // «дата не фіксується, вікно календаря не закривається, клацається через раз».
 // Локальні копії фото — це ЛИШЕ кеш: оригінали лежать в окремих документах хмари
 // (m_photos / m_idea_<id> / m_dresscode), тож прибрати їх звідси безпечно.
-function freeLocalSpace(){
+// показує, ЩО саме їсть місце (найбільші ключі) — щоб не гадати
+function localUsage(){
+  const list=[]; let total=0;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i); const size=(k||'').length+((localStorage.getItem(k)||'').length);
+      total+=size; list.push({k,size});
+    }
+  }catch(e){}
+  list.sort((a,b)=>b.size-a.size);
+  return {total, top:list.slice(0,6)};
+}
+// Чистимо ВСІ наші ключі, а не лише перелік «важких»: base64 могли осісти будь-де
+// (мудборд, колаж, декор, натхнення, чат організатора…) ще до того, як з'явилось
+// автоочищення при збереженні. aggressive=true — прибирає такі ключі цілком.
+function freeLocalSpace(aggressive){
   let freed=0;
   try{
-    LOCAL_FULL_IMG_KEYS.forEach(k=>{
+    const keys=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.indexOf('wed-')===0) keys.push(k); }
+    keys.forEach(k=>{
       const raw=localStorage.getItem(k); if(!raw) return;
-      let v; try{ v=JSON.parse(raw); }catch(e){ return; }
-      let light; try{ light=JSON.stringify(stripDataUrlsDeep(v)); }catch(e){ return; }
-      if(light.length>=raw.length) return;
-      try{ localStorage.removeItem(k); localStorage.setItem(k,light); freed+=raw.length-light.length; }
-      catch(e){ try{ localStorage.removeItem(k); freed+=raw.length; }catch(e2){} }  // не влізло навіть полегшене — краще без кешу, ніж застосунок, що не працює
+      // швидка перевірка: чи є взагалі base64-картинки в цьому ключі
+      if(raw.indexOf('data:')<0 && !(aggressive && raw.length>200000)) return;
+      let light=null;
+      try{ light=JSON.stringify(stripDataUrlsDeep(JSON.parse(raw))); }catch(e){ light=null; }
+      try{
+        localStorage.removeItem(k);
+        if(light!==null && light.length<raw.length && !(aggressive && light.length>200000)){
+          localStorage.setItem(k,light); freed+=raw.length-light.length;
+        } else { freed+=raw.length; }   // не розібрали або досі величезне — краще без кешу, ніж непрацюючий застосунок
+      }catch(e){}
     });
   }catch(e){}
   return freed;
@@ -2253,13 +2276,17 @@ function freeLocalSpace(){
 function warnIfQuotaError(msg){
   const s=String(msg||'');
   if(!/QuotaExceeded|INTERNAL ASSERTION FAILED|setItem.*Storage|exceeded the quota/i.test(s)) return;
-  const freed=freeLocalSpace();
+  // перший захід — мʼяко; якщо не допомогло (місце їдять не картинки) — агресивно
+  let freed=freeLocalSpace(false);
+  let u=localUsage();
+  if(u.total>2_000_000){ freed+=freeLocalSpace(true); u=localUsage(); }
   if(_quotaWarnShown) return;
   _quotaWarnShown=true;
   try{
+    const top=u.top.map(x=>x.k.replace('wed-','')+' '+Math.round(x.size/1024)+'КБ').join(', ');
     showToast(freed>0
-      ? '🧹 Памʼять браузера була переповнена — звільнив ' + Math.round(freed/1024) + ' КБ. Онови сторінку. Фото в хмарі цілі.'
-      : '⚠️ Памʼять браузера переповнена. Онови сторінку; якщо не допоможе — налаштування сайту → «Очистити дані сайту» (стирає лише кеш, не хмару).');
+      ? '🧹 Звільнив ' + Math.round(freed/1024) + ' КБ памʼяті. ОНОВИ СТОРІНКУ. Фото в хмарі цілі. Лишилось: ' + Math.round(u.total/1024) + 'КБ (' + top + ')'
+      : '⚠️ Памʼять переповнена, автоматично звільнити не вийшло. Зайнято ' + Math.round(u.total/1024) + 'КБ: ' + top);
   }catch(e){}
 }
 window.addEventListener('unhandledrejection', ev=>warnIfQuotaError(ev.reason && (ev.reason.message||ev.reason)));
@@ -2271,14 +2298,19 @@ const DB = {
   get(k){ try{ return localStorage.getItem(k); }catch{ return _mem[k] ?? null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch{ _mem[k]=v; } }
 };
-// ПРОФІЛАКТИКА: не чекаємо, поки сховище лусне. Якщо наш кеш уже роздувся (>3 МБ при
-// типовому ліміті ~5 МБ) — одразу прибираємо з нього важкі base64-фото. Вони все одно
-// живуть у хмарі й підтягнуться звідти; локально від них користі майже нема.
+// ПРОФІЛАКТИКА: не чекаємо, поки сховище лусне і Катя знову напише «нічого не зберігається».
+// Прибирання відбувається САМО, при кожному відкритті — тиснути кнопку не треба.
+// Поріг знижений з 3 МБ до 1.5 МБ (при типовому ліміті ~5 МБ): між 1.5 і 5 МБ місця вже
+// критично мало, бо Firestore SDK теж пише свої службові ключі саме сюди — а коли ЙОМУ не
+// вистачає місця, падає будь-яке збереження. Якщо мʼякий прохід не допоміг (місце їдять не
+// картинки, а роздуті записи) — одразу агресивний, без очікування помилки.
+// Локальні копії фото — лише кеш: оригінали в хмарі (m_photos / m_idea_<id> / m_dresscode).
 setTimeout(()=>{
   try{
-    let used=0; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); used+=(k||'').length+((localStorage.getItem(k)||'').length); }
-    if(used>3_000_000){
-      const freed=freeLocalSpace();
+    let used=localUsage().total;
+    if(used>1_500_000){
+      let freed=freeLocalSpace(false);
+      if(localUsage().total>1_500_000) freed+=freeLocalSpace(true);
       if(freed>0) console.info('localStorage: звільнено', Math.round(freed/1024), 'КБ');
     }
   }catch(e){}
@@ -2296,7 +2328,10 @@ function loadJSON(key, fallback){
    а в state лишаємо тільки легкі дані (для ідей — маркер '@m' замість base64). */
 const HEAVY_KEYS = {'wed-photos':'photos','wed-photos-full':'photosFull','wed-outfit':'outfit','wed-venues':'venuePhotos'};
 const MEDIA_DOC = {photos:'m_photos', photosFull:'m_photosFull', outfit:'m_outfit', venuePhotos:'m_venuePhotos'};
-const isDataUrl = s => /^data:/.test(s||'');
+// typeof-перевірка обовʼязкова: без неї регулярка спершу перетворювала МАСИВ на рядок
+// ("data:…,data:…"), він теж починався з "data:" — і замість того, щоб почистити елементи,
+// код стирав увесь масив разом із рештою вмісту (саме так гинув список картинок мудборду).
+const isDataUrl = s => typeof s==='string' && /^data:/.test(s);
 // ключі, яким справді потрібні повні base64-картинки в localStorage (є окремий механізм
 // у applyMedia(), що читає DB.get(key) як фолбек на час гонки завантаження хмарного медіа-
 // документа) — для решти ключів (декор/готелі/натхнення/музика/мудборд/колаж тощо) локальний
@@ -2306,13 +2341,23 @@ const isDataUrl = s => /^data:/.test(s||'');
 // застосунок повністю перестає реагувати на кліки, бо кожен saveJSON після цього падає)
 const LOCAL_FULL_IMG_KEYS = new Set(['wed-ideas','wed-dresscode','wed-photos','wed-photos-full','wed-outfit','wed-venues']);
 function stripDataUrlsDeep(v){
-  if(Array.isArray(v)) return v.map(stripDataUrlsDeep);
+  // елемент масиву може бути ГОЛИМ рядком-картинкою (саме так лежать вільно закинуті
+  // картинки мудборду: moodboardExtra.cloth=['data:image…','data:image…']). Раніше такі
+  // рядки прослизали повз очищення — гілка нижче чистить лише ЗНАЧЕННЯ ВЛАСТИВОСТЕЙ
+  // обʼєкта — тому найважчий ключ (wed-mbExtra) ніколи не худнув.
+  if(Array.isArray(v)) return v.map(x=> isDataUrl(x) ? '' : stripDataUrlsDeep(x));
   if(v && typeof v==='object'){
     const out={};
     for(const k in v) out[k]=isDataUrl(v[k]) ? '' : stripDataUrlsDeep(v[k]);
     return out;
   }
   return v;
+}
+// ЄДИНЕ місце, яке вирішує, що саме осідає в localStorage. Раніше правило жило лише
+// всередині saveJSON, а прихід снапшота з хмари писав кеш повз нього — і всі картинки
+// поверталися назад. Тепер обидва шляхи ходять сюди.
+function cacheLocal(key, val){
+  DB.set(key, JSON.stringify(LOCAL_FULL_IMG_KEYS.has(key) ? val : stripDataUrlsDeep(val)));
 }
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
 function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
@@ -2377,8 +2422,8 @@ function saveJSON(key, val){
   // локальний кеш (працює офлайн). Повні base64-фото лишаємо лише для ключів, яким це
   // реально потрібне (див. LOCAL_FULL_IMG_KEYS) — для решти прибираємо важкі картинки,
   // щоб не забивати обмежену квоту localStorage браузера роками накопичення фото.
-  DB.set(key, JSON.stringify(LOCAL_FULL_IMG_KEYS.has(key) ? val : stripDataUrlsDeep(val)));
-  if(!applyingSnapshot && cloudReady) localEditSinceLoad=true;   // лише СПРАВЖНІ правки після першої синхронізації (не міграції/сіди під час завантаження) вмикають updatedAt-захист
+  cacheLocal(key, val);
+  if(!applyingSnapshot && cloudReady) localEditSinceLoad=true;  // лише СПРАВЖНІ правки після першої синхронізації (не міграції/сіди під час завантаження) вмикають updatedAt-захист
   if(!(DOC && cloudReady && !applyingSnapshot && !IS_GUEST)) return;
   if(HEAVY_KEYS[key]){                               // фото пари/манекени/примірки → окремий документ
     mediaSet(MEDIA_DOC[HEAVY_KEYS[key]], {d:val});
@@ -8901,43 +8946,48 @@ function startSync(){
       plannerQA={};   // особисте опитування — так само не тримаємо в памʼяті/localStorage гостя
       organizerChat=[];   // чат з ШІ-організатором — так само особисте, не для гостей
     }
-    // оновлюємо локальний кеш
-    DB.set('wed-tasks',JSON.stringify(tasks));
-    DB.set('wed-guests',JSON.stringify(guests));
-    DB.set('wed-budget',JSON.stringify(budget));
-    DB.set('wed-contacts',JSON.stringify(contacts));
-    DB.set('wed-notes',JSON.stringify(notes));
-    DB.set('wed-organizer-chat',JSON.stringify(organizerChat));
-    DB.set('wed-cap',JSON.stringify(budgetCap));
-    DB.set('wed-scriptS',JSON.stringify(scriptSofia));
-    DB.set('wed-scriptW',JSON.stringify(scriptWave));
-    DB.set('wed-hotels',JSON.stringify(hotels));
-    DB.set('wed-decor',JSON.stringify(decor));
-    DB.set('wed-orders',JSON.stringify(orders));
-    DB.set('wed-diy-materials',JSON.stringify(diyMaterials));
-    DB.set('wed-helpers',JSON.stringify(helpers));
-    DB.set('wed-music',JSON.stringify(music));
-    DB.set('wed-mustplay',JSON.stringify(mustPlay));
-    DB.set('wed-inspo',JSON.stringify(inspo));
-    DB.set('wed-trad-seed',JSON.stringify(traditionsSeeded));
-    DB.set('wed-rozpys-seed',JSON.stringify(rozpysTaskSeeded));
-    DB.set('wed-script-draft-seed',JSON.stringify(scriptDraftSeeded));
-    DB.set('wed-metrics',JSON.stringify(bodyMetrics));
-    DB.set('wed-seating',JSON.stringify(seating));
-    DB.set('wed-invites',JSON.stringify(invites));
-    DB.set('wed-invite-game',JSON.stringify(inviteGame));
-    DB.set('wed-party-her',JSON.stringify(partyHer));
-    DB.set('wed-party-his',JSON.stringify(partyHis));
-    DB.set('wed-party-notes',JSON.stringify(partyNotes));
-    DB.set('wed-bar',JSON.stringify(bar));
-    DB.set('wed-driving-lessons',JSON.stringify(drivingLessons));
-    DB.set('wed-team',JSON.stringify(team));
-    DB.set('wed-collage',JSON.stringify(collage));
-    DB.set('wed-moodboard',JSON.stringify(moodboard));
-    DB.set('wed-dresscode',JSON.stringify(dresscode));
-    DB.set('wed-outfitLayers',JSON.stringify(outfitLayers));
-    DB.set('wed-mbExtra',JSON.stringify(moodboardExtra));
-    DB.set('wed-planner-qa',JSON.stringify(plannerQA));
+    // оновлюємо локальний кеш — ЧЕРЕЗ cacheLocal, а не голим DB.set.
+    // ЦЕ БУЛА ГОЛОВНА ПРИЧИНА, ЧОМУ ПАМʼЯТЬ ЗАБИВАЛАСЬ ЗНОВУ ПІСЛЯ ОЧИЩЕННЯ:
+    // saveJSON давно прибирає base64 перед записом у localStorage, а ось цей шлях (прихід
+    // снапшота з хмари — тобто КОЖНЕ відкриття застосунку й кожна зміна з іншого пристрою)
+    // писав обʼєкти як є, з усіма картинками. Тобто скільки не чисти — наступний снапшот
+    // одразу наливав усе назад, і Катя знову бачила «нічого не зберігається».
+    cacheLocal('wed-tasks',tasks);
+    cacheLocal('wed-guests',guests);
+    cacheLocal('wed-budget',budget);
+    cacheLocal('wed-contacts',contacts);
+    cacheLocal('wed-notes',notes);
+    cacheLocal('wed-organizer-chat',organizerChat);
+    cacheLocal('wed-cap',budgetCap);
+    cacheLocal('wed-scriptS',scriptSofia);
+    cacheLocal('wed-scriptW',scriptWave);
+    cacheLocal('wed-hotels',hotels);
+    cacheLocal('wed-decor',decor);
+    cacheLocal('wed-orders',orders);
+    cacheLocal('wed-diy-materials',diyMaterials);
+    cacheLocal('wed-helpers',helpers);
+    cacheLocal('wed-music',music);
+    cacheLocal('wed-mustplay',mustPlay);
+    cacheLocal('wed-inspo',inspo);
+    cacheLocal('wed-trad-seed',traditionsSeeded);
+    cacheLocal('wed-rozpys-seed',rozpysTaskSeeded);
+    cacheLocal('wed-script-draft-seed',scriptDraftSeeded);
+    cacheLocal('wed-metrics',bodyMetrics);
+    cacheLocal('wed-seating',seating);
+    cacheLocal('wed-invites',invites);
+    cacheLocal('wed-invite-game',inviteGame);
+    cacheLocal('wed-party-her',partyHer);
+    cacheLocal('wed-party-his',partyHis);
+    cacheLocal('wed-party-notes',partyNotes);
+    cacheLocal('wed-bar',bar);
+    cacheLocal('wed-driving-lessons',drivingLessons);
+    cacheLocal('wed-team',team);
+    cacheLocal('wed-collage',collage);
+    cacheLocal('wed-moodboard',moodboard);
+    cacheLocal('wed-dresscode',dresscode);
+    cacheLocal('wed-outfitLayers',outfitLayers);
+    cacheLocal('wed-mbExtra',moodboardExtra);
+    cacheLocal('wed-planner-qa',plannerQA);
     applyingSnapshot=false;
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
@@ -9130,6 +9180,15 @@ injectCmtButtons();
     const label=(document.querySelector('.tab-btn.active')||{}).textContent||currentTab();
     try{ await navigator.clipboard.writeText(url); showToast('Лінк на «'+label.trim()+'» скопійовано 🔗'); }
     catch(e){ showToast(url); }
+  };
+  // ручне звільнення памʼяті — коли застосунок «затупив», а чекати помилки не хочеться
+  const fsb=document.getElementById('freeSpaceBtn');
+  if(fsb) fsb.onclick=()=>{
+    const before=localUsage().total;
+    const freed=freeLocalSpace(true);
+    const u=localUsage();
+    showToast('🧹 Звільнено '+Math.round(freed/1024)+' КБ (було '+Math.round(before/1024)+', лишилось '+Math.round(u.total/1024)+' КБ). Зараз перезавантажу…');
+    setTimeout(()=>location.reload(), 2200);
   };
   const syncBtn=document.getElementById('syncNowBtn');
   if(syncBtn) syncBtn.onclick=()=>{
