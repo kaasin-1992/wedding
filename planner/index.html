@@ -268,18 +268,29 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 .date-row input{flex:1;min-width:0;}
 .cal-btn{flex:0 0 auto;width:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);
   color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+/* Ширина була 240px — при 7 колонках це давало клітинку 29×29px, удвічі менше за мінімальну
+   зручну ціль дотику (44px). Палець систематично влучав у проміжок між днями, і тап просто
+   зникав у нікуди: дата лишалась попередня. Тепер попап розтягується під екран телефона. */
 .dp-pop{position:fixed;z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px;width:240px;}
+  box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px;width:min(330px, calc(100vw - 20px));}
 .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .dp-head span{font-size:13px;font-weight:700;text-transform:capitalize;}
 .dp-nav{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;
   width:26px;height:26px;font-size:14px;cursor:pointer;}
-.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.dp-dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px;}
-.dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12.5px;
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.dp-dow{font-size:11px;color:var(--muted);text-align:center;padding-bottom:2px;}
+.dp-day{min-height:42px;display:flex;align-items:center;justify-content:center;font-size:15px;
   border-radius:8px;cursor:pointer;color:var(--text);}
+@media (pointer:coarse){ .dp-day{min-height:44px;} }
 .dp-day.pad{visibility:hidden;cursor:default;}
-.dp-day.past{opacity:.28;pointer-events:none;cursor:default;text-decoration:line-through;}
+/* pointer-events:none тут раніше робило минулі дні ПОВНІСТЮ мертвими: тап по них не давав
+   ані реакції, ані пояснення — виглядало як «застосунок не реагує». Тепер вони так само
+   недоступні для вибору, але відповідають підказкою, чому саме. */
+.dp-day.past{opacity:.32;cursor:default;text-decoration:line-through;}
+/* швидкі відступи від сьогодні — головний шлях, коли в поточному місяці майже всі дні вже минули */
+.dp-quick{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.dp-quick button{flex:1 1 auto;min-height:36px;padding:6px 9px;font-size:13px;border-radius:9px;
+  border:1px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;white-space:nowrap;}
 .dp-day:not(.pad):not(.past):hover{background:var(--terra-dim);}
 .dp-day.sel{background:var(--terra);color:#fff;font-weight:700;}
 .dp-clear{width:100%;margin-top:8px;background:none;border:none;color:var(--muted);font-size:12px;
@@ -3023,10 +3034,21 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
     for(let i=0;i<startDow;i++) grid+='<div class="dp-day pad"></div>';
     for(let d=1; d<=daysInMonth; d++){
       const iso=`${viewY}-${String(viewM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isPast = iso < todayIso;   // минулі дні — некликабельні (дедлайн у минулому не має сенсу)
-      grid+=`<div class="dp-day${initialIso===iso?' sel':''}${isPast?' past':''}" ${isPast?'':`data-dpick="${iso}"`}>${d}</div>`;
+      const isPast = iso < todayIso;   // минулі дні недоступні (дедлайн у минулому не має сенсу)
+      // МИНУЛІ ДНІ ТЕПЕР ТЕЖ ВІДПОВІДАЮТЬ (data-dppast) — раніше вони були повністю глухі, і
+      // оскільки календар відкривається на ПОТОЧНОМУ місяці, наприкінці місяця майже всі видимі
+      // числа були мертві (напр. 27 з 31). Тап по такому числу не робив нічого й нічого не казав,
+      // тому й здавалось, що «обираю число, а лишається попереднє».
+      grid+=`<div class="dp-day${initialIso===iso?' sel':''}${isPast?' past':''}" ${isPast?`data-dppast="${iso}"`:`data-dpick="${iso}"`}>${d}</div>`;
     }
-    pop.innerHTML=`<div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
+    // швидкі відступи від сьогодні — щоб не доводилось гортати місяці вручну
+    const quick=[['Завтра',1],['+3 дні',3],['+тиждень',7],['+2 тижні',14],['+місяць',30]]
+      .map(([lbl,n])=>{
+        const dt=new Date(tD.getTime()+n*86400000);
+        const qi=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        return `<button type="button" data-dpquick="${qi}">${lbl}</button>`;
+      }).join('');
+    pop.innerHTML=`<div class="dp-quick">${quick}</div><div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
     const bindNav=(el,step)=>{
       let handled=false;
       const go=()=>{ if(handled) return; handled=true; viewM+=step;
@@ -3053,7 +3075,20 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
       el.addEventListener('click',go);
     };
     pop.querySelectorAll('[data-dpick]').forEach(el=>bindPick(el, el.dataset.dpick));
+    pop.querySelectorAll('[data-dpquick]').forEach(el=>bindPick(el, el.dataset.dpquick));
     bindPick(pop.querySelector('[data-dpclear]'), '');
+    // минулий день: не мовчимо, а пояснюємо — і одразу перекидаємо на наступний місяць,
+    // якщо в поточному вже нема чого вибирати
+    pop.querySelectorAll('[data-dppast]').forEach(el=>{
+      let handled=false;
+      const go=()=>{
+        if(handled) return; handled=true;
+        setTimeout(()=>{handled=false;},400);   // не глушимо повторні спроби, лише подвійну подію
+        try{ showToast('Ця дата вже минула 🙂 обери сьогоднішню або пізнішу — або тисни «Завтра / +тиждень» угорі'); }catch(e){}
+      };
+      el.addEventListener('pointerup',go);
+      el.addEventListener('click',go);
+    });
   }
   renderCal();
   // позиціювання з урахуванням КЛАВІАТУРИ: на телефоні вона з'їдає низ екрана, і календар
