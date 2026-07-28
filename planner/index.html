@@ -8753,7 +8753,12 @@ function mergeIncomingArray(localArr, cloudArr, key){
   });
   const cloudIds=new Set(cloudArr.filter(it=>it&&it.id!=null).map(it=>it.id));
   localArr.forEach(lIt=>{ if(lIt&&lIt.id!=null && !cloudIds.has(lIt.id)) merged.push(lIt); });
-  return merged;
+  // ЩОЙНО ВИДАЛЕНЕ НЕ ВОСКРЕШАЄМО. _skipResurrect (його наповнює delUndo) досі захищав лише
+  // ЗАПИС у хмару, а прихід знімка — ні: у хмарі елемент ще є, поки наш запис у дорозі, тож
+  // будь-який знімок у цю мить повертав картку назад. Видно як «видаляю — а воно знову тут»,
+  // та ще й з наступним записом воскресле поверталося в хмару назавжди.
+  const skip=key && _skipResurrect[key];
+  return skip && skip.size ? merged.filter(it=>!(it && it.id!=null && skip.has(it.id))) : merged;
 }
 function startSync(){
   if(!DOC) return;
