@@ -8727,7 +8727,11 @@ function flashSync(ok, err){
 // на телефоні не підтягнулось": раніше застаріле локальне значення з більшим updatedAt (напр. через
 // різницю годинників пристроїв) могло перемогти свіже хмарне навіть коли ти нічого не редагувала.
 // (localEditSinceLoad оголошено вище, поряд із saveJSON, через var — щоб уникнути TDZ.)
-function mergeIncomingArray(localArr, cloudArr){
+// Ключі, чия ЛОКАЛЬНА версія виявилась свіжішою за хмарну — тобто попередній запис у хмару
+// не доїхав (вкладка впала / мережа обірвалась / браузер прибив сторінку через памʼять).
+// Після застосування знімка ми дописуємо їх у хмару, щоб правка не загубилась остаточно.
+let _pendingResave=new Set();
+function mergeIncomingArray(localArr, cloudArr, key){
   if(!Array.isArray(cloudArr)) return localArr;
   if(!Array.isArray(localArr)) return cloudArr;
   const localById=new Map(localArr.filter(it=>it&&it.id!=null).map(it=>[it.id,it]));
@@ -8735,10 +8739,17 @@ function mergeIncomingArray(localArr, cloudArr){
     if(!cIt||cIt.id==null) return cIt;
     const lIt=localById.get(cIt.id);
     if(!lIt) return cIt;
-    if(!localEditSinceLoad) return cIt;   // жодних власних правок цієї сесії → повністю довіряємо хмарі
+    // РАНІШЕ ТУТ БУЛО: `if(!localEditSinceLoad) return cIt;` — тобто в НОВІЙ сесії (одразу
+    // після перезавантаження) хмара перемагала завжди, навіть коли локальний кеш тримав
+    // свіжішу версію з більшим updatedAt. Саме так гинула правка, зроблена перед аварійним
+    // закриттям вкладки: у localStorage вона лягала синхронно й одразу, а запис у хмару
+    // (він іде після мережевого DOC.get) не встигав — і при наступному відкритті застарілий
+    // хмарний запис мовчки її затирав. Катя бачила «зберіглось → помилка → нічого немає».
+    // Тепер вирішує ЛИШЕ мітка часу, і в обох напрямках: якщо хмара свіжіша — перемагає вона.
     const lTs=typeof lIt.updatedAt==='number'?lIt.updatedAt:-Infinity;
     const cTs=typeof cIt.updatedAt==='number'?cIt.updatedAt:-Infinity;
-    return lTs>cTs ? lIt : cIt;
+    if(lTs>cTs){ if(key) _pendingResave.add(key); return lIt; }
+    return cIt;
   });
   const cloudIds=new Set(cloudArr.filter(it=>it&&it.id!=null).map(it=>it.id));
   localArr.forEach(lIt=>{ if(lIt&&lIt.id!=null && !cloudIds.has(lIt.id)) merged.push(lIt); });
@@ -8761,24 +8772,24 @@ function startSync(){
     }
     const d=snap.data();
     applyingSnapshot=true;
-    if(Array.isArray(d.tasks))    tasks=mergeIncomingArray(tasks, d.tasks);
-    if(Array.isArray(d.guests))   guests=mergeIncomingArray(guests, d.guests);
-    if(Array.isArray(d.budget))   budget=mergeIncomingArray(budget, d.budget);
-    if(Array.isArray(d.contacts)) contacts=mergeIncomingArray(contacts, d.contacts);
-    if(Array.isArray(d.notes))    notes=mergeIncomingArray(notes, d.notes);
+    if(Array.isArray(d.tasks))    tasks=mergeIncomingArray(tasks, d.tasks, 'wed-tasks');
+    if(Array.isArray(d.guests))   guests=mergeIncomingArray(guests, d.guests, 'wed-guests');
+    if(Array.isArray(d.budget))   budget=mergeIncomingArray(budget, d.budget, 'wed-budget');
+    if(Array.isArray(d.contacts)) contacts=mergeIncomingArray(contacts, d.contacts, 'wed-contacts');
+    if(Array.isArray(d.notes))    notes=mergeIncomingArray(notes, d.notes, 'wed-notes');
     if(Array.isArray(d.organizerChat)) organizerChat=mergeIncomingArray(organizerChat, d.organizerChat);
     if(typeof d.cap==='number')   budgetCap=d.cap;
     if(Array.isArray(d.ideas))       ideas=mergeIncomingArray(ideas, d.ideas.filter(it=>it && it.id!=null));
-    if(Array.isArray(d.scriptSofia)) scriptSofia=mergeIncomingArray(scriptSofia, d.scriptSofia);
-    if(Array.isArray(d.scriptWave))  scriptWave=mergeIncomingArray(scriptWave, d.scriptWave);
-    if(Array.isArray(d.hotels))      hotels=mergeIncomingArray(hotels, d.hotels);
+    if(Array.isArray(d.scriptSofia)) scriptSofia=mergeIncomingArray(scriptSofia, d.scriptSofia, 'wed-scriptS');
+    if(Array.isArray(d.scriptWave))  scriptWave=mergeIncomingArray(scriptWave, d.scriptWave, 'wed-scriptW');
+    if(Array.isArray(d.hotels))      hotels=mergeIncomingArray(hotels, d.hotels, 'wed-hotels');
     if(Array.isArray(d.decor))       decor=mergeIncomingArray(decor, d.decor.filter(it=>it && it.id!=null));
-    if(Array.isArray(d.orders))      orders=mergeIncomingArray(orders, d.orders);
+    if(Array.isArray(d.orders))      orders=mergeIncomingArray(orders, d.orders, 'wed-orders');
     if(Array.isArray(d.diyMaterials)) diyMaterials=mergeIncomingArray(diyMaterials, d.diyMaterials);
     if(Array.isArray(d.helpers))      helpers=mergeIncomingArray(helpers, d.helpers);
-    if(Array.isArray(d.music))       music=mergeIncomingArray(music, d.music);
+    if(Array.isArray(d.music))       music=mergeIncomingArray(music, d.music, 'wed-music');
     if(Array.isArray(d.mustPlay))    mustPlay=mergeIncomingArray(mustPlay, d.mustPlay);
-    if(Array.isArray(d.inspo))       inspo=mergeIncomingArray(inspo, d.inspo);
+    if(Array.isArray(d.inspo))       inspo=mergeIncomingArray(inspo, d.inspo, 'wed-inspo');
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
     if(d.photosFull && typeof d.photosFull==='object') legacyMedia.photosFull=d.photosFull;
@@ -8891,6 +8902,21 @@ function startSync(){
     cacheLocal('wed-mbExtra',moodboardExtra);
     cacheLocal('wed-planner-qa',plannerQA);
     applyingSnapshot=false;
+    // ДОРІЗАЄМО В ХМАРУ те, що локально виявилось свіжішим (мердж вище це помітив за updatedAt).
+    // Такий розрив буває, коли попередній запис не доїхав: вкладка впала, зникла мережа,
+    // браузер прибив сторінку через памʼять. Без цього кроку правка жила б лише на цьому
+    // пристрої й зникла б при першому ж чищенні кешу. Повторного циклу не буде: після запису
+    // хмара отримує ТУ САМУ мітку часу, і наступний мердж уже нічого не позначає.
+    if(_pendingResave.size && !IS_GUEST){
+      const keys=[..._pendingResave]; _pendingResave.clear();
+      setTimeout(()=>{
+        keys.forEach(k=>{
+          try{ const a=ARR[k]; if(a) saveJSON(k, a.get()); }
+          catch(e){ console.warn('resave after crash', k, e); }
+        });
+        try{ showToast('☁️ Дописав у хмару зміни, які не встигли зберегтись минулого разу'); }catch(e){}
+      }, 1200);
+    }
     applyMedia();   // підтягуємо важкі картинки з окремих документів і малюємо
     seedTraditions();   // один раз додаємо українські традиції в беклог (після того, як знаємо хмарний прапорець)
     seedRozpysTask();   // один раз додаємо нагадування про розпис 24.08 в Завдання
