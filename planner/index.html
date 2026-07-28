@@ -1260,6 +1260,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <nav class="site-nav" id="siteNav" aria-label="Навігація">
   <a href="../">← Всі сторінки</a>
   <button type="button" class="sync-now" id="syncNowBtn" title="Підтягнути останнє з хмари">🔄 Оновити дані</button>
+  <button type="button" id="copyTabLinkBtn" title="Скопіювати посилання на цю вкладку">🔗 Лінк на розділ</button>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -7917,8 +7918,11 @@ const TAB_ORDER=[...document.querySelectorAll('.tab-btn')].map(b=>b.dataset.tab)
   }
 }
 let _lastContentTab='tasks';   // останній НЕ-домашній розділ — для підсвітки "ти тут був" на головному екрані
+const GUEST_HIDDEN_TABS=['budget','script','organizer'];   // приховані від гостей (як у CSS body.guest)
 function activateTab(name){
   if(!name) return;
+  // гість за прямим посиланням на приховану вкладку побачив би порожнечу — ведемо на головну
+  if(IS_GUEST && GUEST_HIDDEN_TABS.indexOf(name)>=0) name='home';
   if(name!=='home') _lastContentTab=name;
   const btns=[...document.querySelectorAll('.tab-btn')];
   btns.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
@@ -7927,7 +7931,29 @@ function activateTab(name){
   const btn=btns.find(b=>b.dataset.tab===name);
   if(btn) btn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
   if(typeof renderMenu==='function') renderMenu();   // підсвітка активного розділу на головному екрані
+  writeTabHash(name);
 }
+/* ── СВОЯ АДРЕСА В КОЖНОЇ ВКЛАДКИ (напр. …/planner/#budget) ──
+   Щоб можна було зберегти в закладки чи кинути Дімі пряме посилання на потрібний розділ.
+   ⚠️ Гостьовий режим теж читає hash (`#guest`), тому його НІКОЛИ не затираємо —
+   пишемо у форматі `#guest&budget`, а при читанні просто ігноруємо частину 'guest'. */
+function tabFromHash(){
+  try{
+    const parts=(location.hash||'').replace('#','').split('&').filter(Boolean);
+    return parts.find(x=>x.toLowerCase()!=='guest' && TAB_ORDER.indexOf(x)>=0) || null;
+  }catch(e){ return null; }
+}
+function writeTabHash(name){
+  try{
+    const hadGuest=/(^|[#&])guest\b/i.test(location.hash);
+    const hash='#'+(hadGuest?'guest&':'')+name;
+    if(location.hash!==hash) history.replaceState(null,'',hash);   // replace, щоб не засмічувати «назад»
+  }catch(e){}
+}
+window.addEventListener('hashchange',()=>{
+  const t=tabFromHash();
+  if(t && t!==currentTab()) activateTab(t);
+});
 document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
 // розділювачі груп (Підготовка/Стиль/Вендори/День-Х) — тап переносить одразу до першої вкладки групи
 document.querySelectorAll('.tabs-group-lbl').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.jump));
@@ -8631,6 +8657,8 @@ function renderAll(){
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
 updateCountdown();
 renderAll();
+// відкрити вкладку з адреси (…/planner/#budget) — щоб посилання на розділ реально працювало
+{ const t=tabFromHash(); if(t) activateTab(t); }
 setInterval(updateCountdown,60000);
 /* ── ПОГОДА В КИЄВІ НА ДЕНЬ ВЕСІЛЛЯ ── */
 const WX_DATE='2026-09-06';
@@ -9053,6 +9081,15 @@ injectCmtButtons();
   if(sb) sb.onclick=async()=>{
     const url=location.origin+location.pathname.replace(/index\.html$/,'')+'?guest';
     try{ await navigator.clipboard.writeText(url); showToast('Лінк для гостей скопійовано 🔗'); }
+    catch(e){ showToast(url); }
+  };
+  // посилання саме на ПОТОЧНУ вкладку (…/planner/#budget) — щоб кинути Дімі чи в закладки
+  const ctb=document.getElementById('copyTabLinkBtn');
+  if(ctb) ctb.onclick=async()=>{
+    const base=location.origin+location.pathname.replace(/index\.html$/,'');
+    const url=base+'#'+currentTab();
+    const label=(document.querySelector('.tab-btn.active')||{}).textContent||currentTab();
+    try{ await navigator.clipboard.writeText(url); showToast('Лінк на «'+label.trim()+'» скопійовано 🔗'); }
     catch(e){ showToast(url); }
   };
   const syncBtn=document.getElementById('syncNowBtn');
