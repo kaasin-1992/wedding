@@ -2228,12 +2228,39 @@ if(IS_GUEST){ try{ document.body.classList.add('guest'); }catch(e){} }
 // так, ніби "взагалі нічого не клікається". Раніше це було видно ЛИШЕ в консолі розробника;
 // тепер показуємо зрозумілу підказку одразу на екрані (раз на сесію, щоб не спамити).
 let _quotaWarnShown=false;
+// САМОЛІКУВАННЯ ПЕРЕПОВНЕНОГО СХОВИЩА.
+// Причина, підтверджена помилкою у Каті: "Failed to execute 'setItem' on 'Storage':
+// Setting the value of 'firestore_clients_…'" — localStorage забитий під зав'язку
+// (роками накопичених base64-фото одягу/дрес-коду/примірок). Коли він повний, ПАДАЄ
+// БУДЬ-ЯКИЙ запис — і наш, і службовий запис самого Firestore SDK. Наслідок для неї:
+// «дата не фіксується, вікно календаря не закривається, клацається через раз».
+// Локальні копії фото — це ЛИШЕ кеш: оригінали лежать в окремих документах хмари
+// (m_photos / m_idea_<id> / m_dresscode), тож прибрати їх звідси безпечно.
+function freeLocalSpace(){
+  let freed=0;
+  try{
+    LOCAL_FULL_IMG_KEYS.forEach(k=>{
+      const raw=localStorage.getItem(k); if(!raw) return;
+      let v; try{ v=JSON.parse(raw); }catch(e){ return; }
+      let light; try{ light=JSON.stringify(stripDataUrlsDeep(v)); }catch(e){ return; }
+      if(light.length>=raw.length) return;
+      try{ localStorage.removeItem(k); localStorage.setItem(k,light); freed+=raw.length-light.length; }
+      catch(e){ try{ localStorage.removeItem(k); freed+=raw.length; }catch(e2){} }  // не влізло навіть полегшене — краще без кешу, ніж застосунок, що не працює
+    });
+  }catch(e){}
+  return freed;
+}
 function warnIfQuotaError(msg){
-  if(_quotaWarnShown) return;
   const s=String(msg||'');
-  if(!/QuotaExceeded|INTERNAL ASSERTION FAILED/i.test(s)) return;
+  if(!/QuotaExceeded|INTERNAL ASSERTION FAILED|setItem.*Storage|exceeded the quota/i.test(s)) return;
+  const freed=freeLocalSpace();
+  if(_quotaWarnShown) return;
   _quotaWarnShown=true;
-  try{ showToast('⚠️ Локальне сховище браузера переповнене — онови сторінку. Якщо не допоможе: налаштування сайту → «Очистити дані сайту» (це безпечно, стирає лише кеш, не хмару)'); }catch(e){}
+  try{
+    showToast(freed>0
+      ? '🧹 Памʼять браузера була переповнена — звільнив ' + Math.round(freed/1024) + ' КБ. Онови сторінку. Фото в хмарі цілі.'
+      : '⚠️ Памʼять браузера переповнена. Онови сторінку; якщо не допоможе — налаштування сайту → «Очистити дані сайту» (стирає лише кеш, не хмару).');
+  }catch(e){}
 }
 window.addEventListener('unhandledrejection', ev=>warnIfQuotaError(ev.reason && (ev.reason.message||ev.reason)));
 window.addEventListener('error', ev=>warnIfQuotaError(ev.message));
@@ -2244,6 +2271,18 @@ const DB = {
   get(k){ try{ return localStorage.getItem(k); }catch{ return _mem[k] ?? null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch{ _mem[k]=v; } }
 };
+// ПРОФІЛАКТИКА: не чекаємо, поки сховище лусне. Якщо наш кеш уже роздувся (>3 МБ при
+// типовому ліміті ~5 МБ) — одразу прибираємо з нього важкі base64-фото. Вони все одно
+// живуть у хмарі й підтягнуться звідти; локально від них користі майже нема.
+setTimeout(()=>{
+  try{
+    let used=0; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); used+=(k||'').length+((localStorage.getItem(k)||'').length); }
+    if(used>3_000_000){
+      const freed=freeLocalSpace();
+      if(freed>0) console.info('localStorage: звільнено', Math.round(freed/1024), 'КБ');
+    }
+  }catch(e){}
+}, 3000);
 function loadJSON(key, fallback){
   const raw = DB.get(key);
   if(raw===null) return JSON.parse(JSON.stringify(fallback));
