@@ -3147,29 +3147,39 @@ function openTaskDeadlineEdit(id, el){
   inp.value=task.deadline?fmtDate(task.deadline):'';
   el.replaceWith(inp);
   let done=false, blurTimer=null;
+  // ⚠️ ПЕРЕМАЛЬОВУЄМО ЛИШЕ ЧЕРЕЗ redraw(), НІКОЛИ не renderTasks() напряму.
+  // renderTasks() починається з `if(isTextEntryFocused(tl)) return;` — захист, щоб фоновий
+  // снапшот з хмари не знищив поле в момент набору цифр. Але САМЕ ЦЕ поле лишається у фокусі
+  // під час роботи з календарем (попап навмисне тримає фокус через preventDefault на mousedown),
+  // тож виклик renderTasks() з pick() мовчки НІЧОГО не малював: дата чесно зберігалась у памʼять
+  // і в хмару, а на екрані далі висіло старе значення. Звідси «обираю число, а нічого не
+  // міняється» НА КОМПʼЮТЕРІ (на телефоні фокус полю не ставиться, тому там і не відтворювалось).
+  // Знімаємо фокус ПЕРЕД перемальовуванням — тоді захист не спрацьовує. Відкладений commit по
+  // blur нешкідливий: done вже true, і він одразу виходить.
+  const redraw=()=>{ try{ inp.blur(); }catch(e){} renderTasks(); };
   const commit=()=>{
     if(done) return; done=true;
     closeDatePicker();
     const v=inp.value.trim();
-    if(!v){ task.deadline=''; saveJSON('wed-tasks',tasks); renderTasks(); return; }
+    if(!v){ task.deadline=''; saveJSON('wed-tasks',tasks); redraw(); return; }
     const parsed=parseTaskDeadlineInput(v);
-    if(!parsed){ showToast('Не розпізнав дату — формат ДД.ММ, напр. 17.06 🙂'); renderTasks(); return; }
+    if(!parsed){ showToast('Не розпізнав дату — формат ДД.ММ, напр. 17.06 🙂'); redraw(); return; }
     // минула дата блокується лише якщо її СПРАВДІ міняють — старий (уже прострочений) дедлайн,
     // який лишили без змін, і далі спокійно показується як прострочений, без нав'язливого тосту
-    if(parsed!==task.deadline && new Date(parsed)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); renderTasks(); return; }
-    task.deadline=parsed; saveJSON('wed-tasks',tasks); renderTasks();
+    if(parsed!==task.deadline && new Date(parsed)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); redraw(); return; }
+    task.deadline=parsed; saveJSON('wed-tasks',tasks); redraw();
   };
   const cancel=()=>{
     if(done) return; done=true;
     closeDatePicker();
-    renderTasks();
+    redraw();
   };
   const pick=(iso)=>{
     if(blurTimer){ clearTimeout(blurTimer); blurTimer=null; }   // вибір у календарі скасовує відкладений commit
     if(done) return;
     if(iso && iso!==task.deadline && new Date(iso)<today()){ showToast('Дедлайн не може бути в минулому 🙂'); return; }
     done=true;
-    task.deadline=iso||''; saveJSON('wed-tasks',tasks); renderTasks();
+    task.deadline=iso||''; saveJSON('wed-tasks',tasks); redraw();
   };
   // commit на blur — ВІДКЛАДЕНИЙ: на телефоні тап по дню в календарі спершу знімає фокус з поля,
   // і негайний commit закривав редагування зі старою датою ще до того, як спрацює click по дню
