@@ -3854,11 +3854,11 @@ function ideaFieldsHTML(it){
   if(it.cat==='her'||it.cat==='his'){
     const gsel=`<select class="idea-gtype" data-gtype="${it.id}" aria-label="Тип речі">${GTYPES.map(g=>`<option value="${esc(g)}"${(it.gtype||'')===g?' selected':''}>${g?esc(gLabel(g)):'тип речі…'}</option>`).join('')}</select>`;
     const swapBtn=`<button class="idea-photo-btn" data-swapcat="${it.id}">🔄 Перенести до ${it.cat==='his'?'Неї':'Нього'}</button>`;
-    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">🖼 ${it.realTryon?'Замінити фото на мені':'Завантажити фото на мені'}</button>`
-      +`<button class="idea-photo-btn" data-realai="${it.id}" ${it._ai?'disabled':''}>🤳✨ ${it.realTryon?'Перезняти й ШІ':'Зняти й ШІ вдягнути'}</button>`;
-    aiBtns=gsel
-      +`<button class="idea-ai-btn" data-imagineg="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.img?'Інша річ':'Уявити річ'}</button>`
-      +swapBtn+realBtn;
+    // ШІ-генерація одягу («Уявити річ») і ШІ-примірка камерою прибрані на прохання Каті:
+    // одяг уже купований, вигадувати й «вдягати» його ШІ більше нема потреби. Лишається
+    // звичайне фото на мені (своє, без ШІ) і вирізання фото товару — воно годує мудборд.
+    const realBtn=`<button class="idea-photo-btn" data-realphoto="${it.id}">🖼 ${it.realTryon?'Замінити фото на мені':'Завантажити фото на мені'}</button>`;
+    aiBtns=gsel+swapBtn+realBtn;
   }else{
     aiBtns=`<button class="idea-ai-btn" data-imagine="${it.id}" ${it._ai?'disabled':''}>🪄 ${it.gen?'Ще раз':'Уявити'}</button>`;
   }
@@ -4224,30 +4224,6 @@ function wireIdeaDetailHandlers(panel){
       },0.82);
     });
   });
-  // "Зняти й ШІ вдягнути" — знімаємо СВІЖЕ фото (камера телефону, не галерея) і одразу
-  // домальовуємо саме цю річ на нього через aiRealTryOn (не чіпає базове фото/манекен)
-  panel.querySelectorAll('[data-realai]').forEach(b=>b.onclick=()=>{
-    const it=ideas.find(x=>x.id===b.dataset.realai); if(!it) return;
-    if(!it.img){ showToast('Спершу додай фото товару 👆'); return; }
-    pickImageFile(f=>{ if(!f) return;
-      loadPhotoFile(f,1024,async data=>{
-        if(!data){ showToast('Не вдалося обробити фото'); return; }
-        it._ai=true; refreshIdeaViews();
-        try{
-          const res=await aiRealTryOn(it, data);
-          if(res){
-            downscaleSrc(res,1024,small=>{
-              it.realTryon=small||res; it._ai=false; saveJSON('wed-ideas',ideas); refreshIdeaViews();
-              showToast('📸 ШІ вдягнув — готово');
-            },0.85);
-          }else{
-            it._ai=false; refreshIdeaViews();
-            showToast('Не вдалось згенерувати 😕 спробуй ще раз');
-          }
-        }catch(e){ console.warn('realai',e); it._ai=false; refreshIdeaViews(); showToast('Не вдалось згенерувати 😕 '+aiErr(e)); }
-      },0.9);
-    }, true);
-  });
   panel.querySelectorAll('[data-realdel]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.realdel); if(!it) return;
     it.realTryon=''; saveJSON('wed-ideas',ideas); refreshIdeaViews();
@@ -4266,14 +4242,8 @@ function wireIdeaDetailHandlers(panel){
     if(oldSlot) saveJSON('wed-collage',collage);
     refreshIdeaViews();
   });
-  panel.querySelectorAll('[data-tryon]').forEach(b=>b.onclick=()=>{
-    const it=ideas.find(x=>x.id===b.dataset.tryon); if(it) aiTryOn(it);
-  });
   panel.querySelectorAll('[data-imagine]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.imagine); if(it) aiImagine(it);
-  });
-  panel.querySelectorAll('[data-imagineg]').forEach(b=>b.onclick=()=>{
-    const it=ideas.find(x=>x.id===b.dataset.imagineg); if(it) aiImagineGarment(it);
   });
   panel.querySelectorAll('[data-aix]').forEach(b=>b.onclick=()=>{
     const it=ideas.find(x=>x.id===b.dataset.aix); if(!it)return;
@@ -4637,7 +4607,7 @@ function renderBasePhotos(){
     wrap.querySelectorAll('.bp-m').forEach(el=>{ if(document.activeElement!==el) el.value=m[el.dataset.m]||''; });
   });
 }
-let coupleMode={her:'collage',his:'collage'};   // 'ai' | 'collage' — колаж за замовчуванням, ШІ-примірка другорядна (перемикається кнопкою)
+const coupleMode={her:'collage',his:'collage'};   // ШІ-примірку прибрано — лишився тільки ручний колаж
 // ручний колаж: базове фото людини + шари вдягнених речей (наближене позиціювання за типом речі, без ручного перетягування)
 // речі, вдягнені ще ДО того, як зʼявилось авто-довирізання при кліку "Вдягнути" (або вдягнені без
 // нього з інших причин), назавжди лишались би "неохайним" фото товару в колажі — жодна майбутня дія
@@ -4746,27 +4716,14 @@ function renderCouple(){
     el.classList.toggle('busy', !!coupleBusy[s.who]);
     el.classList.add('cs-clickable');
     el.title='Натисни, щоб редагувати образ';
-    const modeSwitch=`<div class="cs-mode">
-      <button class="cs-mode-btn${coupleMode[s.who]==='ai'?' active':''}" data-csmode="${s.who}:ai" title="ШІ-примірка">🪄</button>
-      <button class="cs-mode-btn${coupleMode[s.who]==='collage'?' active':''}" data-csmode="${s.who}:collage" title="Ручний колаж (як у Сімс)">🧩</button>
-    </div>`;
+    // Перемикач «🪄 ШІ-примірка / 🧩 колаж» прибрано разом із самою ШІ-приміркою: без неї
+    // режим 🪄 нічого не міг би показати, крім вічного «ще не вдягнено». Лишився колаж.
     const expandBtn=`<button class="cs-expand" data-csexpand="${s.who}" aria-label="На весь екран" title="На весь екран">⛶</button>`;
-    if(coupleMode[s.who]==='collage'){
-      const resetBtn=`<button class="cs-expand" data-csreset="${s.who}" aria-label="Скинути позиції одягу" title="Скинути позиції одягу">↺</button>`;
-      el.innerHTML=modeSwitch+renderCollageHTML(s.who)+`<div class="cs-cap"><span>${s.name} · колаж</span><div style="display:flex;gap:4px;">${resetBtn}${expandBtn}</div></div>`;
-      wireCollageDrag(s.who, el);
-    }else{
-      const dressed=outfit[s.who], base=photos[s.who];
-      if(dressed){
-        el.innerHTML=modeSwitch+`<img src="${esc(dressed)}" alt=""><button class="cs-x" data-csx="${s.who}" aria-label="Прибрати примірку">✕</button><div class="cs-cap"><span>${s.name}</span>${expandBtn}</div>`;
-      }else if(base){
-        el.innerHTML=modeSwitch+`<img src="${esc(base)}" alt="" style="opacity:.45;filter:grayscale(.4)"><div class="cs-cap"><span>${s.name} · ще не вдягнено</span>${expandBtn}</div>`;
-      }else{
-        el.innerHTML=modeSwitch+`<div class="cs-ph"><div class="cs-emoji">${s.emoji}</div><div>${s.name}<br><small>додай фото та обери одяг</small></div></div>`;
-      }
-    }
+    const resetBtn=`<button class="cs-expand" data-csreset="${s.who}" aria-label="Скинути позиції одягу" title="Скинути позиції одягу">↺</button>`;
+    el.innerHTML=renderCollageHTML(s.who)+`<div class="cs-cap"><span>${s.name} · колаж</span><div style="display:flex;gap:4px;">${resetBtn}${expandBtn}</div></div>`;
+    wireCollageDrag(s.who, el);
     // клік на персонажа → одразу відкрити для нього редактор одягу (як у CAS)
-    el.onclick=(e)=>{ if(e.target.closest('[data-csx],[data-csmode],[data-csexpand],[data-csreset],.collage-layer')) return; openPersonEditor(s.who); };
+    el.onclick=(e)=>{ if(e.target.closest('[data-csx],[data-csexpand],[data-csreset],.collage-layer')) return; openPersonEditor(s.who); };
   });
   document.querySelectorAll('[data-csreset]').forEach(b=>b.onclick=(e)=>{
     e.stopPropagation();
@@ -4801,10 +4758,6 @@ function renderCouple(){
     outfitLayers[who]={}; saveJSON('wed-outfitLayers',outfitLayers); renderCouple();
   });
   document.querySelectorAll('[data-csexpand]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); showCoupleBig(b.dataset.csexpand); });
-  document.querySelectorAll('[data-csmode]').forEach(b=>b.onclick=()=>{
-    const [who,mode]=b.dataset.csmode.split(':');
-    coupleMode[who]=mode; renderCouple();
-  });
 }
 ['Her','His'].forEach(W=>{
   const inp=document.getElementById('bp'+W);
@@ -5049,7 +5002,6 @@ const FB_VER='11.10.0';
 // лише актуальні моделі (Gemini 2.0 Flash та Imagen вимкнені у 2026; 2.5-flash-image = «Nano Banana»)
 const AI_MODELS=['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'];
 // єдиний стиль для ВСІХ примірок — щоб усі картинки виглядали як модельний лукбук
-const TRYON_STYLE='ОБОВ’ЯЗКОВО повний зріст від маківки до взуття — видно ВСЮ постать, ноги і взуття повністю в кадрі, нічого не обрізано; людина стоїть рівно по центру вертикального кадру (співвідношення 3:4) на нейтральному світло-сірому однотонному фоні; м’яке рівне розсіяне студійне світло; природна пряма поза як у модельному лукбуці. ЄДИНЕ КАДРУВАННЯ: постать заповнює майже всю висоту кадру — маківка біля верхнього краю, ступні біля нижнього, з однаковими невеликими полями зверху і знизу (≈5%); той самий масштаб і та сама відстань камери, що для стандартного лукбуку на повний зріст (щоб різні картинки були в одному розмірі). Фотореалізм, реалістичні пропорції; голова РЕАЛІСТИЧНОГО розміру (≈1/7–1/8 зросту), НЕ збільшена; без тексту і водяних знаків.';
 // зріст для реалістичних пропорцій
 function heightLine(who){ return who==='her'?'Жінка зростом приблизно 170 см, реалістична статура.':'Чоловік трохи вищий за 170 см (≈175–182 см), реалістична статура.'; }
 // параметри тіла, які ввела людина (статура/зріст/розмір) — текстова підказка для моделі
@@ -5252,91 +5204,6 @@ async function ensureCleanGarment(it){
   }catch(e){ console.warn('ensureCleanGarment',e); }
   return it.img;
 }
-async function aiTryOn(it){
-  const who=it.cat==='his'?'his':'her';
-  const facePhoto=photos[who];            // справжній портрет — головний якір обличчя
-  const bodyPhoto=photosFull[who];        // справжній повний зріст (необовʼязково)
-  // база ЗАВЖДИ реальне фото людини, НІКОЛИ попередній ШІ-результат (outfit[who]) — раніше кожна
-  // наступна річ редагувала попередній згенерований образ, і генеративна модель трохи "пливе"
-  // обличчям на КОЖНОМУ проході навіть з інструкцією його не чіпати; похибка накопичувалась з
-  // кожною вдягненою річчю. Тут джерело обличчя завжди одне й те саме реальне фото — усі вдягнені
-  // речі (з outfitLayers) подаються РАЗОМ в один виклик, а не ланцюжком послідовних редагувань.
-  const baseSrc=bodyPhoto||facePhoto;
-  if(!baseSrc){ showToast(`Спершу додай базове фото ${who==='her'?'Катерини':'Дмитра'} 👆`); return; }
-  if(!it.img){ showToast('У цієї речі нема фото товару. Натисни 🖼 «Обрати картинку» і вибери саме той одяг із посилання.'); return; }
-  aiBusy(it.id,true);
-  coupleBusy[who]=true; renderCouple();
-  try{
-    const typeWord=(it.gtype||'').trim();
-    const gkey=typeWord||'__misc';
-    if(!outfitLayers[who]) outfitLayers[who]={};
-    // нова річ заміняє попередню того ж типу (той самий gkey); решта вже вдягнених речей лишається
-    const layers={...outfitLayers[who], [gkey]:it.id};
-    const wornItems=Object.values(layers).map(id=>ideas.find(x=>x.id===id)).filter(Boolean);
-
-    // чисті фото КОЖНОЇ вдягненої речі (вирізані з фону де можливо), усі разом як окремі картинки
-    const garmentParts=[];
-    for(const w of wornItems){
-      const src=await ensureCleanGarment(w);
-      const part=await srcToPart(src);
-      if(part) garmentParts.push({item:w, part});
-    }
-    if(!garmentParts.some(g=>g.item.id===it.id)){
-      aiBusy(it.id,false); coupleBusy[who]=false; renderCouple();
-      showToast('Не вдалося взяти фото цього одягу (сайт не віддає картинку). Відкрий 🖼 «Обрати картинку» → 📸 «Скрін сторінки» або 📁 завантаж фото товару — тоді приміряю саме його, без вигадок.');
-      return;
-    }
-    const baseTag=manq?'[МАНЕКЕН]':(bodyPhoto?'[ФОТО]':'[ПОРТРЕТ]');
-    const itemsList=garmentParts.map((g,i)=>`[ТОВАР ${i+1}]${gtypeText(g.item)}`).join(', ');
-    let task;
-    if(manq){
-      task=`Відредагуй ${baseTag}: заміни сірий базовий одяг на речі з ${itemsList}. Людину (обличчя, зачіску, тіло, пропорції, позу) і фон лиши БЕЗ ЗМІН — міняй ВИКЛЮЧНО одяг.`;
-    }else if(bodyPhoto){
-      task=`Відредагуй ${baseTag}: заміни наявний одяг людини на речі з ${itemsList}. Саму людину (обличчя, зачіску, тіло, позу) і фон лиши без змін — міняй лише одяг.`;
-    }else{
-      task=`Покажи людину з ${baseTag} на повний зріст, вдягнену в речі з ${itemsList}.`;
-    }
-    // правило джерела одягу — переносимо ЛИШЕ предмет з кожного товарного фото, ігноруємо чужу
-    // модель/фон/позу/текст, і всі речі мають опинитись на ОДНІЙ і тій самій людині одночасно
-    const garmentRule=` ПРО ${itemsList}: це фото реальних товарів — з КОЖНОГО візьми ЛИШЕ сам предмет (тканину, колір, візерунок, крій, довжину й деталі) і точно його відтвори, усі разом на РІВНО ОДНІЙ людині одночасно. ПОВНІСТЮ ігноруй усе інше на цих фото: якщо там є модель — НЕ переноси її обличчя, тіло, позу чи зачіску; ігноруй фон, цінники й текст. Одяг має сісти саме на тіло людини з ${baseTag}, за її ВЛАСНОЮ позою й пропорціями, природно облягати, з реалістичними складками й тінями.`;
-    const baseFaceRule=` КРИТИЧНО ПРО ОБЛИЧЧЯ: обличчя, зачіску й голову людини з ${baseTag} збережи АБСОЛЮТНО БЕЗ ЗМІН, піксель у піксель — не перемальовуй жодну рису (очі, ніс, губи, овал обличчя, шкіру), не "покращуй", не заміняй на усереднене/ідеалізоване лице, не міняй пропорції чи розмір голови. Обличчя — недоторканна зона цього редагування.`;
-    const tail=` ${heightLine(who)}${metricsLine(who)} Стиль зображення: ${TRYON_STYLE}`;
-
-    const parts=[`${baseTag} — справжнє фото людини (її обличчя, тіло й поза — еталон, не змінювати). ${itemsList} — фото одягу з магазину. ${task}${garmentRule}${baseFaceRule}${tail}`, dataUrlToPart(baseSrc), ...garmentParts.map(g=>g.part)];
-    let img=await aiGenerate(parts);
-    img=await aiAnchorFace(img, who);   // окремий прохід — закріплення обличчя під реальний портрет
-    downscaleSrc(img,896,small=>{
-      const res=small||img;
-      const cur=ideas.find(x=>x.id===it.id);
-      if(cur){ cur.tryon=res; cur._ai=false; saveJSON('wed-ideas',ideas); }
-      outfit[who]=res; saveJSON('wed-outfit',outfit);   // кешується лише для показу — НЕ використовується як база наступного разу
-      outfitLayers[who]=layers; saveJSON('wed-outfitLayers',outfitLayers);
-      coupleBusy[who]=false;
-      renderIdeas(); renderCouple();
-    },0.8);
-  }catch(e){ console.warn('tryOn',e); aiBusy(it.id,false); coupleBusy[who]=false; renderCouple(); showToast('ШІ-примірка не вдалась 😕 '+aiErr(e)); }
-}
-// "Фото на мені" через ШІ: береться СВІЖЕ фото (щойно знята селфі чи завантажена світлина —
-// не базове фото/манекен), і на нього домальовується ЛИШЕ ця одна річ. На відміну від aiTryOn
-// (що працює з базовим фото/манекеном і накопиченим гардеробом), тут база щоразу нова, і
-// результат — саме для realTryon-слоту цієї речі, не для колажу примірки пари.
-async function aiRealTryOn(it, selfieDataUrl){
-  const cleanSrc=await ensureCleanGarment(it);
-  const garmentPart=await srcToPart(cleanSrc||it.img);
-  if(!garmentPart) return null;
-  const itemText=gtypeText(it);
-  // ВАЖЛИВО: тут НЕ додаємо TRYON_STYLE — той константа для ІНШОГО режиму (aiTryOn, повний
-  // зріст на нейтральному студійному фоні) і прямо суперечить меті цієї функції: тут людина вже
-  // на СПРАВЖНЬОМУ фото (свій фон/поза/кадрування), і завдання — лише замінити одяг НА цьому
-  // самому фото, а не перетворити його на студійний лукбук. Раніше обидві інструкції давались
-  // одночасно ("лиши фон без змін" + "постав на сірий студійний фон") — модель плуталась і
-  // змінювала все підряд, включно з локацією.
-  const prompt=`[ФОТО] — справжнє фото людини, щойно зняте. [ТОВАР]${itemText} — фото одягу з магазину.`
-    +` Це ТОЧКОВЕ РЕДАГУВАННЯ наявного фото, а НЕ створення нового зображення: вдягни людину з [ФОТО] у річ з [ТОВАР] — тканину, колір, візерунок, крій і довжину точно відтвори з [ТОВАР], ігноруючи модель/фон/цінники/текст на товарному фото.`
-    +` НЕ МІНЯЙ нічого, крім самого одягу: обличчя, зачіска, тіло, поза, ракурс камери, фон і локація з [ФОТО] лишаються АБСОЛЮТНО без змін, піксель у піксель. Міняй ВИКЛЮЧНО той одяг, який заміняє ця річ. Одяг має природно облягати тіло, з реалістичними складками й тінями, узгодженими з освітленням оригінального фото.`;
-  const img=await aiGenerate([prompt, dataUrlToPart(selfieDataUrl), garmentPart]);
-  return img;
-}
 async function aiImagine(it){
   const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
   if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка)'); return; }
@@ -5353,26 +5220,6 @@ async function aiImagine(it){
   }catch(e){ console.warn('imagine',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
 }
 // уявити САМ предмет одягу з опису (для розділів «Вона»/«Він») — результат стає фото товару it.img,
-// після чого його можна 🪄 «Приміряти». Дає змогу додавати одяг, придуманий з голови, без посилання.
-async function aiImagineGarment(it){
-  const text=[it.title,it.desc,it.note].filter(Boolean).join('. ');
-  if(!text){ showToast('Спершу напиши, що уявити (назва / нотатка) — напр. «шовкова сукня кольору шампань, міді»'); return; }
-  aiBusy(it.id,true);
-  try{
-    const g=(it.gtype||'').trim();
-    const gline=g&&g!=='образ цілком'?` Це саме ${g}.`:'';
-    const img=await aiGenerate([`Створи чисте студійне фото предмета одягу/аксесуара для віртуальної примірки: ${text}.${gline} Покажи САМ предмет — без людини й без манекена — рівно на світлому однотонному фоні, повністю в кадрі, м'яке рівне освітлення, без тексту й водяних знаків. Фотореалістично, як фото товару в каталозі.`]);
-    downscaleSrc(img,768,small=>{
-      const cur=ideas.find(x=>x.id===it.id); if(!cur){return;}
-      const res=small||img;
-      cur.img=res; cur.imgChoices=[res, ...((cur.imgChoices||[]).filter(s=>!/^data:/.test(s)))].slice(0,8);
-      cur.cleanImg=res; cur.cleanFor=garmentSig(res);   // вже чистий предмет — не виокремлюємо вдруге
-      cur._ai=false;
-      saveJSON('wed-ideas',ideas); renderIdeas();
-      showToast('🪄 Готово — тепер натисни «Приміряти»');
-    },0.8);
-  }catch(e){ console.warn('imagineGarment',e); aiBusy(it.id,false); showToast('ШІ не зміг намалювати 😕 '+aiErr(e)); }
-}
 async function srcToPart(src){ const du=await srcToDataUrl(src); return du?dataUrlToPart(du):null; }
 // тягне URL -> data: (через FileReader). null якщо не вдалось (CORS/мережа)
 async function fetchToDataUrl(url){
