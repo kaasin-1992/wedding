@@ -2362,7 +2362,7 @@ function saveJSON(key, val){
     const light={...val};
     if(isDataUrl(val.gen)){ mediaSet('m_dresscode', {gen: val.gen}); light.gen='@m'; }
     DOC.set({dresscode: light, _updated: Date.now()}, {merge:true})
-       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save dresscode', e); flashSync(false); });
+       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save dresscode', e); flashSync(false, e); });
     return;
   }
   if(key==='wed-ideas'){
@@ -2382,12 +2382,12 @@ function saveJSON(key, val){
       }
       const light=splitIdeas(merged);
       DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
-         .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save ideas', e); flashSync(false); });
+         .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save ideas', e); flashSync(false, e); });
     }).catch(e=>{
       console.warn('cloud pre-read ideas', e);
       const light=splitIdeas(val);   // не вдалось прочитати хмару — пишемо як є, аби не заблокувати збереження
       DOC.set({ideas:light, _updated:Date.now()}, {merge:true})
-         .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save ideas', err); flashSync(false); });
+         .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save ideas', err); flashSync(false, err); });
     });
     return;
   }
@@ -2426,16 +2426,16 @@ function saveJSON(key, val){
         });
         if(staleFieldFixed){ try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after stale-field fix', key, e); } }
         DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
-           .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
+           .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false, e); });
       }).catch(e=>{
         console.warn('cloud pre-read', key, e);
         DOC.set({[field]: val, _updated: Date.now()}, {merge:true})   // не вдалось прочитати — пишемо як є, аби не блокувати збереження
-           .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save', err); flashSync(false); });
+           .then(()=>flashSync(true)).catch(err=>{ console.warn('cloud save', err); flashSync(false, err); });
       });
       return;
     }
     DOC.set({[field]: val, _updated: Date.now()}, {merge:true})
-       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false); });
+       .then(()=>flashSync(true)).catch(e=>{ console.warn('cloud save', e); flashSync(false, e); });
   }
 }
 // кеш важких картинок з хмари: base = {photos,photosFull,outfit}; idea = {ideaId:{img,gen,tryon}};
@@ -2955,7 +2955,15 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
     // прилітають обидві події).
     const bindPick=(el,iso)=>{
       let handled=false;
-      const go=()=>{ if(handled) return; handled=true; onPick(iso); closeDatePicker(); };
+      // try/finally: якщо збереження впаде з помилкою, попап МУСИТЬ закритись усе одно —
+      // інакше виходить рівно те, на що скаржилась Катя: «вікно не закривається і дата не
+      // фіксується». І помилку показуємо вголос, а не ковтаємо мовчки.
+      const go=()=>{
+        if(handled) return; handled=true;
+        try{ onPick(iso); }
+        catch(err){ console.error('datepicker', err); try{ showToast('Не вдалось зберегти дату 😕 '+(err&&err.message||'')); }catch(e){} }
+        finally{ closeDatePicker(); }
+      };
       el.addEventListener('pointerup',go);
       el.addEventListener('click',go);
     };
@@ -8660,13 +8668,33 @@ function weatherSummaryText(){
 
 /* ════ SYNC + LOGIN ════ */
 let syncTimer=null;
-function flashSync(ok){
+function flashSync(ok, err){
   const pill=document.getElementById('syncPill'), dot=document.getElementById('syncDot'), txt=document.getElementById('syncTxt');
   dot.className='sync-dot'+(ok?'':' off');
-  txt.textContent=ok?'Збережено для двох ✓':'Збережено локально (немає мережі)';
+  // ЧЕСНЕ повідомлення: раніше будь-який збій запису показувався як «немає мережі», хоча
+  // причина могла бути зовсім інша (немає прав / документ переріс ліміт Firestore 1 MiB —
+  // тоді запис МОВЧКИ не проходить). Через це виглядало, ніби «дані просто не зберігаються».
+  let msg='Збережено для двох ✓';
+  if(!ok){
+    const code=(err&&(err.code||err.message)||'')+'';
+    if(/permission|insufficient/i.test(code))      msg='⚠️ Немає прав на запис — перезайди';
+    else if(/quota|exceeded|too large|maximum/i.test(code)) msg='⚠️ Забагато даних — не зберігається';
+    else if(/unavailable|network|offline/i.test(code))     msg='Збережено локально (немає мережі)';
+    else msg='⚠️ Не зберіглось: '+(code.slice(0,60)||'невідома причина');
+  }
+  txt.textContent=msg;
   pill.classList.add('show');
-  clearTimeout(syncTimer); syncTimer=setTimeout(()=>pill.classList.remove('show'),1800);
+  clearTimeout(syncTimer); syncTimer=setTimeout(()=>pill.classList.remove('show'), ok?1800:6000);
 }
+// Видимий «чорний ящик»: будь-яка JS-помилка тепер показується тостом, а не ховається в
+// консоль. Без цього кожна поломка виглядає для Каті просто як «нічого не працює».
+(function(){
+  const seen=new Set();
+  const show=(m)=>{ m=(m||'').toString().slice(0,90); if(!m||seen.has(m))return; seen.add(m);
+    try{ showToast('⚠️ '+m); }catch(e){} };
+  window.addEventListener('error', e=>show(e.message));
+  window.addEventListener('unhandledrejection', e=>show(e.reason&&(e.reason.message||e.reason)));
+})();
 // onSnapshot фонового прослуховування спрацьовує на КОЖНУ зміну спільного документа wedding/state,
 // навіть якщо змінилось зовсім інше поле (напр. хтось редагував нотатку, поки ти саме тиснула
 // чекбокс завдання) — і раніше (нижче) відповідні масиви просто БЕЗУМОВНО перезаписувались тим,
