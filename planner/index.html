@@ -271,7 +271,8 @@ body.guest [data-tab="organizer"],body.guest #tab-organizer{display:none !import
 /* Ширина була 240px — при 7 колонках це давало клітинку 29×29px, удвічі менше за мінімальну
    зручну ціль дотику (44px). Палець систематично влучав у проміжок між днями, і тап просто
    зникав у нікуди: дата лишалась попередня. Тепер попап розтягується під екран телефона. */
-.dp-pop{position:fixed;z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+/* z-index вище за тост (950) — календар мусить бути НАД будь-яким сповіщенням, а не під ним */
+.dp-pop{position:fixed;z-index:980;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px;width:min(330px, calc(100vw - 20px));}
 .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
 .dp-head span{font-size:13px;font-weight:700;text-transform:capitalize;}
@@ -1029,7 +1030,13 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:950;
   background:var(--text);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:14px;
   box-shadow:0 8px 28px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:90vw;}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+/* ЗНАЙДЕНО ПО ВІДЕО КАТІ: тост висів ПОВЕРХ календаря (z-index 950 проти 900 у .dp-pop)
+   і, оскільки .show вмикав pointer-events на ВЕСЬ тост, він ЗʼЇДАВ клік по числу під ним.
+   Клік не доходив до дня, зате спрацьовував глобальний «клік повз календар» → попап
+   закривався зі старою датою. Саме це виглядало як «обираю число, а нічого не міняється».
+   Тепер саме полотно тосту прозоре для кліків — ловить їх лише кнопка «Скасувати». */
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:none;}
+.toast.show button{pointer-events:auto;}
 .toast button{background:none;border:none;color:var(--terra);font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;letter-spacing:.03em;padding:2px 4px;}
 .toast.dark-text button{color:var(--gold);}
 /* банер "є оновлення" — на відміну від toast, сам не ховається, чекає рішення */
@@ -2985,6 +2992,9 @@ function parseTaskDeadlineInput(str){
    клік по дню замість набору цифр. Текстове поле поруч лишається робочим про всяк випадок. */
 let _dpEl=null, _dpAnchor=null, _dpReposition=null, _dpOnClose=null;
 function _dpOutsideHandler(e){
+  // тост — це сповіщення, а не «інше місце сторінки»: клік по ньому НЕ повинен закривати
+  // календар (підстраховка на випадок, якщо якийсь оверлей знову опиниться зверху)
+  if(e.target && e.target.closest && e.target.closest('.toast')) return;
   if(_dpEl && !_dpEl.contains(e.target) && _dpAnchor && !_dpAnchor.contains(e.target)) closeDatePicker();
 }
 function closeDatePicker(){
