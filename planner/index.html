@@ -3021,7 +3021,13 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
   // щоб одразу було видно доступні (майбутні) дні, а не місяць, повний закреслених дат
   const viewBase = initDate < tD ? tD : initDate;
   let viewY=viewBase.getFullYear(), viewM=viewBase.getMonth();
+  // Захист від ПОДВІЙНОГО зсуву місяця. Прапорець живе на всю сесію попапу (після
+  // перемальовування «‹ ›» — це вже нові елементи, тож локальний не допомагав), а знімається
+  // НЕ таймером, а початком нової взаємодії — pointerdown. Тому два швидкі тапи підряд дають
+  // рівно два місяці, а pointerup+синтезований click одного дотику — рівно один.
+  let _navBusy=false;
   const pop=document.createElement('div'); pop.className='dp-pop';
+  pop.addEventListener('pointerdown',()=>{ _navBusy=false; }, true);
   // якщо анкер — текстове поле (напр. редагування дедлайну), звичайний клік по кнопці всередині
   // попапу спершу зрушує фокус (mousedown) → встигає відпрацювати blur/commit ЗІ СТАРИМ значенням
   // поля, ще до того як власне click дня/кнопки "прибрати" встигне застосувати вибір — гонка,
@@ -3059,10 +3065,18 @@ function openDatePicker(anchorEl, initialIso, onPick, onClose){
         return `<button type="button" data-dpquick="${qi}">${lbl}</button>`;
       }).join('');
     pop.innerHTML=`<div class="dp-quick">${quick}</div><div class="dp-head"><button type="button" class="dp-nav" data-dpprev aria-label="Попередній місяць">‹</button><span>${monthLbl}</span><button type="button" class="dp-nav" data-dpnext aria-label="Наступний місяць">›</button></div><div class="dp-grid">${grid}</div><button type="button" class="dp-clear" data-dpclear>Прибрати дату</button>`;
+    // ⚠️ Прапорець «вже опрацьовано» МУСИТЬ жити ПОЗА renderCal (див. _navLock вище).
+    // Раніше він був локальним тут: pointerup зсував місяць і викликав renderCal(), той
+    // перезбирав pop.innerHTML — і синтезований після дотику `click` влучав уже в НОВУ кнопку
+    // зі свіжим handled=false, зсуваючи місяць ДРУГИЙ раз. На телефоні один тап по «›»
+    // перестрибував з липня одразу у вересень.
     const bindNav=(el,step)=>{
-      let handled=false;
-      const go=()=>{ if(handled) return; handled=true; viewM+=step;
-        if(viewM<0){viewM=11;viewY--;} if(viewM>11){viewM=0;viewY++;} renderCal(); };
+      const go=()=>{
+        if(_navBusy) return;   // друга подія того самого дотику — глушимо
+        _navBusy=true;
+        viewM+=step;
+        if(viewM<0){viewM=11;viewY--;} if(viewM>11){viewM=0;viewY++;} renderCal();
+      };
       el.addEventListener('pointerup',go); el.addEventListener('click',go);
     };
     bindNav(pop.querySelector('[data-dpprev]'), -1);
@@ -8749,7 +8763,19 @@ function mergeIncomingArray(localArr, cloudArr, key){
     const lTs=typeof lIt.updatedAt==='number'?lIt.updatedAt:-Infinity;
     const cTs=typeof cIt.updatedAt==='number'?cIt.updatedAt:-Infinity;
     if(lTs>cTs){ if(key) _pendingResave.add(key); return lIt; }
-    return cIt;
+    // ⚠️ ЗБЕРІГАЄМО ТОТОЖНІСТЬ ОБʼЄКТА, а не підставляємо хмарний екземпляр.
+    // Раніше `return cIt` віддавав НОВИЙ обʼєкт, і весь масив після мерджу складався з нових
+    // обʼєктів. А по всьому застосунку (~180 місць) живе шаблон: обробник один раз бере
+    // `const it = arr.find(x=>x.id===id)` і мутує `it` ПОЗНІШЕ — після кліку, після ШІ-виклику,
+    // після вибору дати в календарі. Якщо між захопленням і мутацією прилетів снапшот (а він
+    // прилітає ехом на ПОПЕРЕДНЄ збереження), захоплений обʼєкт уже не в масиві — і правка
+    // тихо йшла в сироту. Катя бачила це як «одному завданню дату змінила, а другому вже ні»:
+    // перше встигало до ехо-снапшота, друге — вже після.
+    // Вливаємо хмарні поля В НАЯВНИЙ обʼєкт: посилання лишається живим, усі відкладені
+    // мутації влучають у масив. Це лікує весь клас одразу, а не одне місце.
+    Object.keys(lIt).forEach(k=>{ if(!(k in cIt)) delete lIt[k]; });   // поле зникло в хмарі — прибрати й тут
+    Object.assign(lIt, cIt);
+    return lIt;
   });
   const cloudIds=new Set(cloudArr.filter(it=>it&&it.id!=null).map(it=>it.id));
   localArr.forEach(lIt=>{ if(lIt&&lIt.id!=null && !cloudIds.has(lIt.id)) merged.push(lIt); });
