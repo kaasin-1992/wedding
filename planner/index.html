@@ -2378,8 +2378,39 @@ function stripDataUrlsDeep(v){
 // ЄДИНЕ місце, яке вирішує, що саме осідає в localStorage. Раніше правило жило лише
 // всередині saveJSON, а прихід снапшота з хмари писав кеш повз нього — і всі картинки
 // поверталися назад. Тепер обидва шляхи ходять сюди.
+/* Ключі з LOCAL_FULL_IMG_KEYS тримають повні base64 — це навмисно (anti-flicker), але
+   JSON.stringify мегабайтів картинок коштував 236 мс на КОЖЕН снапшот (109 мс навіть на трьох
+   речах). Рятує дешевий ПІДПИС замість stringify: кількість елементів + сума довжин полів-
+   картинок. Не змінився → не пишемо взагалі, а типовий снапшот саме такий (приїхало те саме,
+   що вже лежить). Змінився → пишемо одразу, як і раніше.
+   ДЕБАУНС тут свідомо НЕ робимо: запис став би асинхронним, а на кеш одразу після запису
+   розраховує anti-flicker фолбек в applyMedia() — тобто перезавантаження у вікні очікування
+   лишило б плитки без фото. Підпис і без дебаунсу знімає весь виграш на повторних снапшотах. */
+const _IMG_FIELDS=['img','gen','tryon','cleanImg','realTryon','src'];
+function heavySig(val){
+  let n=0, len=0;
+  const walk=(v)=>{
+    if(Array.isArray(v)){ n+=v.length; v.forEach(walk); return; }
+    if(v && typeof v==='object'){
+      _IMG_FIELDS.forEach(f=>{ if(typeof v[f]==='string') len+=v[f].length; });
+      for(const k in v){ const x=v[k]; if(x && typeof x==='object') walk(x); }
+      return;
+    }
+    if(typeof v==='string') len+=v.length;
+  };
+  try{ walk(val); }catch(e){ return null; }   // не змогли — хай пише як раніше
+  return n+':'+len;
+}
+const _heavySigs={};
 function cacheLocal(key, val){
-  DB.set(key, JSON.stringify(LOCAL_FULL_IMG_KEYS.has(key) ? val : stripDataUrlsDeep(val)));
+  if(!LOCAL_FULL_IMG_KEYS.has(key)){
+    DB.set(key, JSON.stringify(stripDataUrlsDeep(val)));
+    return;
+  }
+  const sig=heavySig(val);
+  if(sig!==null && _heavySigs[key]===sig) return;   // те саме, що вже в кеші — не платимо
+  DB.set(key, JSON.stringify(val));
+  if(sig!==null) _heavySigs[key]=sig;
 }
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
 function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
@@ -7999,6 +8030,8 @@ function activateTab(name){
   btns.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   const panel=document.getElementById('tab-'+name); if(panel) panel.classList.add('active');
+  // догнати розділи цієї вкладки, чиї дані змінились, поки вона була закрита (див. renderAll)
+  if(typeof flushDirtyRenders==='function') flushDirtyRenders();
   const btn=btns.find(b=>b.dataset.tab===name);
   if(btn) btn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
   if(typeof renderMenu==='function') renderMenu();   // підсвітка активного розділу на головному екрані
@@ -8721,9 +8754,55 @@ async function organizerSend(){
 }
 renderOrganizerChat();
 
+/* ── МАЛЮЄМО ЛИШЕ ТЕ, ЩО ВИДНО ──
+   Раніше renderAll() перемальовував ВСІ 27 розділів на кожен прихід снапшота з хмари. Виміряно
+   на реальному обсязі даних: 255–319 мс замороженого екрана, тоді як сама активна вкладка
+   малюється 50–80 мс. А Firestore віддає власний запис назад снапшотом — тобто це зависання
+   траплялось на КОЖНЕ збереження. Саме воно й читалось як «взагалі все висне».
+
+   Пара — це функція + id ЇЇ КОНТЕЙНЕРА, а не назва вкладки: панель визначаємо через
+   closest('.panel'), тож помилитись у прив'язці майже неможливо, і вона перевіряється тестом.
+   ПРАВИЛО БЕЗПЕКИ: якщо контейнера немає або він поза панеллю — малюємо ЗАВЖДИ. Тобто
+   найгірший випадок дорівнює старій поведінці, а не «розділ спорожнів». */
+const RENDERERS=[
+  [renderTasks,'pbarFill'], [renderGuests,'guestList'], [renderBudget,'budgetList'],
+  [renderContacts,'contactList'], [renderNotes,'noteList'], [renderIdeas,'ideaList'],
+  [renderBasePhotos,'basePhotos'], [renderBeauty,'beautyList'], [renderPortraits,'psGrid'],
+  [renderDressCode,'dcColors'], [renderScripts,'scriptList'], [renderHotels,'hotelList'],
+  [renderDecor,'decorList'], [renderOrders,'ordersList'], [renderDiyMaterials,'materialsList'],
+  [renderHelpers,'helpersList'], [renderMusic,'musicList'], [renderMustPlay,'mustPlayList'],
+  [renderInspo,'inspoGrid'], [renderParties,'partyGenNote'], [renderBar,'barOut'],
+  [renderSeating,'seatTip'], [renderInvites,'gameConcept'], [renderMenu,'homeGrid'],
+  [renderOrganizerChat,'orgMsgs'],
+];
+const _dirtyRenders=new Set();   // розділи, чиї дані змінились, поки вкладка була закрита
+function _panelOf(containerId){
+  const el=document.getElementById(containerId);
+  return el ? el.closest('.panel') : null;
+}
 function renderAll(){
-  renderTasks(); renderGuests(); renderBudget(); renderContacts(); renderNotes(); renderIdeas(); renderBeauty(); renderDressCode(); renderScripts(); renderHotels(); renderDecor(); renderOrders(); renderDiyMaterials(); renderHelpers(); renderMusic(); renderMustPlay(); renderInspo(); renderBasePhotos(); renderCouple(); renderPortraits(); renderParties(); renderBar(); renderSeating(); renderInvites(); renderMenu(); syncPlannerQAValues(); renderOrganizerChat();
+  RENDERERS.forEach(pair=>{
+    const [fn,cid]=pair;
+    const pan=_panelOf(cid);
+    if(pan && !pan.classList.contains('active')){ _dirtyRenders.add(pair); return; }
+    _dirtyRenders.delete(pair);
+    try{ fn(); }catch(e){ console.warn('render', cid, e); }
+  });
+  // без власного контейнера в розмітці: renderCouple зараз взагалі no-op (секцію примірки пари
+  // прибрали раніше), syncPlannerQAValues — дешеве проставляння значень у поля опитування
+  renderCouple(); syncPlannerQAValues();
   document.getElementById('capInput').value = budgetCap||'';
+}
+// догнати те, що не малювалось, поки вкладка була закрита — викликається з activateTab
+function flushDirtyRenders(){
+  if(!_dirtyRenders.size) return;
+  [..._dirtyRenders].forEach(pair=>{
+    const [fn,cid]=pair;
+    const pan=_panelOf(cid);
+    if(pan && !pan.classList.contains('active')) return;   // ще не ця вкладка — лишаємо в черзі
+    _dirtyRenders.delete(pair);
+    try{ fn(); }catch(e){ console.warn('flush render', cid, e); }
+  });
 }
 function updateCountdown(){ const d=Math.max(0,daysUntilWedding()); document.getElementById('daysLeft').textContent=d; document.getElementById('cntLbl').textContent=plDays(d)+' залишилось'; }
 updateCountdown();
