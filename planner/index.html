@@ -1755,6 +1755,10 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
   <div class="filters" id="ideaGtypeBar" style="display:none;"></div>
   <button class="idea-photo-btn" id="ideaBulkProcessBtn" style="display:none;margin-bottom:16px;">🪄 Обробити все одразу (скрін + вирізати)</button>
+  <!-- Катя обрала одяг в іншому місці й сюди завантажить тільки фінальне: одноразова чистка
+       старих варіантів. Заразом це найважчий вантаж застосунку — фото одягу коштували
+       ~236 мс на КОЖНУ синхронізацію. Каблучки й загальні ідеї кнопка не чіпає. -->
+  <button class="idea-photo-btn" id="clothWipeBtn" style="display:none;margin-bottom:16px;">🧺 Прибрати старі варіанти одягу</button>
   <div class="add-section" style="margin-bottom:16px;">
     <details>
       <summary>＋ Додати (посилання або текстом)</summary>
@@ -4000,6 +4004,62 @@ async function processClothItem(it){
     if(cut && cut!==it.img){ it.img=cut; it.cleanImg=cut; it.cleanFor=garmentSig(it.img); }
   }
 }
+/* ── ОДНОРАЗОВА ЧИСТКА СТАРИХ ВАРІАНТІВ ОДЯГУ ──
+   Катя: «мені вже не треба в планері всі ті фото одягу що були, я одяг обрала в іншому місці і
+   сюди завантажу тільки те що врешті обрала».
+   Прибираємо ЛИШЕ cat==='her'/'his' — каблучки ('rings') і загальні ідеї ('idea') живуть у тому
+   самому масиві `ideas` і НЕ чіпаються.
+   Викликається виключно з кнопки й тільки після явного підтвердження: це видалення її даних. */
+function clothWipeTargets(){ return ideas.filter(it=>it && (it.cat==='her'||it.cat==='his')); }
+async function wipeOldCloth(){
+  const doomed=clothWipeTargets();
+  if(!doomed.length){ showToast('Тут уже нічого прибирати 🙂'); return; }
+  const ok=await askConfirm(
+    `Прибрати ${doomed.length} ${plThings(doomed.length)} одягу разом із фото, цінами й посиланнями?\n\n`+
+    `Каблучки й загальні ідеї лишаться. Скасувати це вже не вийде.`,
+    'Прибрати', 'Не прибирати');
+  if(!ok) return;
+
+  const ids=doomed.map(it=>it.id);
+  const idSet=new Set(ids);
+
+  // 1) привʼязані рядки бюджету — той самий патерн, що в одиночному видаленні ідеї
+  let budgetTouched=false;
+  doomed.forEach(it=>{
+    if(!it.budgetId) return;
+    const i=budget.findIndex(b=>b.id===it.budgetId);
+    if(i>-1){ budget.splice(i,1); budgetTouched=true; }
+  });
+  if(budgetTouched){ saveJSON('wed-budget',budget); renderBudget(); }
+
+  // 2) слоти колажу, ключі мудборду одягу і шари примірки — інакше лишаються «привиди»
+  ['her','his'].forEach(who=>{
+    const c=collage[who]; if(c) Object.keys(c).forEach(slot=>{ if(idSet.has(slotId(c[slot]))) delete c[slot]; });
+    const l=outfitLayers[who]; if(l) Object.keys(l).forEach(g=>{ if(idSet.has(l[g])) delete l[g]; });
+  });
+  if(moodboard.cloth) Object.keys(moodboard.cloth).forEach(k=>{ if(idSet.has(k)) delete moodboard.cloth[k]; });
+  saveJSON('wed-collage',collage); saveJSON('wed-outfitLayers',outfitLayers); saveJSON('wed-moodboard',moodboard);
+
+  // 3) самі речі. Через _skipResurrect — інакше мердж-гард повернув би їх із хмари
+  (_skipResurrect['wed-ideas']||=new Set());
+  ids.forEach(id=>_skipResurrect['wed-ideas'].add(id));
+  ideas=ideas.filter(it=>!(it && idSet.has(it.id)));
+  saveJSON('wed-ideas',ideas);
+  refreshIdeaViews(); renderCouple();
+
+  // 4) хмарне: важкі фото кожної речі лежать окремими документами, голоси дружок — окремою
+  // колекцією. Без цього вони висять осиротілими й далі їдять місце (та сама причина, що вже
+  // ловили в #126). Вікна «Скасувати» тут немає — підтвердження вже було, тож прибираємо одразу.
+  if(!IS_GUEST){
+    if(WEDCOL) ids.forEach(id=>WEDCOL.doc('m_idea_'+id).delete().catch(e=>console.warn('m_idea_'+id, e)));
+    if(typeof DRESSVOTES!=='undefined' && DRESSVOTES){
+      dressVotes.filter(v=>v && idSet.has(v.ideaId) && v._id)
+        .forEach(v=>DRESSVOTES.doc(v._id).delete().catch(e=>console.warn('dressVote', e)));
+    }
+  }
+  showToast(`🧺 Прибрано ${ids.length} ${plThings(ids.length)}. Тепер можна завантажити фінальне`);
+}
+function plThings(n){ const a=n%100,b=n%10; if(a>10&&a<20)return'речей'; if(b===1)return'річ'; if(b>=2&&b<=4)return'речі'; return'речей'; }
 // послідовно (не паралельно, щоб не задавити ШІ-виклики) прогонити скрін+ШІ-інфо і вирізання
 // для всього одягу, доданого раніше без фото чи без чистого cleanImg
 async function bulkProcessCloth(ids){
@@ -4050,6 +4110,17 @@ function renderIdeas(){
     }
   }
   // масова обробка: скрін+ШІ-інфо для речей без фото, вирізання для речей із "брудним" фото
+  // кнопка чистки: лише у вкладці одягу, лише коли справді є що прибирати, і не для гостя
+  const wipeBtn=document.getElementById('clothWipeBtn');
+  if(wipeBtn){
+    const n=IS_GUEST?0:clothWipeTargets().length;
+    if(!isCloth || !n){ wipeBtn.style.display='none'; }
+    else{
+      wipeBtn.style.display='block';
+      wipeBtn.textContent=`🧺 Прибрати старі варіанти одягу (${n})`;
+      wipeBtn.onclick=()=>wipeOldCloth();
+    }
+  }
   const bulkBtn=document.getElementById('ideaBulkProcessBtn');
   if(bulkBtn){
     const needsWork=isCloth?items.filter(clothNeedsProcessing):[];
