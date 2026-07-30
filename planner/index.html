@@ -2229,8 +2229,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-07-30';
-const APP_CACHE='wedding-planner-v2';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-07-30.2';
+const APP_CACHE='wedding-planner-v3';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -2460,20 +2460,48 @@ function stripDataUrlsDeep(v){
    ДЕБАУНС тут свідомо НЕ робимо: запис став би асинхронним, а на кеш одразу після запису
    розраховує anti-flicker фолбек в applyMedia() — тобто перезавантаження у вікні очікування
    лишило б плитки без фото. Підпис і без дебаунсу знімає весь виграш на повторних снапшотах. */
-const _IMG_FIELDS=['img','gen','tryon','cleanImg','realTryon','src'];
+/* Підпис має ловити БУДЬ-ЯКУ зміну, інакше кеш тихо застаріє. Раніше рахувались лише поля
+   зі списку _IMG_FIELDS, а решта рядкових властивостей ігнорувалась — і для photos
+   ({her:'data:…', his:'data:…'}) підпис виходив однаковий за будь-якого вмісту, тобто нове
+   фото пари ніколи б не дійшло до кешу. Тому обходимо ВСІ властивості. Довжини самої теж
+   замало: перейменування «Сукня А» → «Сукня Б» її не змінює. Тому короткі рядки (назви,
+   статуси, id, дати) згортаємо в хеш повністю. Довгі (base64) хешувати цілком не можна —
+   це знову ті самі мегабайти, заради яких усе й робилось, — але й самої лише довжини
+   замало: замінене фото тієї ж довжини (перекадрувала, обрала інший варіант) підпис би не
+   змінило й тихо не доїхало б у кеш. Тому з довгого рядка беремо ФІКСОВАНУ вибірку:
+   довжина + рівномірно розкидані символи + хвіст. Читань стала кількість незалежно від
+   розміру, а зміна вмісту майже напевно змінює підпис. Хвіст важливий окремо: усі
+   data:-URL починаються однаково, тож інформативний саме кінець. */
+const SIG_HASH_MAX=256;   // до скількох символів рядок хешується повністю
+const SIG_SAMPLE=64;      // скільки символів вибирати з довгого рядка
 function heavySig(val){
-  let n=0, len=0;
+  let n=0, h=0;
+  const mix=x=>{ h=(h*31+x)|0; };
   const walk=(v)=>{
-    if(Array.isArray(v)){ n+=v.length; v.forEach(walk); return; }
+    if(Array.isArray(v)){ n+=v.length; mix(v.length); v.forEach(walk); return; }
     if(v && typeof v==='object'){
-      _IMG_FIELDS.forEach(f=>{ if(typeof v[f]==='string') len+=v[f].length; });
-      for(const k in v){ const x=v[k]; if(x && typeof x==='object') walk(x); }
+      for(const k in v){
+        const x=v[k];
+        if(x && typeof x==='object'){ mix(k.length); walk(x); }
+        else{ n++; mix(k.length); walk(x); }
+      }
       return;
     }
-    if(typeof v==='string') len+=v.length;
+    if(typeof v==='string'){
+      const L=v.length;
+      mix(L);
+      if(L<=SIG_HASH_MAX){ for(let i=0;i<L;i++) mix(v.charCodeAt(i)); return; }
+      const step=Math.floor(L/SIG_SAMPLE)||1;
+      for(let i=0;i<L;i+=step) mix(v.charCodeAt(i));
+      for(let i=Math.max(0,L-32);i<L;i++) mix(v.charCodeAt(i));   // хвіст: початок data:-URL завжди однаковий
+      return;
+    }
+    if(typeof v==='number'){ mix(v|0); return; }
+    if(typeof v==='boolean'){ mix(v?1:2); return; }
+    if(v===null){ mix(3); }
   };
   try{ walk(val); }catch(e){ return null; }   // не змогли — хай пише як раніше
-  return n+':'+len;
+  return n+':'+h;
 }
 const _heavySigs={};
 function cacheLocal(key, val){
@@ -2487,7 +2515,9 @@ function cacheLocal(key, val){
   if(sig!==null) _heavySigs[key]=sig;
 }
 let _mediaWritten = {};   // docId -> підпис, щоб не писати те саме двічі
-function mediaSig(o){ try{ return JSON.stringify(o).length+':'+JSON.stringify(o).slice(0,40); }catch(e){ return Math.random()+''; } }
+// серіалізуємо ОДИН раз: раніше тут було два JSON.stringify підряд на тому самому обʼєкті,
+// тобто подвійне виділення памʼяті на кожен запис важкої картинки
+function mediaSig(o){ try{ const s=JSON.stringify(o); return s.length+':'+s.slice(0,40); }catch(e){ return Math.random()+''; } }
 function mediaSet(docId, payload){
   if(!WEDCOL || IS_GUEST) return;
   const sig=mediaSig(payload);
@@ -2654,6 +2684,8 @@ function saveJSON(key, val){
 // dresscodeGen = ШІ-візуалізація стилю дрес-коду (окремий документ, той самий підхід)
 const mediaCache = {base:{}, idea:{}, dresscodeGen:undefined};
 const legacyMedia = {};   // старі картинки, що могли лишитись у самому state (для сумісності)
+// поля ідеї, які можуть містити маркер '@m' (реальна картинка лежить в окремому документі)
+const MARK_FIELDS=['img','gen','tryon','cleanImg','realTryon'];
 // зібрати повні дані з легких (state) + важких (окремі документи) і перемалювати
 function applyMedia(){
   ['photos','photosFull','outfit','venuePhotos'].forEach(name=>{
@@ -2667,12 +2699,23 @@ function applyMedia(){
   // ідеї: маркер '@m' замінюємо реальною картинкою з окремого документа.
   // Якщо медіа-документ ще не прилетів (гонка завантаження) — НЕ ставимо порожньо,
   // а беремо останнє відоме фото з локального кешу, щоб не затерти його порожнечею.
+  // Але цей фолбек потрібен ЛИШЕ поки лишився нерозвʼязаний '@m'. Раніше кеш розбирався
+  // безумовно — а wed-ideas тримає повні base64 (LOCAL_FULL_IMG_KEYS), тобто кожен виклик
+  // applyMedia() коштував JSON.parse на мегабайти. А викликається він на КОЖЕН снапшот,
+  // у тому числі на ехо власного збереження — тобто на кожен клік у Завданнях. Саме через
+  // це browser прибивав вкладку по памʼяті («Error code: 5»).
+  const _needFallback = Array.isArray(ideas) && ideas.some(it=> it && (
+    MARK_FIELDS.some(k=>it[k]==='@m') ||
+    (Array.isArray(it.extraImgs) && it.extraImgs.some(s=>s==='@m'))
+  ));
   let _cachedIdeas={};
-  try{ (JSON.parse(DB.get('wed-ideas')||'[]')||[]).forEach(it=>{ if(it&&it.id) _cachedIdeas[it.id]=it; }); }catch(e){}
+  if(_needFallback){
+    try{ (JSON.parse(DB.get('wed-ideas')||'[]')||[]).forEach(it=>{ if(it&&it.id) _cachedIdeas[it.id]=it; }); }catch(e){}
+  }
   if(Array.isArray(ideas)) ideas.forEach(it=>{
     const m=mediaCache.idea[it.id]||{};
     const fb=_cachedIdeas[it.id]||{};
-    ['img','gen','tryon','cleanImg','realTryon'].forEach(k=>{
+    MARK_FIELDS.forEach(k=>{
       if(it[k]==='@m'){
         if(isDataUrl(m[k])) it[k]=m[k];           // реальне фото з хмари
         else if(isDataUrl(fb[k])) it[k]=fb[k];    // ще не завантажилось — лишаємо останнє відоме
@@ -2704,14 +2747,20 @@ function applyMedia(){
       try{ const cachedDc=JSON.parse(DB.get('wed-dresscode')||'null'); if(cachedDc&&isDataUrl(cachedDc.gen)) dresscode.gen=cachedDc.gen; }catch(e){}
     }
   }
-  // оновлюємо локальний кеш повними даними
+  // Оновлюємо локальний кеш повними даними — але ЧЕРЕЗ cacheLocal, а не голим DB.set.
+  // Усі шість ключів нижче — у LOCAL_FULL_IMG_KEYS, тобто base64 зберігаються повністю,
+  // як і раніше. Різниця в тому, що cacheLocal спершу звіряє підпис і мовчки виходить,
+  // якщо нічого не змінилось. Раніше ці шість рядків серіалізували всі фото на КОЖЕН
+  // виклик applyMedia() — тобто на кожен клік у Завданнях, де фото взагалі ні до чого.
+  // Саме ці мегабайти сміття підряд і доводили вкладку до «Error code: 5».
+  // (Гард із #236 існував лише в cacheLocal, а цей шлях ішов повз нього.)
   applyingSnapshot=true;
-  DB.set('wed-photos',JSON.stringify(photos));
-  DB.set('wed-photos-full',JSON.stringify(photosFull));
-  DB.set('wed-outfit',JSON.stringify(outfit));
-  DB.set('wed-venues',JSON.stringify(venuePhotos));
-  DB.set('wed-ideas',JSON.stringify(ideas));
-  if(dresscode) DB.set('wed-dresscode',JSON.stringify(dresscode));
+  cacheLocal('wed-photos',photos);
+  cacheLocal('wed-photos-full',photosFull);
+  cacheLocal('wed-outfit',outfit);
+  cacheLocal('wed-venues',venuePhotos);
+  cacheLocal('wed-ideas',ideas);
+  if(dresscode) cacheLocal('wed-dresscode',dresscode);
   applyingSnapshot=false;
   snapshotRender();
 }
