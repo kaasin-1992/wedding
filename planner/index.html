@@ -2229,8 +2229,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-07-30.2';
-const APP_CACHE='wedding-planner-v3';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-07-30.3';
+const APP_CACHE='wedding-planner-v4';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -2615,8 +2615,7 @@ function saveJSON(key, val){
     DOC.get().then(snap=>{
       const cloudIdeas=(snap.exists && Array.isArray(snap.data().ideas)) ? snap.data().ideas : [];
       const localIds=new Set(val.map(it=>it.id));
-      const skipIdeas=_skipResurrect['wed-ideas'];
-      const missingFromLocal=cloudIdeas.filter(it=>it && it.id && !localIds.has(it.id) && !(skipIdeas&&skipIdeas.has(it.id)));
+      const missingFromLocal=cloudIdeas.filter(it=>it && it.id && !localIds.has(it.id) && !isDeleted('wed-ideas', it.id));
       const merged=missingFromLocal.length ? [...val, ...missingFromLocal] : val;
       if(missingFromLocal.length){
         missingFromLocal.forEach(it=>ideas.push(it));
@@ -2644,8 +2643,7 @@ function saveJSON(key, val){
       DOC.get().then(snap=>{
         const cloudArr=(snap.exists && Array.isArray(snap.data()[field])) ? snap.data()[field] : [];
         const localIds=new Set(val.map(it=>it.id));
-        const skip=_skipResurrect[key];
-        const missingFromLocal=cloudArr.filter(it=>it && it.id!=null && !localIds.has(it.id) && !(skip&&skip.has(it.id)));
+        const missingFromLocal=cloudArr.filter(it=>it && it.id!=null && !localIds.has(it.id) && !isDeleted(key, it.id));
         if(missingFromLocal.length){
           missingFromLocal.forEach(it=>val.push(it));   // val — той самий масив, що й жива змінна виклику
           try{ const a=ARR[key]; if(a) a.render(); }catch(e){ console.warn('rerender after merge', key, e); }
@@ -3637,21 +3635,92 @@ const ARR={
   'wed-team':{get:()=>team,set:v=>team=v,render:()=>renderBar()},
   'wed-invites':{get:()=>invites,set:v=>invites=v,render:()=>renderInvites()}
 };
-// id-и, які ЩОЙНО видалені локально й ще не встигли підтвердитись у хмарі — saveJSON() читає
-// хмару ПЕРЕД записом (щоб домішати елементи, додані деінде), і хмара в цей момент ЩЕ показує
-// старий стан (сам запис на сервер іще не пішов) — тобто щойно видалений елемент завжди потрапляв
-// у "відсутній локально" і мовчки повертався назад (у кінець масиву, бо merge робить push).
-// Це не рідкісна гонка кількох вкладок — це стається на КОЖНОМУ видаленні. Поки id тут — saveJSON
-// свідомо не воскрешає його.
-const _skipResurrect={};
+/* ── НАДГРОБКИ: сліди видалення, які переживають перезавантаження й синхронізуються ──
+   Мердж масивів навмисно ДОДАВАЛЬНИЙ: елемент, який є в хмарі, але якого немає локально,
+   вважається доданим з іншого пристрою — і повертається. Для додавання це правильно, але
+   через це видалення й було невидиме: відсутність елемента нічим не відрізнялась від
+   «його тут ще не бачили». Раніше захистом був звичайний обʼєкт у памʼяті сторінки — він
+   помирав разом із вкладкою, тож видалене поверталось у двох звичайних випадках:
+     1) перезавантаження до того, як запис дійшов у хмару (а вкладку ще й прибивало по памʼяті);
+     2) другий пристрій, який видалення не бачив і дописував елемент назад.
+   Тепер слід зберігається локально (wed-deleted) і в хмарі (поле deleted).
+   Значення — мітка часу: > 0 «видалено», < 0 «повернуто через Скасувати». Перемагає більший
+   |ts|, тож пристрої сходяться самі. Просто прибрати запис на «Скасувати» не можна: на
+   другому пристрої надгробок лишився б і видалив елемент повторно — а негативна мітка
+   доїжджає туди так само, як доїхала позитивна. */
+const TOMB_TTL=90*86400000;   // 90 днів: id нових елементів унікальні ('b'+Date.now()), тож
+                              // старий надгробок не може випадково заблокувати щось нове
+let deletedIds=(()=>{
+  try{ const v=JSON.parse(DB.get('wed-deleted')||'{}'); return (v && typeof v==='object' && !Array.isArray(v)) ? v : {}; }
+  catch(e){ return {}; }
+})();
+function isDeleted(key,id){
+  const m=deletedIds[key];
+  return !!m && typeof m[id]==='number' && m[id]>0;
+}
+function saveTombstones(patch){
+  cacheLocal('wed-deleted', deletedIds);
+  if(!(DOC && cloudReady && !IS_GUEST)) return;
+  DOC.set({deleted: patch||deletedIds, _updated:Date.now()},{merge:true})
+     .catch(e=>console.warn('cloud save deleted', e));
+}
+function markDeleted(key,id){
+  const ts=Date.now();
+  (deletedIds[key]||={})[id]=ts;
+  saveTombstones({[key]:{[id]:ts}});
+}
+function markRestored(key,id){
+  const ts=-Date.now();
+  (deletedIds[key]||={})[id]=ts;
+  saveTombstones({[key]:{[id]:ts}});
+}
+// хмарні надгробки ДОМІШУЄМО, а не заміщаємо: інакше пристрій, який щойно щось видалив,
+// стер би собі чужий слід (і навпаки). Перемагає свіжіший за модулем.
+function mergeTombstones(cloudDel){
+  if(!cloudDel || typeof cloudDel!=='object') return;
+  for(const k in cloudDel){
+    const cm=cloudDel[k]; if(!cm || typeof cm!=='object') continue;
+    const lm=(deletedIds[k]||={});
+    for(const id in cm){
+      const cv=cm[id]; if(typeof cv!=='number') continue;
+      const lv=lm[id];
+      if(typeof lv!=='number' || Math.abs(cv)>Math.abs(lv)) lm[id]=cv;
+    }
+  }
+}
+// прибирання протермінованих: локально просто викидаємо, у хмарі — явним FieldValue.delete(),
+// бо merge:true вміє лише додавати ключі в мапу, а не прибирати їх
+function gcTombstones(){
+  const cutoff=Date.now()-TOMB_TTL;
+  const stale={};
+  let any=false;
+  for(const k in deletedIds){
+    const m=deletedIds[k];
+    for(const id in m){
+      if(Math.abs(m[id])<cutoff){ delete m[id]; (stale[k]||={})[id]=true; any=true; }
+    }
+    if(!Object.keys(m).length) delete deletedIds[k];
+  }
+  if(!any) return false;
+  cacheLocal('wed-deleted', deletedIds);
+  try{
+    const del=window.firebase && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.delete;
+    if(del && DOC && cloudReady && !IS_GUEST){
+      const patch={};
+      for(const k in stale){ patch[k]={}; for(const id in stale[k]) patch[k][id]=firebase.firestore.FieldValue.delete(); }
+      DOC.set({deleted:patch},{merge:true}).catch(e=>console.warn('gc tombstones', e));
+    }
+  }catch(e){}
+  return true;
+}
 function delUndo(key,id,label){
   const a=ARR[key], list=a.get(), idx=list.findIndex(x=>x.id===id);
   if(idx<0) return;
   const removed=list[idx];
-  (_skipResurrect[key]||=new Set()).add(id);
+  markDeleted(key,id);
   a.set(list.filter(x=>x.id!==id)); saveJSON(key,a.get()); a.render();
   showToast(label||'Видалено', ()=>{
-    _skipResurrect[key]?.delete(id);   // повернули вручну — далі це вже звичайний елемент
+    markRestored(key,id);   // повернули вручну — далі це вже звичайний елемент
     const cur=a.get().slice(); cur.splice(Math.min(idx,cur.length),0,removed);
     a.set(cur); saveJSON(key,a.get()); a.render();
   });
@@ -3661,10 +3730,10 @@ function delUndo(key,id,label){
   // документ — він лишався навічно "осиротілим" у хмарі (і в офлайн-кеші Firestore на
   // пристрої), навіть після давнього видалення самої ідеї. Це і накопичувало "аномально
   // багато місця", яке зауважив Chrome. Приберемо документ, коли вікно "Скасувати" (5с у
-  // showToast) точно минуло і вона НЕ натиснула "Скасувати" (id досі в _skipResurrect).
+  // showToast) точно минуло і вона НЕ натиснула "Скасувати" (надгробок досі додатний).
   if(key==='wed-ideas' && WEDCOL && !IS_GUEST){
     setTimeout(()=>{
-      if(_skipResurrect[key]?.has(id)) WEDCOL.doc('m_idea_'+id).delete().catch(e=>console.warn('cleanup m_idea_'+id, e));
+      if(isDeleted(key,id)) WEDCOL.doc('m_idea_'+id).delete().catch(e=>console.warn('cleanup m_idea_'+id, e));
     }, 5500);
   }
 }
@@ -4194,9 +4263,8 @@ async function wipeOldCloth(){
   if(moodboard.cloth) Object.keys(moodboard.cloth).forEach(k=>{ if(idSet.has(k)) delete moodboard.cloth[k]; });
   saveJSON('wed-collage',collage); saveJSON('wed-outfitLayers',outfitLayers); saveJSON('wed-moodboard',moodboard);
 
-  // 3) самі речі. Через _skipResurrect — інакше мердж-гард повернув би їх із хмари
-  (_skipResurrect['wed-ideas']||=new Set());
-  ids.forEach(id=>_skipResurrect['wed-ideas'].add(id));
+  // 3) самі речі. Через надгробки — інакше мердж-гард повернув би їх із хмари
+  ids.forEach(id=>markDeleted('wed-ideas', id));
   ideas=ideas.filter(it=>!(it && idSet.has(it.id)));
   saveJSON('wed-ideas',ideas);
   refreshIdeaViews(); renderCouple();
@@ -6084,9 +6152,9 @@ function seedTemu2Cost(){
 function seedTemu2Split(){
   if(temu2SplitDone || IS_GUEST) return;
   temu2SplitDone=true;
-  // прибираємо два загальні рядки (через _skipResurrect, інакше merge-guard поверне їх з хмари)
+  // прибираємо два загальні рядки (через надгробки, інакше merge-guard поверне їх з хмари)
   const old=budget.filter(b=>b.name && b.name.includes('Temu замовлення'));
-  old.forEach(b=>(_skipResurrect['wed-budget']||=new Set()).add(b.id));
+  old.forEach(b=>markDeleted('wed-budget', b.id));
   if(old.length) budget=budget.filter(b=>!(b.name && b.name.includes('Temu замовлення')));
   const base=Date.now();
   const add=(nm,cat,sum,i)=>{
@@ -6104,7 +6172,7 @@ function seedTemu2Split(){
 // одноразово: вписати АКТУАЛЬНИЙ розклад дня (Софі + Хвильовий), який дала Катя, замінивши
 // стару чернетку таймлайну. Прибираємо всі старі ТАЙМОВАНІ пункти + залишки ігор ('game…') і
 // вірменської традиції ('tradarm…'), а українські традиції та інші беклог-нотатки лишаємо.
-// Прибирання — через _skipResurrect (як delUndo), інакше merge-guard воскресив би старі пункти.
+// Прибирання — через надгробки (як delUndo), інакше merge-guard воскресив би старі пункти.
 const REAL_SOFIA=[
   ['12:00','Велком-дрінк, зустріч гостей'],
   ['12:30','Гості розходяться по станціях (активності)'],
@@ -6131,8 +6199,8 @@ function seedRealSchedule(){
   realScheduleDone=true;
   const base=Date.now();
   const keepItem = it => it && it.id!=null && !it.time && !String(it.id).startsWith('game') && !String(it.id).startsWith('tradarm');
-  scriptSofia.forEach(it=>{ if(it&&it.id!=null && !keepItem(it)) (_skipResurrect['wed-scriptS']||=new Set()).add(it.id); });
-  scriptWave.forEach(it=>{ if(it&&it.id!=null && !keepItem(it)) (_skipResurrect['wed-scriptW']||=new Set()).add(it.id); });
+  scriptSofia.forEach(it=>{ if(it&&it.id!=null && !keepItem(it)) markDeleted('wed-scriptS', it.id); });
+  scriptWave.forEach(it=>{ if(it&&it.id!=null && !keepItem(it)) markDeleted('wed-scriptW', it.id); });
   const keepS = scriptSofia.filter(keepItem);
   const keepW = scriptWave.filter(keepItem);
   scriptSofia = REAL_SOFIA.map((r,i)=>({id:'rs'+base+'_'+i, time:r[0], text:r[1], loc:'Бути Софі'})).concat(keepS);
@@ -9052,12 +9120,12 @@ function mergeIncomingArray(localArr, cloudArr, key){
   });
   const cloudIds=new Set(cloudArr.filter(it=>it&&it.id!=null).map(it=>it.id));
   localArr.forEach(lIt=>{ if(lIt&&lIt.id!=null && !cloudIds.has(lIt.id)) merged.push(lIt); });
-  // ЩОЙНО ВИДАЛЕНЕ НЕ ВОСКРЕШАЄМО. _skipResurrect (його наповнює delUndo) досі захищав лише
+  // ЩОЙНО ВИДАЛЕНЕ НЕ ВОСКРЕШАЄМО. Надгробки (їх ставить delUndo) досі захищали лише
   // ЗАПИС у хмару, а прихід знімка — ні: у хмарі елемент ще є, поки наш запис у дорозі, тож
   // будь-який знімок у цю мить повертав картку назад. Видно як «видаляю — а воно знову тут»,
   // та ще й з наступним записом воскресле поверталося в хмару назавжди.
-  const skip=key && _skipResurrect[key];
-  return skip && skip.size ? merged.filter(it=>!(it && it.id!=null && skip.has(it.id))) : merged;
+  const skip=key && deletedIds[key];
+  return skip ? merged.filter(it=>!(it && it.id!=null && isDeleted(key, it.id))) : merged;
 }
 function startSync(){
   if(!DOC) return;
@@ -9076,23 +9144,27 @@ function startSync(){
     }
     const d=snap.data();
     applyingSnapshot=true;
+    // НАДГРОБКИ — ПЕРШИМИ, до масивів: саме вони вирішують, що з хмари не приймати.
+    // Домішуємо (не заміщаємо), інакше пристрій стер би собі чужий слід видалення.
+    mergeTombstones(d.deleted);
+    gcTombstones();
     if(Array.isArray(d.tasks))    tasks=mergeIncomingArray(tasks, d.tasks, 'wed-tasks');
     if(Array.isArray(d.guests))   guests=mergeIncomingArray(guests, d.guests, 'wed-guests');
     if(Array.isArray(d.budget))   budget=mergeIncomingArray(budget, d.budget, 'wed-budget');
     if(Array.isArray(d.contacts)) contacts=mergeIncomingArray(contacts, d.contacts, 'wed-contacts');
     if(Array.isArray(d.notes))    notes=mergeIncomingArray(notes, d.notes, 'wed-notes');
-    if(Array.isArray(d.organizerChat)) organizerChat=mergeIncomingArray(organizerChat, d.organizerChat);
+    if(Array.isArray(d.organizerChat)) organizerChat=mergeIncomingArray(organizerChat, d.organizerChat, 'wed-organizer-chat');
     if(typeof d.cap==='number')   budgetCap=d.cap;
-    if(Array.isArray(d.ideas))       ideas=mergeIncomingArray(ideas, d.ideas.filter(it=>it && it.id!=null));
+    if(Array.isArray(d.ideas))       ideas=mergeIncomingArray(ideas, d.ideas.filter(it=>it && it.id!=null), 'wed-ideas');
     if(Array.isArray(d.scriptSofia)) scriptSofia=mergeIncomingArray(scriptSofia, d.scriptSofia, 'wed-scriptS');
     if(Array.isArray(d.scriptWave))  scriptWave=mergeIncomingArray(scriptWave, d.scriptWave, 'wed-scriptW');
     if(Array.isArray(d.hotels))      hotels=mergeIncomingArray(hotels, d.hotels, 'wed-hotels');
-    if(Array.isArray(d.decor))       decor=mergeIncomingArray(decor, d.decor.filter(it=>it && it.id!=null));
+    if(Array.isArray(d.decor))       decor=mergeIncomingArray(decor, d.decor.filter(it=>it && it.id!=null), 'wed-decor');
     if(Array.isArray(d.orders))      orders=mergeIncomingArray(orders, d.orders, 'wed-orders');
-    if(Array.isArray(d.diyMaterials)) diyMaterials=mergeIncomingArray(diyMaterials, d.diyMaterials);
-    if(Array.isArray(d.helpers))      helpers=mergeIncomingArray(helpers, d.helpers);
+    if(Array.isArray(d.diyMaterials)) diyMaterials=mergeIncomingArray(diyMaterials, d.diyMaterials, 'wed-diy-materials');
+    if(Array.isArray(d.helpers))      helpers=mergeIncomingArray(helpers, d.helpers, 'wed-helpers');
     if(Array.isArray(d.music))       music=mergeIncomingArray(music, d.music, 'wed-music');
-    if(Array.isArray(d.mustPlay))    mustPlay=mergeIncomingArray(mustPlay, d.mustPlay);
+    if(Array.isArray(d.mustPlay))    mustPlay=mergeIncomingArray(mustPlay, d.mustPlay, 'wed-mustplay');
     if(Array.isArray(d.inspo))       inspo=mergeIncomingArray(inspo, d.inspo, 'wed-inspo');
     // важкі картинки тепер в окремих документах; із state читаємо лише ЯК ЗАПАСНИЙ варіант (старі дані)
     if(d.photos && typeof d.photos==='object') legacyMedia.photos=d.photos;
@@ -9169,6 +9241,7 @@ function startSync(){
     // снапшота з хмари — тобто КОЖНЕ відкриття застосунку й кожна зміна з іншого пристрою)
     // писав обʼєкти як є, з усіма картинками. Тобто скільки не чисти — наступний снапшот
     // одразу наливав усе назад, і Катя знову бачила «нічого не зберігається».
+    cacheLocal('wed-deleted',deletedIds);   // сліди видалення мусять пережити перезавантаження
     cacheLocal('wed-tasks',tasks);
     cacheLocal('wed-guests',guests);
     cacheLocal('wed-budget',budget);
