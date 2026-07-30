@@ -1048,6 +1048,15 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .update-banner button.ub-go{color:var(--terra);}
 .update-banner.dark-text button.ub-go{color:var(--gold);}
 .update-banner button.ub-later{color:inherit;opacity:.6;}
+/* Маркер версії в підвалі. Потрібен для діагностики: без нього «в мене не працює»
+   неможливо звести до конкретної збірки — доводиться вгадувати. Клік = скинути кеш. */
+.app-ver{margin:26px auto calc(96px + env(safe-area-inset-bottom));padding:0 16px;max-width:900px;
+  font-size:11px;line-height:1.6;color:var(--muted);text-align:center;letter-spacing:.02em;}
+.app-ver code{font-family:var(--mono,monospace);font-size:11px;opacity:.85;}
+.app-ver .av-bad{color:var(--terra);font-weight:700;}
+.app-ver button{margin-top:6px;background:none;border:1px solid var(--line);border-radius:9px;
+  color:var(--muted);font-family:inherit;font-size:11px;padding:6px 11px;cursor:pointer;min-height:32px;}
+.app-ver button:hover{color:var(--text);border-color:var(--muted);}
 /* одноразова підказка про свайп */
 /* знизу, а не посеред екрана: раніше підказка накривала саму панель вкладок,
    про яку й розповідає, і виглядала як зависла помилка */
@@ -2202,6 +2211,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="inspo-grid" id="inspoGrid"></div>
 </div>
 
+<div class="app-ver" id="appVer"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2210,6 +2221,69 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 <script src="../lib/budget-utils.js"></script>
 <script>
 const WEDDING = new Date('2026-09-06');
+
+/* ════ ВЕРСІЯ + ЗАХИСТ ВІД ЗАСТАРІЛОГО КЕШУ ════
+   Симптом «взагалі нічого не клікається» виникає, коли service worker віддає СТАРИЙ
+   lib/*.js до свіжого index.html: перший же виклик відсутньої функції валить
+   ініціалізацію, обробники подій не навішуються, і сторінка виглядає мертвою.
+   Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
+   код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
+   неможливо звести до конкретної версії, доводиться вгадувати. */
+const APP_BUILD='2026-07-30';
+const APP_CACHE='wedding-planner-v2';   // мусить збігатися з CACHE у sw.js
+// Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
+// живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
+const LIB_NEEDS=[
+  ['getStatus',()=>getStatus], ['plDays',()=>plDays], ['timeMask',()=>timeMask],
+  ['timeNorm',()=>timeNorm], ['stripGuestData',()=>stripGuestData], ['daysUntilWedding',()=>daysUntilWedding],
+  ['findDuplicateGuest',()=>findDuplicateGuest], ['totalPeople',()=>totalPeople], ['peopleAt',()=>peopleAt],
+  ['matchesAllFilters',()=>matchesAllFilters], ['sortGuestList',()=>sortGuestList],
+  ['parseMoney',()=>parseMoney], ['extractPrice',()=>extractPrice], ['computeBudgetTotals',()=>computeBudgetTotals]
+];
+const libMissing=LIB_NEEDS.filter(p=>{ try{ return typeof p[1]()!=='function'; }catch(e){ return true; } }).map(p=>p[0]);
+
+// Чистить ТІЛЬКО кеш браузера і реєстрацію SW. localStorage не торкаємо: там лежать
+// фото для анти-мигання і правки, які могли ще не доїхати в хмару.
+async function hardResetApp(){
+  try{ if('caches' in window){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  try{ if(navigator.serviceWorker){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } }catch(e){}
+  location.reload();
+}
+
+function renderAppVer(activeCache){
+  const el=document.getElementById('appVer'); if(!el) return;
+  const skew=activeCache && activeCache!=='—' && activeCache!==APP_CACHE;
+  const rows=[];
+  if(libMissing.length || skew) rows.push('<div class="av-bad">⚠️ У браузері застаріла копія застосунку — саме через це кнопки можуть не працювати.</div>');
+  let line='Планер · збірка '+APP_BUILD;
+  if(activeCache) line+=' · кеш <code>'+activeCache+'</code>';
+  line+= libMissing.length ? ' · <span class="av-bad">lib: немає '+libMissing.join(', ')+'</span>' : ' · lib ✓';
+  rows.push('<div>'+line+'</div>');
+  rows.push('<button type="button" id="appVerReset" title="Видаляє лише кеш браузера і перереєструє офлайн-режим. Дані у хмарі і локальні правки не зникають.">🔄 Скинути кеш і перезавантажити</button>');
+  el.innerHTML=rows.join('');
+  const rb=document.getElementById('appVerReset'); if(rb) rb.onclick=hardResetApp;
+}
+
+(function initAppVer(){
+  renderAppVer(null);
+  if(libMissing.length){
+    // фатальний випадок: показуємо помітно, бо до підвалу вона може й не долистати
+    const b=document.createElement('div');
+    b.className='update-banner show';
+    b.style.zIndex='999';
+    b.appendChild(Object.assign(document.createElement('span'),{textContent:'Стара копія в кеші — тому нічого не клікається'}));
+    const go=Object.assign(document.createElement('button'),{className:'ub-go',type:'button',textContent:'Виправити'});
+    go.onclick=hardResetApp;
+    b.appendChild(go);
+    document.body.appendChild(b);
+  }
+  if('caches' in window){
+    caches.keys().then(ks=>{
+      const mine=ks.filter(k=>k.indexOf('wedding-planner')===0);
+      renderAppVer(mine.length?mine.join(', '):'—');
+    }).catch(()=>{});
+  }
+})();
 
 /* ════ FIREBASE (спільна синхронізація між телефонами) ════ */
 const firebaseConfig = {
