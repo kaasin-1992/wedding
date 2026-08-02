@@ -2254,8 +2254,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-07-31.1';
-const APP_CACHE='wedding-planner-v5';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-07-31.2';
+const APP_CACHE='wedding-planner-v6';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -2320,6 +2320,7 @@ const firebaseConfig = {
   appId: "1:87093437583:web:d1ec82c0bca2f0334f3cfa"
 };
 let auth=null, DOC=null, WEDCOL=null, COMMENTS=null, RSVPS=null, DRESSVOTES=null, GUESTSCOL=null, cloudReady=false, seeded=false, applyingSnapshot=false, rsvpBound=false;
+
 let _dcLastLocalSave=0;   // мітка часу останнього ЛОКАЛЬНОГО збереження дрес-коду — короткий "грейс-період"
                           // нижче в onSnapshot захищає щойно обраний пресет/колір від фонового знімку,
                           // що ще не встиг підхопити цю саму зміну (гонка мережі, не лише порівняння _ts)
@@ -2419,6 +2420,63 @@ const DB = {
   get(k){ try{ return localStorage.getItem(k); }catch{ return _mem[k] ?? null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch{ _mem[k]=v; } }
 };
+
+/* ── СПІЛЬНИЙ ЧАС ДЛЯ ДВОХ ТЕЛЕФОНІВ ──
+   Уся синхронізація вирішує конфлікти за міткою updatedAt, а вона ставилась як Date.now() —
+   тобто з годинника САМОГО телефона. Наслідок: перемагає той пристрій, у якого годинник
+   спішить. Якщо телефон Діми йде вперед на 10 хвилин, його старі рядки бюджету завжди
+   «новіші» за свіжі Катині: він її правку не приймає, а _pendingResave ще й дописує його
+   версію назад у хмару — і правка гине для обох. Саме це Катя й бачила: «внесла зміни в
+   себе, а в Діми їх нема», і раніше «зберігається, а потім нічого не зберіглось».
+   Лікуємо в корені: беремо час сервера й далі міряємо ним, а не годинником телефона. */
+let srvOffset=(()=>{ const v=Number(DB.get('wed-clock-offset')); return isFinite(v)?v:0; })();
+function syncNow(){ return Date.now()+srvOffset; }
+function clockSkewMs(){ return -srvOffset; }   // наскільки телефон випереджає сервер
+
+async function calibrateClock(){
+  if(!DOC || IS_GUEST) return;
+  try{
+    const FV=firebase.firestore.FieldValue;
+    if(!FV || !FV.serverTimestamp) return;
+    await DOC.set({_clock: FV.serverTimestamp()}, {merge:true});
+    const snap=await DOC.get({source:'server'});          // саме з сервера, не з кешу
+    const t=snap.exists && snap.data()._clock;
+    const ms=(t && typeof t.toMillis==='function') ? t.toMillis() : null;
+    if(!ms) return;
+    srvOffset=ms-Date.now();
+    DB.set('wed-clock-offset', String(srvOffset));
+    reanchorTimestamps();
+  }catch(e){ console.warn('clock calibrate', e); }
+}
+
+// Наявні мітки ставились сирим Date.now() цього телефона, тож усі вони зміщені рівно на
+// його похибку. Додавши offset, переводимо їх у спільний час — це точний перерахунок, а
+// не здогад. Робимо один раз на кожну нову похибку (памʼятаємо, яку вже застосували).
+function reanchorTimestamps(){
+  const applied=Number(DB.get('wed-clock-anchored'))||0;
+  const delta=srvOffset-applied;
+  if(Math.abs(delta)<30000){ DB.set('wed-clock-anchored', String(srvOffset)); return 0; }
+  let n=0; const змінені=[];
+  Object.keys(ARR).forEach(key=>{
+    let arr; try{ arr=ARR[key].get(); }catch(e){ return; }
+    if(!Array.isArray(arr)) return;
+    let touched=false;
+    arr.forEach(it=>{ if(it && typeof it.updatedAt==='number'){ it.updatedAt+=delta; touched=true; n++; } });
+    if(touched){ змінені.push(key); try{ cacheLocal(key, arr); }catch(e){} }
+  });
+  Object.keys(deletedIds).forEach(k=>{
+    const m=deletedIds[k];
+    for(const id in m){ if(typeof m[id]==='number') m[id]+= (m[id]<0 ? -delta : delta); }
+  });
+  try{ cacheLocal('wed-deleted', deletedIds); }catch(e){}
+  DB.set('wed-clock-anchored', String(srvOffset));
+  // виправлені мітки треба віддати й у хмару, інакше другий телефон і далі бачитиме
+  // роздуті значення й відкидатиме свіжі правки. Вміст не змінюється — лише мітки.
+  if(!IS_GUEST) setTimeout(()=>{
+    змінені.forEach(k=>{ try{ saveJSON(k, ARR[k].get()); }catch(e){ console.warn('reanchor save', k, e); } });
+  }, 1500);
+  return n;
+}
 // ПРОФІЛАКТИКА: не чекаємо, поки сховище лусне і Катя знову напише «нічого не зберігається».
 // Прибирання відбувається САМО, при кожному відкритті — тиснути кнопку не треба.
 // Поріг знижений з 3 МБ до 1.5 МБ (при типовому ліміті ~5 МБ): між 1.5 і 5 МБ місця вже
@@ -2596,7 +2654,7 @@ function saveJSON(key, val){
           const p=prevById.get(it.id); if(!p) return;
           const a=JSON.stringify(stripDataUrlsDeep({...it,updatedAt:undefined}));
           const b=JSON.stringify(stripDataUrlsDeep({...p,updatedAt:undefined}));
-          if(a!==b) it.updatedAt=Date.now();
+          if(a!==b) it.updatedAt=syncNow();
         });
       }
     }catch(e){}
@@ -2624,7 +2682,7 @@ function saveJSON(key, val){
     // застосунку) перезаписати щойно обраний пресет/колір застарілим значенням із хмари,
     // яке ще не встигло підхопити цю саму зміну (звідси скарга "підсвічується, але одразу
     // зникає" — вибір і справді стається, просто наступний фоновий рендер його стирає)
-    val._ts=Date.now();
+    val._ts=syncNow();
     _dcLastLocalSave=val._ts;
     const light={...val};
     if(isDataUrl(val.gen)){ mediaSet('m_dresscode', {gen: val.gen}); light.gen='@m'; }
@@ -3139,7 +3197,7 @@ function moveTaskStage(id, stage){
   const t=tasks.find(x=>x.id===id); if(!t) return;
   t.stage=stage;
   t.done=(stage==='done');
-  t.updatedAt=Date.now();
+  t.updatedAt=syncNow();
   saveJSON('wed-tasks',tasks); renderTasks(); renderDecorTasks();
 }
 function toggleTask(id){ const t=tasks.find(x=>x.id===id); if(t){ moveTaskStage(id, t.done?'todo':'done'); } }
@@ -3556,14 +3614,14 @@ function renderGuests(){
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.grp); if(!g)return;
     g.group=(g.group||'friends')==='family'?'friends':'family';
-    g.updatedAt=Date.now();
+    g.updatedAt=syncNow();
     saveJSON('wed-guests',guests); renderGuests();
   });
   listEl.querySelectorAll('[data-ev]').forEach(el=>el.onclick=e=>{
     e.stopPropagation();
     const g=guests.find(x=>x.id===el.dataset.ev); if(!g)return;
     g.event={both:'ceremony',ceremony:'party',party:'both'}[g.event]||'both';
-    g.updatedAt=Date.now();
+    g.updatedAt=syncNow();
     saveJSON('wed-guests',guests); renderGuests();
   });
   listEl.querySelectorAll('[data-attr]').forEach(el=>el.onclick=e=>{
@@ -3577,7 +3635,7 @@ function renderGuests(){
     else if(a==='veg') g.veg=!g.veg;
     else if(a==='kids') g.kids=((Number(g.kids)||0)+1)%4;
     else if(a==='plus1'){ const order=['none','pending','confirmed']; let cur=order.indexOf(g.plus1); if(cur<0)cur=0; g.plus1=order[(cur+1)%order.length]; }
-    g.updatedAt=Date.now();
+    g.updatedAt=syncNow();
     saveJSON('wed-guests',guests); renderGuests();
     if(a==='alco'||a==='veg') renderBar();
   });
@@ -3585,7 +3643,7 @@ function renderGuests(){
     const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gname); if(!g)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
       if(!v){ el.textContent=g.name; return; }
-      if(v!==g.name){ g.name=v; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); renderGuests(); }
+      if(v!==g.name){ g.name=v; g.updatedAt=syncNow(); saveJSON('wed-guests',guests); renderGuests(); }
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
@@ -3594,7 +3652,7 @@ function renderGuests(){
     el.addEventListener('focus',()=>{ if(!el.classList.contains('empty')) return; el.textContent=''; el.classList.remove('empty'); });
     const save=()=>{ const g=guests.find(x=>x.id===el.dataset.gcontact); if(!g)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
-      if(v!==(g.contact||'')){ g.contact=v; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); }
+      if(v!==(g.contact||'')){ g.contact=v; g.updatedAt=syncNow(); saveJSON('wed-guests',guests); }
       if(!v){ el.textContent='＋ контакт'; el.classList.add('empty'); }
     };
     el.addEventListener('blur',save);
@@ -3604,7 +3662,7 @@ function renderGuests(){
     const g=guests.find(x=>x.id===b.dataset.gvcf); if(!g) return;
     pickVcfContact(({contact})=>{
       if(!contact){ showToast('У файлі немає телефону/email 😕'); return; }
-      g.contact=contact; g.updatedAt=Date.now(); saveJSON('wed-guests',guests); renderGuests();
+      g.contact=contact; g.updatedAt=syncNow(); saveJSON('wed-guests',guests); renderGuests();
       showToast('📇 Контакт додано');
     });
   });
@@ -3690,12 +3748,12 @@ function saveTombstones(patch){
      .catch(e=>console.warn('cloud save deleted', e));
 }
 function markDeleted(key,id){
-  const ts=Date.now();
+  const ts=syncNow();
   (deletedIds[key]||={})[id]=ts;
   saveTombstones({[key]:{[id]:ts}});
 }
 function markRestored(key,id){
-  const ts=-Date.now();
+  const ts=-syncNow();
   (deletedIds[key]||={})[id]=ts;
   saveTombstones({[key]:{[id]:ts}});
 }
@@ -3954,7 +4012,7 @@ function renderContacts(){
     const save=()=>{ const c=contacts.find(x=>x.id===el.dataset.crole); if(!c)return;
       const v=el.textContent.replace(/\s+/g,' ').trim();
       if(!v){ el.textContent=c.role; return; }
-      if(v!==c.role){ c.role=v; c.updatedAt=Date.now(); saveJSON('wed-contacts',contacts); }
+      if(v!==c.role){ c.role=v; c.updatedAt=syncNow(); saveJSON('wed-contacts',contacts); }
     };
     el.addEventListener('blur',save);
     el.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); el.blur(); } });
@@ -6089,7 +6147,7 @@ function seedNpshopCost(){
   npshopCostDone=true;
   const set=(match,name,cat,sum)=>{
     const row=budget.find(b=>b.name && b.name.includes(match));
-    if(row){ row.name=name; row.planned=sum; row.paid=sum; row.updatedAt=Date.now(); }
+    if(row){ row.name=name; row.planned=sum; row.paid=sum; row.updatedAt=syncNow(); }
     else budget.push({id:'np'+Date.now()+'_'+match.length, name, cat, planned:sum, paid:sum});
   };
   set('Фотоапарати одноразові','Фотоапарати одноразові (прострочені 2600 ₴ + Fujifilm 8-pack з доставкою)','Фото / Відео',10217);
@@ -6104,7 +6162,7 @@ function seedStickersCost(){
   if(stickersCostDone || IS_GUEST) return;
   stickersCostDone=true;
   const row=budget.find(b=>b.name && b.name.includes('Друк наліпок'));
-  if(row){ row.planned=700; row.paid=700; row.updatedAt=Date.now(); }
+  if(row){ row.planned=700; row.paid=700; row.updatedAt=syncNow(); }
   else budget.push({id:'stk'+Date.now(), name:'Друк наліпок на одноразові фотоапарати', cat:'Фото / Відео', planned:700, paid:700});
   saveJSON('wed-budget',budget);
   saveJSON('wed-stickers-cost',true);
@@ -6117,9 +6175,9 @@ function seedVasesFix(){
   if(vasesFixDone || IS_GUEST) return;
   vasesFixDone=true;
   const ban=budget.find(b=>b.name && b.name.includes('Банери'));
-  if(ban){ ban.name='Банери (Amazon)'; ban.planned=0; ban.paid=0; ban.updatedAt=Date.now(); }
+  if(ban){ ban.name='Банери (Amazon)'; ban.planned=0; ban.paid=0; ban.updatedAt=syncNow(); }
   const vase=budget.find(b=>b.name && (b.name.includes('Вази') || b.name.includes('Вазочки')));
-  if(vase){ vase.name='Вазочки (Amazon) з доставкою'; vase.planned=9913; vase.paid=9913; vase.updatedAt=Date.now(); }
+  if(vase){ vase.name='Вазочки (Amazon) з доставкою'; vase.planned=9913; vase.paid=9913; vase.updatedAt=syncNow(); }
   else budget.push({id:'vz'+Date.now(), name:'Вазочки (Amazon) з доставкою', cat:'Декор / Флористика', planned:9913, paid:9913});
   // дрібні декор-покупки з рук (вже куплено)
   if(!budget.some(b=>b.name && b.name.includes('Б/у стрічки'))){
@@ -9126,8 +9184,13 @@ function mergeIncomingArray(localArr, cloudArr, key){
     // (він іде після мережевого DOC.get) не встигав — і при наступному відкритті застарілий
     // хмарний запис мовчки її затирав. Катя бачила «зберіглось → помилка → нічого немає».
     // Тепер вирішує ЛИШЕ мітка часу, і в обох напрямках: якщо хмара свіжіша — перемагає вона.
-    const lTs=typeof lIt.updatedAt==='number'?lIt.updatedAt:-Infinity;
-    const cTs=typeof cIt.updatedAt==='number'?cIt.updatedAt:-Infinity;
+    // Запобіжник від зіпсованої мітки: якщо вона більш ніж на добу попереду серверного
+    // часу, її ставив збитий годинник — такій вірити не можна, інакше один кривий телефон
+    // назавжди виграє всі конфлікти. Тоді перемагає хмара, як безпечніший варіант.
+    const межа=syncNow()+86400000;
+    const норм=ts=>(typeof ts==='number' && ts<межа)?ts:-Infinity;
+    const lTs=норм(lIt.updatedAt);
+    const cTs=норм(cIt.updatedAt);
     if(lTs>cTs){ if(key) _pendingResave.add(key); return lIt; }
     // ⚠️ ЗБЕРІГАЄМО ТОТОЖНІСТЬ ОБʼЄКТА, а не підставляємо хмарний екземпляр.
     // Раніше `return cIt` віддавав НОВИЙ обʼєкт, і весь масив після мерджу складався з нових
@@ -9154,6 +9217,7 @@ function mergeIncomingArray(localArr, cloudArr, key){
 }
 function startSync(){
   if(!DOC) return;
+  calibrateClock();   // спершу домовляємось про час, інакше конфлікти вирішує кривий годинник
   DOC.onSnapshot(snap=>{
     cloudReady=true;
     if(!snap.exists){
@@ -9585,6 +9649,14 @@ injectCmtButtons();
         хмара==='ok' ? 'Дані синхронізуються між телефоном і компом'
         : хмара==='гостьовий режим' ? 'Гостьовий перегляд — тільки читання'
         : 'Немає звʼязку. Правки збережуться на цьому пристрої й доїдуть, коли зʼявиться інтернет');
+
+    // 5) годинник телефона — саме через нього зміни «не доходили» до другого пристрою
+    const зсув=clockSkewMs();
+    const хв=Math.round(Math.abs(зсув)/60000);
+    const годинникОк=Math.abs(зсув)<60000;
+    add(годинникОк, 'Годинник телефона',
+        годинникОк ? 'Збігається з сервером — синхронізація з другим телефоном коректна'
+        : 'Розходиться із сервером на ' + (хв||1) + ' хв (' + (зсув>0?'спішить':'відстає') + '). Я вже враховую це, але краще увімкнути автоматичний час у налаштуваннях телефона');
 
     document.getElementById('stList').innerHTML = rows.join('');
     document.getElementById('stNote').innerHTML = bad===0
