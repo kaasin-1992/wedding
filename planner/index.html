@@ -1075,6 +1075,18 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .modal-btn.ghost:hover{background:var(--surface2);color:var(--text);}
 .modal-btn.gold{background:var(--gold);color:#fff;}
 .modal-btn.gold:disabled{opacity:.6;cursor:default;}
+/* Самоперевірка. Катя: «я не розумію чи працює щось взагалі» — і мала рацію: я просила
+   її звіряти рядки версій і відтворювати баги. Застосунок має відповідати на це сам. */
+.st-box{max-width:420px;text-align:left;}
+.st-title{font-family:var(--sans);font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px;}
+.st-list{display:flex;flex-direction:column;gap:11px;}
+.st-row{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;}
+.st-ico{flex:none;font-size:15px;line-height:1.45;}
+.st-body strong{display:block;color:var(--text);font-weight:600;}
+.st-body span{color:var(--muted);font-size:13px;}
+.st-row.bad .st-body strong{color:var(--terra);}
+.st-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--muted);}
+.st-note b{color:var(--text);}
 /* вибір картинки для ідеї */
 .imgpick-box{max-width:420px;text-align:left;}
 .imgpick-title{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:4px;}
@@ -1192,6 +1204,18 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button id="quickAddSubmit" class="submit-btn">Додати</button>
 </div>
 
+<div class="modal-overlay" id="selfTest" style="display:none">
+  <div class="modal-box st-box">
+    <div class="st-title">Перевірка застосунку</div>
+    <div class="st-list" id="stList"></div>
+    <div class="st-note" id="stNote"></div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="stClose">Закрити</button>
+      <button class="modal-btn" id="stAgain">Перевірити ще раз</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal" style="display:none">
   <div class="modal-box">
     <div class="modal-text" id="modalText"></div>
@@ -1289,6 +1313,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button type="button" class="sync-now" id="syncNowBtn" title="Підтягнути останнє з хмари">🔄 Оновити дані</button>
   <button type="button" id="copyTabLinkBtn" title="Скопіювати посилання на цю вкладку">🔗 Лінк на розділ</button>
   <button type="button" id="freeSpaceBtn" title="Звільнити памʼять браузера (фото в хмарі не постраждають)">🧹 Звільнити памʼять</button>
+  <button type="button" id="selfTestBtn" title="Перевірити, чи все справді працює — застосунок перевірить себе сам">🩺 Все працює?</button>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -2229,8 +2254,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-07-30.3';
-const APP_CACHE='wedding-planner-v4';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-07-31.1';
+const APP_CACHE='wedding-planner-v5';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -9495,6 +9520,88 @@ injectCmtButtons();
     showToast('🧹 Звільнено '+Math.round(freed/1024)+' КБ (було '+Math.round(before/1024)+', лишилось '+Math.round(u.total/1024)+' КБ). Зараз перезавантажу…');
     setTimeout(()=>location.reload(), 2200);
   };
+  /* ── САМОПЕРЕВІРКА ──
+     Катя: «я не розумію чи працює щось взагалі». Просити її звіряти номер збірки в підвалі
+     чи відтворювати баг — це перекладати діагностику на неї. Застосунок перевіряє себе сам
+     і відповідає словами, а не рядками версій.
+     Перевірка справжня: видалення реально проганяється через той самий mergeIncomingArray,
+     який і воскрешав завдання. Але СЛІДІВ НЕ ЛИШАЄ — тимчасове завдання й надгробок до нього
+     живуть лише в памʼяті, у хмару не йдуть, і прибираються у finally навіть якщо щось впаде. */
+  function stRow(ok, title, detail){
+    return '<div class="st-row'+(ok?'':' bad')+'"><span class="st-ico">'+(ok?'✅':'⚠️')+'</span>'+
+           '<span class="st-body"><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></span></div>';
+  }
+  async function runSelfTest(){
+    const rows=[]; let bad=0;
+    const add=(ok,t,d)=>{ rows.push(stRow(ok,t,d)); if(!ok) bad++; };
+
+    // 1) чи це взагалі свіжа версія
+    const кеші = ('caches' in window) ? await caches.keys().then(k=>k.filter(x=>x.indexOf('wedding-planner')===0)).catch(()=>[]) : [];
+    const скіс = кеші.length && !кеші.includes(APP_CACHE);
+    add(!скіс && !libMissing.length, 'Версія застосунку',
+        'Збірка ' + APP_BUILD + (кеші.length ? ' · кеш ' + кеші.join(', ') : '') +
+        (скіс ? ' — у браузері застрягла стара копія, натисни «Скинути кеш» у підвалі' :
+         libMissing.length ? ' — не вистачає частин коду, натисни «Скинути кеш» у підвалі' : ' — свіжа'));
+
+    // 2) чи взагалі зберігається
+    let зберігається=false;
+    try{
+      const проба='__st'+Date.now();
+      DB.set('wed-selftest', проба);
+      зберігається = DB.get('wed-selftest')===проба;
+      localStorage.removeItem('wed-selftest');
+    }catch(e){}
+    const u=localUsage();
+    add(зберігається, 'Збереження на телефоні',
+        зберігається ? 'Працює. Зайнято ' + Math.round(u.total/1024) + ' КБ'
+                     : 'Не вдалось записати — памʼять браузера переповнена, натисни «🧹 Звільнити памʼять»');
+
+    // 3) ГОЛОВНЕ: чи тримається видалення
+    const проб='__selftest_'+Date.now();
+    let тримається=false;
+    try{
+      tasks.push({id:проб, text:'Тимчасове завдання самоперевірки', done:false});
+      (deletedIds['wed-tasks']||={})[проб]=Date.now();          // тільки в памʼяті, у хмару не пишемо
+      const безНього = tasks.filter(t=>t.id!==проб);
+      const хмараЩеМає = безНього.concat([{id:проб, text:'Тимчасове завдання самоперевірки', done:false}]);
+      тримається = !mergeIncomingArray(безНього, хмараЩеМає, 'wed-tasks').some(t=>t && t.id===проб);
+    }catch(e){ тримається=false; }
+    finally{
+      const i=tasks.findIndex(t=>t && t.id===проб); if(i>-1) tasks.splice(i,1);
+      if(deletedIds['wed-tasks']) delete deletedIds['wed-tasks'][проб];
+    }
+    add(тримається, 'Видалення тримається',
+        тримається ? 'Видалене не повертається — навіть якщо в хмарі воно ще є'
+                   : 'Видалене може повернутись. Скинь кеш у підвалі — схоже, версія стара');
+
+    // 4) чи є звʼязок із хмарою
+    let хмара='—';
+    if(IS_GUEST) хмара='гостьовий режим';
+    else if(!DOC) хмара='немає';
+    else{
+      try{ await DOC.get(); хмара='ok'; }catch(e){ хмара='помилка'; }
+    }
+    add(хмара==='ok' || хмара==='гостьовий режим', 'Звʼязок із хмарою',
+        хмара==='ok' ? 'Дані синхронізуються між телефоном і компом'
+        : хмара==='гостьовий режим' ? 'Гостьовий перегляд — тільки читання'
+        : 'Немає звʼязку. Правки збережуться на цьому пристрої й доїдуть, коли зʼявиться інтернет');
+
+    document.getElementById('stList').innerHTML = rows.join('');
+    document.getElementById('stNote').innerHTML = bad===0
+      ? '<b>Все гаразд.</b> Якщо щось усе одно поводиться дивно — просто напиши мені, що саме, і я подивлюсь.'
+      : '<b>Знайшла ' + bad + ' ' + (bad===1?'проблему':'проблеми') + '.</b> Що робити — написано в рядку вище. Якщо не допоможе — напиши мені.';
+  }
+  const stOv=document.getElementById('selfTest');
+  const stb=document.getElementById('selfTestBtn');
+  if(stb) stb.onclick=async()=>{
+    document.getElementById('stList').innerHTML='<div class="st-row"><span class="st-ico">⏳</span><span class="st-body"><strong>Перевіряю…</strong></span></div>';
+    document.getElementById('stNote').textContent='';
+    stOv.style.display='flex';
+    try{ await runSelfTest(); }catch(e){ console.warn('selftest', e); }
+  };
+  { const c=document.getElementById('stClose'); if(c) c.onclick=()=>{ stOv.style.display='none'; }; }
+  { const a=document.getElementById('stAgain'); if(a) a.onclick=async()=>{ try{ await runSelfTest(); }catch(e){ console.warn('selftest', e); } }; }
+
   const syncBtn=document.getElementById('syncNowBtn');
   if(syncBtn) syncBtn.onclick=()=>{
     // перезавантаження = гарантований чистий підтяг із хмари: на новому старті localEditSinceLoad=false,
