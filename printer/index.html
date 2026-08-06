@@ -1,0 +1,1661 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Міні-принтер · Катя &amp; Діма</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#B0464E">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Принтер">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%96%A8%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF3EF; --surface:#FFFFFF; --surface2:#F6E7E0;
+  --ink:#3A2530; --muted:#8A6E76;
+  --wine:#B0464E; --wine-soft:#F1D9D6; --gold:#B98A4B; --sky:#5C93A8;
+  --line:#EAD7D0; --ok:#3E8E63; --warn:#C8801F; --err:#C0392B;
+  --serif:'Cormorant Garamond', Georgia, serif;
+  --sans:'Manrope', -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#170F13; --surface:#221820; --surface2:#2C1E27; --ink:#F5E7EE; --muted:#C39FAD;
+    --wine:#E9808A; --wine-soft:#3A222A; --gold:#DDB877; --sky:#8FC1D4; --line:#3A2A33;
+    --ok:#6FC694; --warn:#E5AC5C; --err:#F08076; }
+}
+:root[data-theme="dark"]{ --bg:#170F13; --surface:#221820; --surface2:#2C1E27; --ink:#F5E7EE; --muted:#C39FAD;
+  --wine:#E9808A; --wine-soft:#3A222A; --gold:#DDB877; --sky:#8FC1D4; --line:#3A2A33;
+  --ok:#6FC694; --warn:#E5AC5C; --err:#F08076; }
+:root[data-theme="light"]{ --bg:#FBF3EF; --surface:#FFFFFF; --surface2:#F6E7E0; --ink:#3A2530; --muted:#8A6E76;
+  --wine:#B0464E; --wine-soft:#F1D9D6; --gold:#B98A4B; --sky:#5C93A8; --line:#EAD7D0;
+  --ok:#3E8E63; --warn:#C8801F; --err:#C0392B; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 15% 6%, rgba(176,70,78,.10), transparent 40%),
+    radial-gradient(circle at 85% 96%, rgba(185,138,75,.09), transparent 40%);}
+.wrap{max-width:560px;margin:0 auto;padding:26px 16px 140px}
+header{text-align:center;margin-bottom:18px}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:8px}
+h1{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.1;margin:0 0 4px}
+h1 em{font-style:italic;color:var(--wine)}
+.sub{color:var(--muted);font-size:14px;margin:0}
+a.back{display:inline-block;margin-top:10px;color:var(--muted);text-decoration:none;font-size:14px}
+/* Кнопка теми НЕ fixed: нижче є липка смуга підключення, і на вузькому екрані
+   вони наїжджали одна на одну — кругляк накривав кнопку «Підключити». */
+.theme-toggle{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;z-index:10}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;
+  box-shadow:0 4px 16px rgba(140,80,90,.06)}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:800;letter-spacing:.01em}
+.card h3{font-size:13px;margin:14px 0 8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── смуга підключення ── */
+.conn{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:10px 12px;margin-bottom:12px;position:sticky;top:8px;z-index:20;
+  box-shadow:0 6px 20px rgba(140,80,90,.10)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.dot.on{background:var(--ok)} .dot.busy{background:var(--warn)} .dot.err{background:var(--err)}
+.conn .who{flex:1;min-width:0}
+.conn .who b{display:block;font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conn .who span{display:block;font-size:12px;color:var(--muted)}
+
+button,select,input,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:11px;padding:9px 13px;cursor:pointer;font-weight:600}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--wine);border-color:var(--wine);color:#fff}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.wide{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{
+  width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--bg);}
+textarea{resize:vertical;min-height:96px;line-height:1.5}
+label.fld{display:block;margin-bottom:10px}
+label.fld>span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.slider{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.slider>span{font-size:12px;color:var(--muted);width:96px;flex:0 0 auto;font-weight:600}
+.slider input[type=range]{flex:1;min-width:0;accent-color:var(--wine)}
+.slider>b{font-size:12px;width:44px;text-align:right;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.chk{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;cursor:pointer}
+.chk input{accent-color:var(--wine);width:17px;height:17px}
+
+/* ── вкладки ── */
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;
+  padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected=true]{background:var(--wine);border-color:var(--wine);color:#fff}
+section[hidden]{display:none}
+
+/* ── попередній перегляд ── */
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:25;box-shadow:0 -6px 22px rgba(140,80,90,.12)}
+.dock .inner{max-width:560px;margin:0 auto;display:flex;gap:12px;align-items:center}
+.paper{background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px;flex:0 0 auto;
+  max-height:96px;overflow:hidden;display:flex;align-items:flex-start}
+.paper canvas{display:block;width:76px;height:auto;image-rendering:pixelated}
+.dock .meta{flex:1;min-width:0;font-size:12px;color:var(--muted)}
+.dock .meta b{display:block;font-size:14px;color:var(--ink)}
+.bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--wine);width:0;transition:width .12s linear}
+
+.preview-full{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:auto;max-height:420px}
+.preview-full canvas{display:block;width:100%;max-width:384px;height:auto;image-rendering:pixelated;margin:0 auto}
+
+.note{font-size:13px;color:var(--muted);line-height:1.5}
+.note.warn{color:var(--warn)}
+.banner{border-radius:14px;padding:13px 14px;margin-bottom:12px;font-size:14px;line-height:1.55}
+.banner.bt{background:var(--wine-soft);border:1px solid var(--wine)}
+.banner.bt b{display:block;margin-bottom:5px}
+.banner.err{background:var(--wine-soft);border:1px solid var(--err);color:var(--ink)}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;
+  background:var(--surface2);color:var(--muted);margin-left:6px}
+.pill.ok{background:rgba(62,142,99,.15);color:var(--ok)}
+.pill.err{background:rgba(192,57,43,.15);color:var(--err)}
+
+ul.picks{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+ul.picks li{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px}
+ul.picks li:last-child{border-bottom:0}
+ul.picks li input{accent-color:var(--wine);width:17px;height:17px;flex:0 0 auto}
+ul.picks li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto}
+
+/* ── замір наклейки по фото ── */
+.measure{position:relative;touch-action:none;user-select:none;background:var(--surface2);border-radius:10px;overflow:hidden}
+.measure img{display:block;width:100%;height:auto;pointer-events:none}
+.pin{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid #fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:grab;touch-action:none}
+.pin.ref{background:#2f7fd4} .pin.w{background:#c0392b} .pin.h{background:#3e8e63}
+.measure svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.roll-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.roll-item:last-child{border-bottom:0}
+.roll-item b{flex:1;min-width:0;font-weight:600}
+.log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:9px;max-height:180px;overflow:auto;white-space:pre-wrap;color:var(--muted)}
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" aria-label="Тема">🌙</button>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Наш міні-принтер</div>
+    <h1>Друк <em>без</em> реклами</h1>
+    <p class="sub">Текст, фото, списки, QR і наклейки — прямо з браузера</p>
+    <a class="back" href="../">← усі наші сторінки</a>
+  </header>
+
+  <div class="banner bt" id="btWarn" hidden></div>
+
+  <div class="conn" id="connBar">
+    <span class="dot" id="connDot"></span>
+    <span class="who"><b id="connName">Принтер не підключений</b><span id="connState">натисни «Підключити»</span></span>
+    <button class="btn primary" id="btnConnect">Підключити</button>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-tab="text" aria-selected="true">📝 Текст</button>
+    <button role="tab" data-tab="photo" aria-selected="false">🖼 Фото</button>
+    <button role="tab" data-tab="list" aria-selected="false">✅ Списки та QR</button>
+    <button role="tab" data-tab="planner" aria-selected="false">💍 З планера</button>
+    <button role="tab" data-tab="roll" aria-selected="false">🏷 Рулон</button>
+    <button role="tab" data-tab="dev" aria-selected="false">⚙️ Принтер</button>
+  </nav>
+
+  <!-- ══════════ ТЕКСТ ══════════ -->
+  <section id="tab-text">
+    <div class="card">
+      <h2>Що надрукувати</h2>
+      <textarea id="txtBody" placeholder="Пиши тут…&#10;Кирилиця, розділові знаки й емодзі — усе малюється як є."></textarea>
+      <div class="row" style="margin-top:8px">
+        <select id="txtPreset">
+          <option value="">— готова заготовка —</option>
+          <option value="note">Нотатка з датою</option>
+          <option value="shop">Список покупок</option>
+          <option value="quote">Цитата в рамці</option>
+          <option value="label">Підпис на банку</option>
+          <option value="wish">Побажання гостю</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Як має виглядати</h2>
+      <label class="fld"><span>Шрифт</span>
+        <select id="txtFont">
+          <option value="sans">Без засічок (Manrope)</option>
+          <option value="serif">Із засічками (Cormorant)</option>
+          <option value="mono">Моноширинний</option>
+          <option value="system">Системний</option>
+        </select>
+      </label>
+      <div class="slider"><span>Розмір</span><input type="range" id="txtSize" min="14" max="88" value="30"><b id="txtSizeV">30</b></div>
+      <div class="slider"><span>Інтервал</span><input type="range" id="txtLead" min="100" max="220" value="132"><b id="txtLeadV">1.3</b></div>
+      <label class="fld"><span>Вирівнювання</span>
+        <select id="txtAlign"><option value="left">Ліворуч</option><option value="center">По центру</option><option value="right">Праворуч</option></select>
+      </label>
+      <label class="chk"><input type="checkbox" id="txtBold"> Жирний</label>
+      <label class="chk"><input type="checkbox" id="txtInvert"> Білим по чорному</label>
+      <label class="chk"><input type="checkbox" id="txtRule"> Лінійка зверху й знизу</label>
+    </div>
+  </section>
+
+  <!-- ══════════ ФОТО ══════════ -->
+  <section id="tab-photo" hidden>
+    <div class="card">
+      <h2>Фото</h2>
+      <div class="row">
+        <label class="btn wide" style="text-align:center">Вибрати фото
+          <input type="file" id="phFile" accept="image/*" hidden></label>
+        <label class="btn wide" style="text-align:center">Зняти камерою
+          <input type="file" id="phCam" accept="image/*" capture="environment" hidden></label>
+      </div>
+      <p class="note" style="margin-top:10px" id="phHint">Ще нічого не вибрано. Тягни пальцем по перегляду, щоб посунути, двома — щоб наблизити.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="phRotate">↻ Повернути</button>
+        <button class="btn" id="phFit">Вписати</button>
+        <button class="btn" id="phFill">Заповнити</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Якість друку</h2>
+      <label class="fld"><span>Спосіб передачі півтонів</span>
+        <select id="phDither">
+          <option value="floyd">Флойд–Стайнберг — найдетальніше</option>
+          <option value="atkinson">Аткінсон — контрастніше, чистіше</option>
+          <option value="bayer">Байєр — рівномірна сітка</option>
+          <option value="threshold">Простий поріг — тільки для штрихових</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="phAuto" checked> Автоматично розтягнути контраст</label>
+      <div class="slider"><span>Яскравість</span><input type="range" id="phBright" min="-100" max="100" value="0"><b id="phBrightV">0</b></div>
+      <div class="slider"><span>Контраст</span><input type="range" id="phContrast" min="-100" max="100" value="10"><b id="phContrastV">10</b></div>
+      <div class="slider"><span>Гама</span><input type="range" id="phGamma" min="30" max="250" value="100"><b id="phGammaV">1.0</b></div>
+      <div class="slider"><span>Поріг</span><input type="range" id="phThresh" min="40" max="215" value="128"><b id="phThreshV">128</b></div>
+      <label class="chk"><input type="checkbox" id="phInvert"> Негатив</label>
+      <p class="note">Саме тут і ховається різниця з рідним застосунком: він ріже фото простим порогом, тому воно й виходить чорною плямою. Розсіювання похибки дає видимі півтони.</p>
+    </div>
+  </section>
+
+  <!-- ══════════ СПИСКИ ТА QR ══════════ -->
+  <section id="tab-list" hidden>
+    <div class="card">
+      <h2>Чек-лист</h2>
+      <label class="fld"><span>Заголовок</span><input type="text" id="lsTitle" placeholder="Наприклад: Ранок нареченої"></label>
+      <label class="fld"><span>По пункту в рядок</span>
+        <textarea id="lsBody" placeholder="Забрати букет&#10;Віддати обручки свідку&#10;Зарядити камери"></textarea></label>
+      <div class="slider"><span>Розмір</span><input type="range" id="lsSize" min="16" max="56" value="26"><b id="lsSizeV">26</b></div>
+      <label class="chk"><input type="checkbox" id="lsBoxes" checked> Квадратики для галочок</label>
+      <label class="chk"><input type="checkbox" id="lsNums"> Нумерувати</label>
+    </div>
+    <div class="card">
+      <h2>QR-код</h2>
+      <label class="fld"><span>Текст або посилання</span>
+        <input type="text" id="qrText" placeholder="https://лютевесілля.укр"></label>
+      <label class="fld"><span>Підпис під кодом</span><input type="text" id="qrCap" placeholder="необов'язково"></label>
+      <div class="row">
+        <label class="fld"><span>Запас корекції</span>
+          <select id="qrLevel">
+            <option value="L">Мінімальний — код дрібніший</option>
+            <option value="M" selected>Середній</option>
+            <option value="Q">Підвищений</option>
+            <option value="H">Максимальний — терпить згини</option>
+          </select></label>
+      </div>
+      <div class="slider"><span>Розмір</span><input type="range" id="qrSize" min="40" max="100" value="80"><b id="qrSizeV">80%</b></div>
+      <p class="note" id="qrNote"></p>
+      <div class="row">
+        <button class="btn" id="qrFromGame">Посилання на гру</button>
+        <button class="btn" id="qrFromAlbum">Спільний альбом</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ З ПЛАНЕРА ══════════ -->
+  <section id="tab-planner" hidden>
+    <div class="card" id="plLogin">
+      <h2>Дані з планера</h2>
+      <p class="note">Той самий email і пароль, що й у планері. Читаємо тільки на перегляд — нічого не змінюємо.</p>
+      <label class="fld" style="margin-top:10px"><span>Email</span><input type="email" id="plEmail" autocomplete="username"></label>
+      <label class="fld"><span>Пароль</span><input type="password" id="plPass" autocomplete="current-password"></label>
+      <button class="btn primary wide" id="plBtn">Завантажити</button>
+      <p class="note warn" id="plErr" style="margin-top:8px"></p>
+    </div>
+    <div class="card" id="plPick" hidden>
+      <h2>Що друкуємо <span class="pill ok" id="plLoaded"></span></h2>
+      <label class="fld"><span>Розділ</span>
+        <select id="plKind">
+          <option value="tasks">Завдання</option>
+          <option value="guests">Список гостей</option>
+          <option value="badges">Бейджі гостей — по одному на наклейку</option>
+          <option value="seating">Розсадка по столах</option>
+          <option value="contacts">Контакти</option>
+        </select>
+      </label>
+      <label class="fld" id="plFilterWrap"><span>Які саме</span>
+        <select id="plFilter">
+          <option value="undone">Тільки невиконані</option>
+          <option value="hot">Тільки термінові</option>
+          <option value="all">Усі</option>
+        </select>
+      </label>
+      <div id="plList"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="plAll">Позначити все</button>
+        <button class="btn" id="plNone">Зняти все</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ РУЛОН ══════════ -->
+  <section id="tab-roll" hidden>
+    <div class="card">
+      <h2>Який зараз рулон</h2>
+      <label class="fld"><span>Вибрати</span><select id="rlPreset"></select></label>
+      <div class="row">
+        <label class="fld"><span>Ширина, мм</span><input type="number" id="rlW" min="10" max="48" step="0.5"></label>
+        <label class="fld"><span>Висота, мм</span><input type="number" id="rlH" min="0" max="200" step="0.5"></label>
+      </div>
+      <div class="row">
+        <label class="fld"><span>Проміжок, мм</span><input type="number" id="rlGap" min="0" max="20" step="0.5"></label>
+        <label class="fld"><span>Ліве поле, мм</span><input type="number" id="rlOff" min="0" max="38" step="0.5"></label>
+      </div>
+      <div class="slider"><span>Поправка</span><input type="range" id="rlNudge" min="-40" max="40" value="0"><b id="rlNudgeV">0</b></div>
+      <p class="note">Висота 0 = суцільна стрічка без наклейок. «Поправка» в десятих міліметра — якщо друк поволі сповзає з наклейки.</p>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="rlName" placeholder="Назва рулона">
+        <button class="btn" id="rlSave">Зберегти</button>
+      </div>
+      <div id="rlSaved"></div>
+    </div>
+
+    <div class="card">
+      <h2>Зміряти наклейку по фото</h2>
+      <p class="note">Розмір із фотографії сам по собі не дізнатись — камера не знає масштабу. Поклади поруч щось відоме (найпростіше — банківську картку), сфоткай згори і розстав мітки.</p>
+      <label class="btn wide" style="text-align:center;margin-top:10px">Сфоткати або вибрати фото
+        <input type="file" id="msFile" accept="image/*" capture="environment" hidden></label>
+      <div id="msWrap" hidden>
+        <label class="fld" style="margin-top:12px"><span>Що поруч лежить</span><select id="msRef"></select></label>
+        <div class="measure" id="msArea"></div>
+        <div class="legend">
+          <span><i style="background:#2f7fd4"></i>еталон</span>
+          <span><i style="background:#c0392b"></i>ширина наклейки</span>
+          <span><i style="background:#3e8e63"></i>висота наклейки</span>
+        </div>
+        <p class="note" id="msOut" style="margin-top:10px"></p>
+        <button class="btn primary wide" id="msApply" style="margin-top:8px">Взяти ці розміри</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Калібрувальна лінійка</h2>
+      <p class="note">Друкує смужку з міліметровими позначками. Прикладаєш до неї наклейку — і бачиш точний розмір, а заразом чи не бреше подача паперу.</p>
+      <button class="btn wide" id="rlRuler" style="margin-top:10px">Надрукувати лінійку 50 мм</button>
+    </div>
+  </section>
+
+  <!-- ══════════ ПРИНТЕР ══════════ -->
+  <section id="tab-dev" hidden>
+    <div class="card">
+      <h2>Стан</h2>
+      <div id="devState" class="note">Принтер не підключений.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="devRefresh">Оновити стан</button>
+        <button class="btn" id="devTest">Тестовий друк</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Друк</h2>
+      <div class="slider"><span>Щільність</span><input type="range" id="devEnergy" min="4000" max="48000" step="1000" value="24000"><b id="devEnergyV">24k</b></div>
+      <div class="slider"><span>Швидкість</span><input type="range" id="devSpeed" min="8" max="48" value="32"><b id="devSpeedV">32</b></div>
+      <div class="slider"><span>Відступ</span><input type="range" id="devFeed" min="0" max="200" value="80"><b id="devFeedV">80</b></div>
+      <p class="note">Блідий друк лікується щільністю, а не яскравістю фото. Якщо папір чорніє й пахне — навпаки, зменш.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="devFeedBtn">↓ Подати папір</button>
+        <button class="btn" id="devRetract">↑ Втягнути</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Тонкі налаштування</h2>
+      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="40" max="240" step="20" value="120"><b id="devChunkV">120</b></div>
+      <div class="slider"><span>Пауза, мс</span><input type="range" id="devDelay" min="0" max="60" step="2" value="14"><b id="devDelayV">14</b></div>
+      <label class="chk"><input type="checkbox" id="devLattice" checked> Службова преамбула друку</label>
+      <label class="chk"><input type="checkbox" id="devCoalesce"> Прискорювати порожні ділянки</label>
+      <p class="note">Якщо принтер зривається посеред довгого друку — зменш порцію й збільш паузу. Саме переповнений буфер, а не Bluetooth, найчастіше й рве з'єднання.</p>
+    </div>
+    <div class="card">
+      <h2>Журнал</h2>
+      <div class="log" id="devLog">—</div>
+      <button class="btn wide ghost" id="devClear" style="margin-top:8px">Очистити</button>
+    </div>
+  </section>
+
+  <div class="card">
+    <h2>Як воно вийде <span class="pill" id="pvInfo"></span></h2>
+    <div class="banner err" id="pvOver" hidden>
+      <b id="pvOverTxt"></b>
+      <button class="btn wide" id="pvFit" style="margin-top:9px">Зменшити, щоб влізло</button>
+    </div>
+    <div class="preview-full"><canvas id="pvCanvas" width="384" height="10"></canvas></div>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="inner">
+    <div class="paper"><canvas id="dockCanvas" width="384" height="10"></canvas></div>
+    <div class="meta">
+      <b id="dockTitle">Готово до друку</b>
+      <span id="dockSub">—</span>
+      <div class="bar"><i id="dockBar"></i></div>
+    </div>
+    <button class="btn primary" id="btnPrint">Друк</button>
+  </div>
+</div>
+
+<script src="../lib/catprinter.js"></script>
+<script src="../lib/qr.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
+
+   Уся сторінка тримається на одному конвеєрі: КОЖНА вкладка малює свій
+   вміст на canvas завширшки рівно 384 точки, і далі шлях однаковий —
+   у відтінки сірого, корекція, дизеринг, упаковка бітів, черга пакетів.
+   Тому попередній перегляд показує саме те, що вилізе на стрічці,
+   а не «приблизно схоже».
+   ════════════════════════════════════════════════════════════════════════ */
+const VERSION = 'printer-v1';
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ── збереження налаштувань ── */
+const DB = {
+  get(k, def){ try{ const v = localStorage.getItem('wed-printer-' + k); return v == null ? def : JSON.parse(v); }catch(e){ return def; } },
+  set(k, v){ try{ localStorage.setItem('wed-printer-' + k, JSON.stringify(v)); }catch(e){} },
+};
+
+function log(msg){
+  const el = $('devLog');
+  const time = new Date().toTimeString().slice(0, 8);
+  el.textContent = (el.textContent === '—' ? '' : el.textContent + '\n') + time + '  ' + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ════════ ПІДКЛЮЧЕННЯ ДО ПРИНТЕРА ════════
+   Найголовніше тут — не «як підключитись», а «як не відвалитись». Кадри
+   пишуться без підтвердження, тому єдиний спосіб не переповнити буфер
+   принтера — самим тримати темп і паузи. */
+const Printer = {
+  device: null, server: null, tx: null, rx: null,
+  status: null, name: '', connecting: false, wantConnected: false,
+  job: null,
+
+  get connected(){ return !!(this.device && this.device.gatt && this.device.gatt.connected && this.tx); },
+
+  supported(){ return typeof navigator !== 'undefined' && !!navigator.bluetooth; },
+
+  async connect(){
+    if (!this.supported()) throw new Error('Цей браузер не вміє Bluetooth');
+    this.connecting = true; ui.conn();
+    try{
+      this.device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [CAT_ADV_SRV] }],
+        optionalServices: [CAT_PRINT_SRV],
+      });
+      this.device.addEventListener('gattserverdisconnected', () => this.onDrop());
+      this.wantConnected = true;
+      await this.open();
+    } finally { this.connecting = false; ui.conn(); }
+  },
+
+  async open(){
+    this.server = await this.device.gatt.connect();
+    const svc = await this.server.getPrimaryService(CAT_PRINT_SRV);
+    this.tx = await svc.getCharacteristic(CAT_PRINT_TX_CHAR);
+    try{
+      this.rx = await svc.getCharacteristic(CAT_PRINT_RX_CHAR);
+      await this.rx.startNotifications();
+      this.rx.addEventListener('characteristicvaluechanged', e => {
+        const st = parseStatus(new Uint8Array(e.target.value.buffer));
+        if (st){ this.status = st; ui.conn(); ui.devState(); }
+      });
+    }catch(e){ log('нотифікації недоступні: ' + e.message); }
+    this.name = this.device.name || 'Міні-принтер';
+    log('підключено: ' + this.name);
+    ui.conn(); ui.devState();
+    await this.write(cmdState());
+  },
+
+  /* Обрив. Якщо він стався посеред друку — не викидаємо завдання, а даємо
+     його доробити: рядки незалежні один від одного, тож достатньо повторити
+     службову преамбулу й піти далі з місця обриву. */
+  onDrop(){
+    log('з\'єднання розірвано');
+    this.tx = null; this.rx = null;
+    ui.conn();
+    if (this.job && this.job.running){
+      this.job.running = false;
+      this.job.interrupted = true;
+      ui.dock('Обрив зв\'язку', 'перепідключаюсь…');
+    }
+    if (this.wantConnected) this.reconnect();
+  },
+
+  async reconnect(){
+    for (let attempt = 1; attempt <= 5 && this.wantConnected && !this.connected; attempt++){
+      const wait = Math.min(8000, 600 * Math.pow(2, attempt - 1));
+      ui.conn('Перепідключення… спроба ' + attempt);
+      await sleep(wait);
+      if (!this.wantConnected) return;
+      try{
+        await this.open();
+        log('перепідключено з ' + attempt + '-ї спроби');
+        if (this.job && this.job.interrupted) await this.resume();
+        return;
+      }catch(e){ log('спроба ' + attempt + ' не вдалась: ' + e.message); }
+    }
+    if (!this.connected) ui.conn('Не вдалось перепідключитись');
+  },
+
+  disconnect(){
+    this.wantConnected = false;
+    this.job = null;
+    try{ if (this.device && this.device.gatt.connected) this.device.gatt.disconnect(); }catch(e){}
+    this.tx = null; this.status = null;
+    ui.conn(); ui.devState();
+  },
+
+  async write(bytes){
+    if (!this.tx) throw new Error('Принтер не підключений');
+    if (this.tx.writeValueWithoutResponse) await this.tx.writeValueWithoutResponse(bytes);
+    else await this.tx.writeValue(bytes);
+  },
+
+  /* Відправка завдання. Ведемо лік НАДІСЛАНИМ ПАКЕТАМ, а не байтам:
+     тільки так після обриву можна продовжити з цілого рядка, а не з
+     половини кадру, яку принтер однаково викине. */
+  async send(packets, label){
+    this.job = { packets, sent: 0, running: true, interrupted: false, label: label || 'Друк' };
+    await this.pump();
+  },
+
+  async resume(){
+    if (!this.job) return;
+    this.job.running = true; this.job.interrupted = false;
+    // після перепідключення принтер забув швидкість і щільність — повторюємо
+    const prelude = [cmdSpeed(settings.speed), cmdEnergy(settings.energy), cmdApplyEnergy()];
+    for (const p of prelude){ try{ await this.write(p); }catch(e){ return; } }
+    log('продовжую з рядка ' + this.job.sent);
+    await this.pump();
+  },
+
+  async pump(){
+    const job = this.job;
+    const chunk = settings.chunk, delay = settings.delay;
+    let buf = [], size = 0;
+    const flush = async () => {
+      if (!buf.length) return;
+      let total = 0; for (const p of buf) total += p.length;
+      const merged = new Uint8Array(total);
+      let at = 0; for (const p of buf){ merged.set(p, at); at += p.length; }
+      await this.write(merged);
+      buf = []; size = 0;
+    };
+    try{
+      while (job.sent < job.packets.length && job.running){
+        const p = job.packets[job.sent];
+        buf.push(p); size += p.length;
+        job.sent++;
+        if (size >= chunk){
+          await flush();
+          if (delay) await sleep(delay);
+          ui.progress(job.sent / job.packets.length, job.label);
+        }
+      }
+      if (job.running){
+        await flush();
+        ui.progress(1, job.label);
+        await sleep(120);
+        this.job = null;
+        ui.dock('Надруковано', job.label);
+        log('готово: ' + job.label + ' (' + job.packets.length + ' пакетів)');
+      }
+    }catch(e){
+      job.running = false; job.interrupted = true;
+      log('збій відправки: ' + e.message);
+      ui.dock('Друк зупинився', e.message);
+      throw e;
+    }
+  },
+};
+
+/* ════════ НАЛАШТУВАННЯ ДРУКУ ════════ */
+const settings = {
+  energy: DB.get('energy', DEF_ENERGY),
+  speed: DB.get('speed', DEF_SPEED),
+  feed: DB.get('feed', DEF_FEED),
+  chunk: DB.get('chunk', 120),
+  delay: DB.get('delay', 14),
+  lattice: DB.get('lattice', true),
+  coalesce: DB.get('coalesce', false),
+};
+
+/* ════════ РУЛОН ════════ */
+let roll = DB.get('roll', Object.assign({}, ROLL_PRESETS[0]));
+let savedRolls = DB.get('savedRolls', []);
+const layout = () => rollLayout(roll);
+
+/* ════════ ПОЛОТНО ════════
+   Малюємо ЗАВЖДИ на повну ширину друку, а вміст зсуваємо на ліве поле
+   наклейки. Так одна й та сама картинка однаково лягає і на суцільну
+   стрічку, і на вузьку наклейку. */
+const sheet = document.createElement('canvas');
+sheet.width = PRINT_WIDTH;
+const sctx = sheet.getContext('2d', { willReadFrequently: true });
+
+function newSheet(heightPx){
+  const L = layout();
+  const h = Math.max(8, Math.round(heightPx));
+  sheet.height = L.continuous ? h : Math.max(h, L.heightPx);
+  sctx.fillStyle = '#fff';
+  sctx.fillRect(0, 0, sheet.width, sheet.height);
+  return { ctx: sctx, x0: L.offsetPx, w: L.widthPx, h: sheet.height, layout: L };
+}
+
+const FONTS = {
+  sans: "'Manrope', -apple-system, 'Segoe UI', sans-serif",
+  serif: "'Cormorant Garamond', Georgia, serif",
+  mono: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  system: "-apple-system, 'Segoe UI', Roboto, sans-serif",
+};
+
+function wrapLines(ctx, text, maxWidth){
+  const out = [];
+  String(text).split('\n').forEach(para => {
+    if (!para.trim()){ out.push(''); return; }
+    let line = '';
+    para.split(/\s+/).forEach(word => {
+      const probe = line ? line + ' ' + word : word;
+      if (ctx.measureText(probe).width <= maxWidth || !line){ line = probe; return; }
+      out.push(line); line = word;
+    });
+    if (line) out.push(line);
+  });
+  return out;
+}
+
+/* ════════ ЩО САМЕ МАЛЮЄМО ════════
+   Кожен збирач повертає висоту в точках; малює він у вже підготовлене
+   полотно. Спершу міряємо, потім малюємо — інакше не знати, якої висоти
+   робити полотно. */
+
+function drawText(measureOnly){
+  const size = +$('txtSize').value;
+  const lead = +$('txtLead').value / 100;
+  const bold = $('txtBold').checked;
+  const invert = $('txtInvert').checked;
+  const rule = $('txtRule').checked;
+  const align = $('txtAlign').value;
+  const font = (bold ? '700 ' : '400 ') + size + 'px ' + FONTS[$('txtFont').value];
+  const text = $('txtBody').value || '';
+
+  const L = layout();
+  const pad = Math.round(size * 0.35);
+  const maxW = L.widthPx - pad * 2;
+
+  sctx.font = font;
+  const lines = wrapLines(sctx, text, maxW);
+  const lineH = Math.round(size * lead);
+  const ruleH = rule ? Math.round(size * 0.5) : 0;
+  const height = pad * 2 + ruleH * 2 + Math.max(lineH, lines.length * lineH);
+  if (measureOnly) return height;
+
+  const s = newSheet(height);
+  const ctx = s.ctx;
+  if (invert){ ctx.fillStyle = '#000'; ctx.fillRect(s.x0, 0, s.w, s.h); }
+  ctx.fillStyle = invert ? '#fff' : '#000';
+  if (rule){
+    ctx.fillRect(s.x0 + pad, pad, s.w - pad * 2, 3);
+    ctx.fillRect(s.x0 + pad, pad * 2 + ruleH * 2 + lines.length * lineH - 3, s.w - pad * 2, 3);
+  }
+  ctx.font = font;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = align;
+  const x = align === 'left' ? s.x0 + pad : align === 'right' ? s.x0 + s.w - pad : s.x0 + s.w / 2;
+  lines.forEach((line, i) => ctx.fillText(line, x, pad + ruleH + i * lineH + Math.round((lineH - size) / 2)));
+  return s.h;
+}
+
+function drawList(measureOnly){
+  const size = +$('lsSize').value;
+  const boxes = $('lsBoxes').checked;
+  const nums = $('lsNums').checked;
+  const title = $('lsTitle').value.trim();
+  const items = $('lsBody').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+  const L = layout();
+  const pad = Math.round(size * 0.4);
+  const box = Math.round(size * 0.82);
+  const gap = Math.round(size * 0.45);
+  const indent = (boxes ? box + gap : 0) + (nums ? Math.round(size * 1.25) : 0);
+  const lineH = Math.round(size * 1.35);
+  const titleH = title ? Math.round(size * 1.7) : 0;
+
+  sctx.font = '600 ' + size + 'px ' + FONTS.sans;
+  let rows = 0;
+  const wrapped = items.map(it => {
+    const lines = wrapLines(sctx, it, L.widthPx - pad * 2 - indent);
+    rows += lines.length;
+    return lines;
+  });
+
+  const height = pad * 2 + titleH + Math.max(lineH, rows * lineH + Math.max(0, items.length - 1) * Math.round(size * 0.3));
+  if (measureOnly) return height;
+
+  const s = newSheet(height);
+  const ctx = s.ctx;
+  ctx.fillStyle = '#000';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+
+  let y = pad;
+  if (title){
+    ctx.font = '800 ' + Math.round(size * 1.15) + 'px ' + FONTS.sans;
+    ctx.fillText(title, s.x0 + pad, y);
+    y += Math.round(size * 1.35);
+    ctx.fillRect(s.x0 + pad, y, s.w - pad * 2, 2);
+    y += Math.round(size * 0.35);
+  }
+  ctx.font = '600 ' + size + 'px ' + FONTS.sans;
+  wrapped.forEach((lines, i) => {
+    let x = s.x0 + pad;
+    if (boxes){
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(x + 1, y + Math.round((lineH - box) / 2) + 1, box - 2, box - 2);
+      x += box + gap;
+    }
+    if (nums){
+      ctx.fillText(i + 1 + '.', x, y + Math.round((lineH - size) / 2));
+      x += Math.round(size * 1.25);
+    }
+    lines.forEach((line, k) => ctx.fillText(line, x, y + k * lineH + Math.round((lineH - size) / 2)));
+    y += lines.length * lineH + Math.round(size * 0.3);
+  });
+  return s.h;
+}
+
+function drawQR(measureOnly){
+  const text = $('qrText').value.trim();
+  const cap = $('qrCap').value.trim();
+  const L = layout();
+  const pad = 12;
+  const capH = cap ? 34 : 0;
+  if (!text){
+    $('qrNote').textContent = 'Впиши текст або посилання — і код з\'явиться в перегляді.';
+    if (measureOnly) return 0;
+    const s = newSheet(40); return s.h;
+  }
+  let code;
+  try{ code = encodeQRWithQuiet(text, $('qrLevel').value, 4); }
+  catch(e){ $('qrNote').textContent = e.message; if (measureOnly) return 0; const s = newSheet(40); return s.h; }
+
+  const want = Math.round(L.widthPx * (+$('qrSize').value / 100));
+  // масштаб мусить бути ЦІЛИМ: дробовий розмиває модулі, і сканер губиться
+  const scale = Math.max(1, Math.floor(want / code.size));
+  const side = scale * code.size;
+  $('qrNote').textContent = 'Версія ' + code.version + ', рівень ' + code.level +
+    ', модуль ' + scale + ' точ. (' + (side / DOTS_PER_MM).toFixed(1) + ' мм у ширину)';
+
+  const height = pad * 2 + side + capH;
+  if (measureOnly) return height;
+
+  const s = newSheet(height);
+  const ctx = s.ctx;
+  ctx.fillStyle = '#000';
+  const x0 = s.x0 + Math.round((s.w - side) / 2);
+  for (let r = 0; r < code.size; r++){
+    for (let c = 0; c < code.size; c++){
+      if (code.matrix[r][c]) ctx.fillRect(x0 + c * scale, pad + r * scale, scale, scale);
+    }
+  }
+  if (cap){
+    ctx.font = '600 24px ' + FONTS.sans;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(cap, s.x0 + s.w / 2, pad + side + 4);
+  }
+  return s.h;
+}
+
+function drawPhoto(measureOnly){
+  const L = layout();
+  if (!photo.img){
+    if (measureOnly) return 0;
+    const s = newSheet(40);
+    s.ctx.fillStyle = '#000';
+    s.ctx.font = '500 20px ' + FONTS.sans;
+    s.ctx.textAlign = 'center';
+    s.ctx.fillText('Фото не вибране', s.x0 + s.w / 2, 12);
+    return s.h;
+  }
+  const h = L.continuous ? Math.round(photo.boxH) : L.heightPx;
+  if (measureOnly) return h;
+
+  const s = newSheet(h);
+  const ctx = s.ctx;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(s.x0, 0, s.w, s.h);
+  ctx.clip();
+  ctx.translate(s.x0 + s.w / 2 + photo.dx, s.h / 2 + photo.dy);
+  ctx.rotate(photo.rot * Math.PI / 180);
+  ctx.scale(photo.zoom, photo.zoom);
+  ctx.drawImage(photo.img, -photo.img.width / 2, -photo.img.height / 2);
+  ctx.restore();
+  return s.h;
+}
+
+function drawRuler(){
+  const marks = rulerMarks(50);
+  const L = layout();
+  const height = mmToDots(50) + 40;
+  const s = newSheet(height);
+  const ctx = s.ctx;
+  ctx.fillStyle = '#000';
+  ctx.font = '600 16px ' + FONTS.mono;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  marks.forEach(m => {
+    const y = 20 + m.dots;
+    const len = m.major ? 90 : m.mid ? 55 : 28;
+    ctx.fillRect(s.x0 + 8, y, len, m.major ? 3 : 2);
+    if (m.major) ctx.fillText(m.mm + ' мм', s.x0 + 8 + len + 10, y);
+  });
+  ctx.fillRect(s.x0 + 8, 20, 3, mmToDots(50));
+  return s.h;
+}
+
+/* ── дані з планера ── */
+const planner = { state: null, picked: {} };
+
+function plannerItems(){
+  if (!planner.state) return [];
+  const kind = $('plKind').value;
+  const st = planner.state;
+  if (kind === 'tasks'){
+    const filter = $('plFilter').value;
+    return (st.tasks || []).filter(t => {
+      if (filter === 'all') return true;
+      if (filter === 'undone') return !t.done;
+      return !t.done && (t.asap || (t.deadline && (new Date(t.deadline) - new Date()) < 7 * 86400000));
+    }).map(t => ({ id: t.id || t.title, main: t.title || t.name || '—', sub: t.deadline || (t.asap ? 'терміново' : '') }));
+  }
+  if (kind === 'guests' || kind === 'badges'){
+    return (st.guests || []).map((g, i) => ({
+      id: g.id || String(i),
+      main: g.name || g.title || '—',
+      sub: (g.table ? 'стіл ' + g.table : '') + (g.side ? ' · ' + g.side : ''),
+    }));
+  }
+  if (kind === 'seating'){
+    const seats = st.seating || [];
+    return seats.map((s, i) => ({ id: s.id || String(i), main: s.name || ('Стіл ' + (i + 1)), sub: (s.guests || []).length + ' гостей' }));
+  }
+  if (kind === 'contacts'){
+    return (st.contacts || []).map((c, i) => ({ id: c.id || String(i), main: c.name || '—', sub: c.phone || c.role || '' }));
+  }
+  return [];
+}
+
+function drawPlanner(measureOnly){
+  const items = plannerItems().filter(it => planner.picked[it.id]);
+  const kind = $('plKind').value;
+  const L = layout();
+
+  if (!items.length){
+    if (measureOnly) return 0;
+    const s = newSheet(40);
+    s.ctx.fillStyle = '#000';
+    s.ctx.font = '500 20px ' + FONTS.sans;
+    s.ctx.textAlign = 'center';
+    s.ctx.fillText('Нічого не позначено', s.x0 + s.w / 2, 12);
+    return s.h;
+  }
+
+  // бейджі — це не список, а окрема наклейка на кожного гостя
+  if (kind === 'badges'){
+    const one = L.continuous ? 150 : L.heightPx;
+    if (measureOnly) return one * items.length;
+    const s = newSheet(one * items.length);
+    const ctx = s.ctx;
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    items.forEach((it, i) => {
+      const cy = i * one + one / 2;
+      ctx.font = '700 34px ' + FONTS.serif;
+      ctx.fillText(it.main, s.x0 + s.w / 2, cy - 14);
+      if (it.sub){ ctx.font = '600 20px ' + FONTS.sans; ctx.fillText(it.sub, s.x0 + s.w / 2, cy + 22); }
+      if (i < items.length - 1 && L.continuous){
+        ctx.fillRect(s.x0 + 30, (i + 1) * one - 1, s.w - 60, 2);
+      }
+    });
+    return s.h;
+  }
+
+  const size = 24, pad = 12, lineH = 32;
+  sctx.font = '600 ' + size + 'px ' + FONTS.sans;
+  const rows = items.map(it => wrapLines(sctx, it.main + (it.sub ? '  · ' + it.sub : ''), L.widthPx - pad * 2 - 30));
+  const total = rows.reduce((n, r) => n + r.length, 0);
+  const titleH = 46;
+  const height = pad * 2 + titleH + total * lineH + items.length * 8;
+  if (measureOnly) return height;
+
+  const s = newSheet(height);
+  const ctx = s.ctx;
+  ctx.fillStyle = '#000';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.font = '800 26px ' + FONTS.sans;
+  const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', contacts: 'Контакти' };
+  ctx.fillText(titles[kind] || 'Список', s.x0 + pad, pad);
+  ctx.fillRect(s.x0 + pad, pad + 34, s.w - pad * 2, 2);
+
+  let y = pad + titleH;
+  ctx.font = '600 ' + size + 'px ' + FONTS.sans;
+  rows.forEach(lines => {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(s.x0 + pad + 1, y + 5, 18, 18);
+    lines.forEach((line, k) => ctx.fillText(line, s.x0 + pad + 30, y + k * lineH));
+    y += lines.length * lineH + 8;
+  });
+  return s.h;
+}
+
+/* ── який збирач активний ── */
+let activeTab = 'text';
+const DRAWERS = { text: drawText, photo: drawPhoto, list: drawListOrQR, planner: drawPlanner, roll: drawRuler, dev: drawText };
+
+/* На вкладці «Списки та QR» друкуємо те, що заповнене; якщо обидва —
+   спершу список, під ним код. */
+function drawListOrQR(measureOnly){
+  const hasList = $('lsBody').value.trim() || $('lsTitle').value.trim();
+  const hasQR = $('qrText').value.trim();
+  if (hasList && !hasQR) return drawList(measureOnly);
+  if (!hasList && hasQR) return drawQR(measureOnly);
+  if (!hasList && !hasQR) return drawList(measureOnly);
+
+  const listH = drawList(true), qrH = drawQR(true);
+  if (measureOnly) return listH + qrH;
+  // малюємо частинами в окремі полотна й склеюємо
+  drawList(false);
+  const top = document.createElement('canvas');
+  top.width = PRINT_WIDTH; top.height = sheet.height;
+  top.getContext('2d').drawImage(sheet, 0, 0);
+  drawQR(false);
+  const bottom = document.createElement('canvas');
+  bottom.width = PRINT_WIDTH; bottom.height = sheet.height;
+  bottom.getContext('2d').drawImage(sheet, 0, 0);
+
+  const s = newSheet(top.height + bottom.height);
+  s.ctx.drawImage(top, 0, 0);
+  s.ctx.drawImage(bottom, 0, top.height);
+  return s.h;
+}
+
+/* ════════ ФОТО: рух пальцем ════════ */
+const photo = { img: null, zoom: 1, dx: 0, dy: 0, rot: 0, boxH: 300 };
+
+function fitPhoto(mode){
+  if (!photo.img) return;
+  const L = layout();
+  const boxW = L.widthPx;
+  const boxH = L.continuous ? Math.round(boxW * photo.img.height / photo.img.width) : L.heightPx;
+  photo.boxH = clamp(boxH, 40, 2400);
+  const sx = boxW / photo.img.width, sy = photo.boxH / photo.img.height;
+  photo.zoom = mode === 'fill' ? Math.max(sx, sy) : Math.min(sx, sy);
+  photo.dx = 0; photo.dy = 0;
+  render();
+}
+
+/* ════════ ПЕРЕГЛЯД І ДРУК ════════ */
+let lastHeight = 0;
+
+function render(){
+  const draw = DRAWERS[activeTab] || drawText;
+  try{ draw(false); }catch(e){ log('перегляд: ' + e.message); }
+  lastHeight = sheet.height;
+
+  const L = layout();
+  [$('pvCanvas'), $('dockCanvas')].forEach(cv => {
+    cv.width = PRINT_WIDTH;
+    cv.height = sheet.height;
+    const c = cv.getContext('2d');
+    c.drawImage(processedCanvas(), 0, 0);
+    // межі наклейки — щоб було видно, куди саме ляже друк
+    if (!L.continuous){
+      c.strokeStyle = 'rgba(176,70,78,.55)';
+      c.setLineDash([6, 6]);
+      c.lineWidth = 2;
+      for (let y = 0; y < cv.height; y += L.pitchPx){
+        c.strokeRect(L.offsetPx + 1, y + 1, L.widthPx - 2, Math.min(L.heightPx, cv.height - y) - 2);
+      }
+    }
+  });
+
+  const mm = (sheet.height / DOTS_PER_MM).toFixed(0);
+  $('pvInfo').textContent = PRINT_WIDTH + '×' + sheet.height + ' точок · ' + mm + ' мм стрічки';
+  $('dockSub').textContent = mm + ' мм · ' + (L.continuous ? 'суцільна стрічка' : roll.name || 'наклейки');
+  checkOverflow(L);
+}
+
+/* Найпідступніше з наклейками: вміст тихо вилазить за межу й друкується
+   через проміжок на дві наклейки одразу. На пунктирних рамках у перегляді
+   це видно, але сказати про це прямо — надійніше. */
+function checkOverflow(L){
+  const box = $('pvOver');
+  // бейджі — навмисно по наклейці на гостя, там «переповнення» нормальне
+  const perSticker = activeTab === 'planner' && $('plKind').value === 'badges';
+  const over = !L.continuous && sheet.height > L.heightPx && !perSticker;
+  box.hidden = !over;
+  if (!over) return;
+  const mm = ((sheet.height - L.heightPx) / DOTS_PER_MM).toFixed(1);
+  const fit = fitter();
+  $('pvOverTxt').textContent = 'Не влазить у наклейку на ' + mm + ' мм — надрукується через проміжок на дві.';
+  $('pvFit').hidden = !fit;
+}
+
+/* Що саме зменшувати, щоб вліз, залежить від вкладки — а на вкладці зі
+   списками ще й від того, що там зараз заповнене. */
+function fitter(){
+  if (activeTab === 'text') return { el: $('txtSize'), measure: () => drawText(true) };
+  if (activeTab === 'list'){
+    const hasList = $('lsBody').value.trim() || $('lsTitle').value.trim();
+    if (hasList) return { el: $('lsSize'), measure: () => drawList(true) };
+    if ($('qrText').value.trim()) return { el: $('qrSize'), measure: () => drawQR(true) };
+  }
+  return null;
+}
+
+$('pvFit').onclick = () => {
+  const fit = fitter();
+  if (!fit) return;
+  const limit = layout().heightPx;
+  const min = +fit.el.min;
+  // крок за кроком униз, поки не влізе — так само, як людина крутила б повзунок
+  while (+fit.el.value > min && fit.measure() > limit) fit.el.value = String(+fit.el.value - 1);
+  fit.el.dispatchEvent(new Event('input'));
+};
+
+/* Готове до друку зображення — те саме, що показуємо. Один шлях для
+   перегляду й для принтера, тому «на екрані красиво, а надрукувалось інакше»
+   тут статись не може. */
+const outCanvas = document.createElement('canvas');
+function processedCanvas(){
+  const w = sheet.width, h = sheet.height;
+  outCanvas.width = w; outCanvas.height = h;
+  const octx = outCanvas.getContext('2d');
+  const bits = currentBits();
+  const img = octx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++){
+    const v = bits[i] ? 0 : 255;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+    img.data[i * 4 + 3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  return outCanvas;
+}
+
+function currentBits(){
+  const w = sheet.width, h = sheet.height;
+  const data = sctx.getImageData(0, 0, w, h).data;
+  let gray = toGray(data, w * h);
+  const isPhoto = activeTab === 'photo';
+  if (isPhoto){
+    if ($('phAuto').checked) gray = autoLevels(gray);
+    gray = adjust(gray, {
+      brightness: +$('phBright').value,
+      contrast: +$('phContrast').value,
+      gamma: +$('phGamma').value / 100,
+      invert: $('phInvert').checked,
+    });
+    return dither(gray, w, h, $('phDither').value, +$('phThresh').value);
+  }
+  // текст, списки, QR — це вже чиста чорно-біла графіка, їй дизеринг зайвий
+  return dither(gray, w, h, 'threshold', 128);
+}
+
+async function printCurrent(label){
+  if (!Printer.connected){
+    ui.dock('Принтер не підключений', 'спершу натисни «Підключити»');
+    return;
+  }
+  const bits = currentBits();
+  const packed = packBits(bits, sheet.width, sheet.height);
+  const L = layout();
+  const packets = buildJob(packed, {
+    rows: sheet.height,
+    rowBytes: ROW_BYTES,
+    speed: settings.speed,
+    energy: settings.energy,
+    feed: rollFeed(L, sheet.height, settings.feed),
+    lattice: settings.lattice,
+    coalesceBlank: settings.coalesce,
+  });
+  ui.dock('Друкую…', label || 'завдання');
+  try{ await Printer.send(packets, label || 'завдання'); }
+  catch(e){ /* повідомлення вже показане */ }
+}
+
+/* ════════ ІНТЕРФЕЙС ════════ */
+const ui = {
+  conn(msg){
+    const dot = $('connDot'), name = $('connName'), state = $('connState'), btn = $('btnConnect');
+    if (Printer.connecting){ dot.className = 'dot busy'; name.textContent = 'Шукаю принтер…'; state.textContent = 'вибери пристрій у списку'; btn.textContent = 'Підключити'; return; }
+    if (Printer.connected){
+      dot.className = 'dot on';
+      name.textContent = Printer.name;
+      const problem = statusProblem(Printer.status);
+      state.textContent = problem || 'готовий до друку';
+      dot.className = problem ? 'dot err' : 'dot on';
+      btn.textContent = 'Відключити';
+    } else {
+      dot.className = msg ? 'dot err' : 'dot';
+      name.textContent = msg || 'Принтер не підключений';
+      state.textContent = msg ? 'спробуй ще раз' : 'натисни «Підключити»';
+      btn.textContent = 'Підключити';
+    }
+  },
+  dock(title, sub){
+    $('dockTitle').textContent = title;
+    if (sub != null) $('dockSub').textContent = sub;
+  },
+  progress(frac, label){
+    $('dockBar').style.width = Math.round(frac * 100) + '%';
+    if (frac >= 1) setTimeout(() => { $('dockBar').style.width = '0'; }, 900);
+    else ui.dock('Друкую… ' + Math.round(frac * 100) + '%', label);
+  },
+  devState(){
+    const el = $('devState');
+    if (!Printer.connected){ el.innerHTML = 'Принтер не підключений.'; return; }
+    const st = Printer.status;
+    const rows = [
+      ['Пристрій', Printer.name],
+      ['Папір', st ? (st.outOfPaper ? '<b style="color:var(--err)">скінчився</b>' : 'є') : '—'],
+      ['Кришка', st ? (st.coverOpen ? '<b style="color:var(--err)">відкрита</b>' : 'закрита') : '—'],
+      ['Температура', st ? (st.overheat ? '<b style="color:var(--err)">перегрів</b>' : 'нормальна') : '—'],
+      ['Живлення', st ? (st.lowPower ? '<b style="color:var(--warn)">сідає батарея</b>' : 'достатнє') : '—'],
+    ];
+    el.innerHTML = rows.map(r => '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line)"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>').join('');
+  },
+};
+
+/* ── вкладки ── */
+$('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  activeTab = btn.dataset.tab;
+  [...$('tabs').children].forEach(b => b.setAttribute('aria-selected', String(b === btn)));
+  ['text', 'photo', 'list', 'planner', 'roll', 'dev'].forEach(t => { $('tab-' + t).hidden = (t !== activeTab); });
+  if (activeTab === 'planner') loadFirebase();
+  render();
+});
+
+/* ── дрібні прив'язки ── */
+function bindSlider(id, fmt, onChange){
+  const el = $(id), out = $(id + 'V');
+  const upd = () => { out.textContent = fmt ? fmt(+el.value) : el.value; if (onChange) onChange(+el.value); render(); };
+  el.addEventListener('input', upd);
+  upd();
+}
+function bindLive(ids){ ids.forEach(id => { const el = $(id); el.addEventListener('input', render); el.addEventListener('change', render); }); }
+
+bindSlider('txtSize');
+bindSlider('txtLead', v => (v / 100).toFixed(1));
+bindSlider('lsSize');
+bindSlider('qrSize', v => v + '%');
+bindSlider('phBright');
+bindSlider('phContrast');
+bindSlider('phGamma', v => (v / 100).toFixed(1));
+bindSlider('phThresh');
+bindLive(['txtBody', 'txtFont', 'txtAlign', 'txtBold', 'txtInvert', 'txtRule',
+  'lsTitle', 'lsBody', 'lsBoxes', 'lsNums',
+  'qrText', 'qrCap', 'qrLevel',
+  'phDither', 'phAuto', 'phInvert']);
+
+const PRESETS = {
+  note: 'Нотатка\n' + new Date().toLocaleDateString('uk-UA') + '\n\n',
+  shop: 'Купити:\n— \n— \n— ',
+  quote: '«»\n\n— ',
+  label: 'ДЖЕМ\nполуничний\n' + new Date().toLocaleDateString('uk-UA'),
+  wish: 'Дорогі гості!\nДякуємо, що ви з нами 💛\n\nКатя & Діма',
+};
+$('txtPreset').addEventListener('change', e => {
+  const p = PRESETS[e.target.value];
+  if (p){ $('txtBody').value = p; render(); }
+  e.target.value = '';
+});
+
+$('qrFromGame').onclick = () => { $('qrText').value = 'https://лютевесілля.укр'; $('qrCap').value = 'Гра-запрошення'; render(); };
+$('qrFromAlbum').onclick = () => { $('qrText').value = 'https://лютевесілля.укр/kadr'; $('qrCap').value = 'Спільний альбом'; render(); };
+
+/* ── фото ── */
+function loadPhoto(file){
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    photo.img = img;
+    photo.rot = 0;
+    fitPhoto('fit');
+    $('phHint').textContent = img.width + '×' + img.height + ' — тягни по перегляду, щоб посунути; повзунки нижче керують якістю.';
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { $('phHint').textContent = 'Не вдалось прочитати це фото — спробуй інше.'; URL.revokeObjectURL(url); };
+  img.src = url;
+}
+$('phFile').addEventListener('change', e => loadPhoto(e.target.files[0]));
+$('phCam').addEventListener('change', e => loadPhoto(e.target.files[0]));
+$('phRotate').onclick = () => { photo.rot = (photo.rot + 90) % 360; render(); };
+$('phFit').onclick = () => fitPhoto('fit');
+$('phFill').onclick = () => fitPhoto('fill');
+
+/* перетягування й масштаб просто по перегляду */
+(function dragPreview(){
+  const cv = $('pvCanvas');
+  let dragging = false, lastX = 0, lastY = 0, pinch = 0;
+  const scaleFactor = () => PRINT_WIDTH / cv.getBoundingClientRect().width;
+  cv.addEventListener('pointerdown', e => {
+    if (activeTab !== 'photo' || !photo.img) return;
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const k = scaleFactor();
+    photo.dx += (e.clientX - lastX) * k;
+    photo.dy += (e.clientY - lastY) * k;
+    lastX = e.clientX; lastY = e.clientY;
+    render();
+  });
+  const stop = () => { dragging = false; };
+  cv.addEventListener('pointerup', stop);
+  cv.addEventListener('pointercancel', stop);
+  cv.addEventListener('wheel', e => {
+    if (activeTab !== 'photo' || !photo.img) return;
+    e.preventDefault();
+    photo.zoom = clamp(photo.zoom * (e.deltaY < 0 ? 1.08 : 0.93), 0.05, 12);
+    render();
+  }, { passive: false });
+  // два пальці — масштаб
+  cv.addEventListener('touchmove', e => {
+    if (activeTab !== 'photo' || !photo.img || e.touches.length !== 2) return;
+    e.preventDefault();
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (pinch) { photo.zoom = clamp(photo.zoom * (d / pinch), 0.05, 12); render(); }
+    pinch = d;
+  }, { passive: false });
+  cv.addEventListener('touchend', () => { pinch = 0; });
+})();
+
+/* ════════ РУЛОН ════════ */
+function fillRollSelect(){
+  const sel = $('rlPreset');
+  sel.innerHTML = '';
+  ROLL_PRESETS.concat(savedRolls).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  const o = document.createElement('option');
+  o.value = '__custom'; o.textContent = 'Свій розмір';
+  sel.appendChild(o);
+  sel.value = roll.id || '__custom';
+}
+function rollToForm(){
+  $('rlW').value = roll.widthMm != null ? roll.widthMm : 48;
+  $('rlH').value = roll.heightMm != null ? roll.heightMm : 0;
+  $('rlGap').value = roll.gapMm != null ? roll.gapMm : 0;
+  $('rlOff').value = roll.offsetMm != null ? roll.offsetMm : 0;
+  $('rlNudge').value = Math.round((roll.nudgeMm || 0) * 10);
+  $('rlNudgeV').textContent = ((roll.nudgeMm || 0)).toFixed(1);
+}
+function formToRoll(){
+  roll = {
+    id: '__custom',
+    name: roll.name && roll.id === '__custom' ? roll.name : 'Свій розмір',
+    widthMm: +$('rlW').value || 48,
+    heightMm: +$('rlH').value || 0,
+    gapMm: +$('rlGap').value || 0,
+    offsetMm: +$('rlOff').value || 0,
+    nudgeMm: (+$('rlNudge').value || 0) / 10,
+    continuous: !(+$('rlH').value > 0),
+  };
+  DB.set('roll', roll);
+  if (photo.img) fitPhoto('fit'); else render();
+}
+$('rlPreset').addEventListener('change', e => {
+  const all = ROLL_PRESETS.concat(savedRolls);
+  const found = all.find(p => p.id === e.target.value);
+  if (found){ roll = Object.assign({}, found); DB.set('roll', roll); rollToForm(); }
+  if (photo.img) fitPhoto('fit'); else render();
+});
+['rlW', 'rlH', 'rlGap', 'rlOff'].forEach(id => $(id).addEventListener('input', formToRoll));
+$('rlNudge').addEventListener('input', e => { $('rlNudgeV').textContent = (e.target.value / 10).toFixed(1); formToRoll(); });
+
+function renderSavedRolls(){
+  const box = $('rlSaved');
+  box.innerHTML = savedRolls.length ? '<h3>Мої рулони</h3>' : '';
+  savedRolls.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.className = 'roll-item';
+    d.innerHTML = '<b></b><span class="note"></span>';
+    d.querySelector('b').textContent = r.name;
+    d.querySelector('span').textContent = r.widthMm + '×' + (r.heightMm || '∞') + ' мм';
+    const use = document.createElement('button');
+    use.className = 'btn'; use.textContent = 'Взяти';
+    use.onclick = () => { roll = Object.assign({}, r); DB.set('roll', roll); fillRollSelect(); rollToForm(); render(); };
+    const del = document.createElement('button');
+    del.className = 'btn ghost'; del.textContent = '✕';
+    del.onclick = () => { savedRolls.splice(i, 1); DB.set('savedRolls', savedRolls); fillRollSelect(); renderSavedRolls(); };
+    d.appendChild(use); d.appendChild(del);
+    box.appendChild(d);
+  });
+}
+$('rlSave').onclick = () => {
+  const name = $('rlName').value.trim();
+  if (!name) return;
+  savedRolls.push({
+    id: 'my-' + Date.now(), name,
+    widthMm: +$('rlW').value || 48, heightMm: +$('rlH').value || 0,
+    gapMm: +$('rlGap').value || 0, offsetMm: +$('rlOff').value || 0,
+    nudgeMm: (+$('rlNudge').value || 0) / 10, continuous: !(+$('rlH').value > 0),
+  });
+  DB.set('savedRolls', savedRolls);
+  $('rlName').value = '';
+  fillRollSelect(); renderSavedRolls();
+};
+$('rlRuler').onclick = async () => { activeTab = 'roll'; drawRuler(); render(); await printCurrent('лінійка'); };
+
+/* ── замір по фото ── */
+const measure = { pins: null, img: null, ref: MEASURE_REFS[0] };
+MEASURE_REFS.forEach((r, i) => {
+  const o = document.createElement('option');
+  o.value = String(i); o.textContent = r.name + ' — ' + r.mm + ' мм';
+  $('msRef').appendChild(o);
+});
+$('msRef').addEventListener('change', e => { measure.ref = MEASURE_REFS[+e.target.value]; updateMeasure(); });
+
+$('msFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const area = $('msArea');
+  area.innerHTML = '';
+  const img = document.createElement('img');
+  img.onload = () => {
+    $('msWrap').hidden = false;
+    const w = area.clientWidth || 300, h = img.clientHeight || 200;
+    measure.pins = {
+      ref: [{ x: w * 0.15, y: h * 0.15 }, { x: w * 0.75, y: h * 0.15 }],
+      w: [{ x: w * 0.2, y: h * 0.5 }, { x: w * 0.6, y: h * 0.5 }],
+      h: [{ x: w * 0.3, y: h * 0.6 }, { x: w * 0.3, y: h * 0.9 }],
+    };
+    buildPins();
+    updateMeasure();
+  };
+  img.src = url;
+  area.appendChild(img);
+  measure.img = img;
+});
+
+function buildPins(){
+  const area = $('msArea');
+  area.querySelectorAll('.pin,svg').forEach(n => n.remove());
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  area.appendChild(svg);
+  Object.keys(measure.pins).forEach(key => {
+    measure.pins[key].forEach((p, i) => {
+      const el = document.createElement('div');
+      el.className = 'pin ' + key;
+      el.style.left = p.x + 'px';
+      el.style.top = p.y + 'px';
+      el.addEventListener('pointerdown', ev => {
+        ev.preventDefault();
+        el.setPointerCapture(ev.pointerId);
+        const move = e2 => {
+          const r = area.getBoundingClientRect();
+          p.x = clamp(e2.clientX - r.left, 0, r.width);
+          p.y = clamp(e2.clientY - r.top, 0, r.height);
+          el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+          updateMeasure();
+        };
+        const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); };
+        el.addEventListener('pointermove', move);
+        el.addEventListener('pointerup', up);
+      });
+      area.appendChild(el);
+    });
+  });
+}
+
+function updateMeasure(){
+  if (!measure.pins) return;
+  const dist = pair => Math.hypot(pair[1].x - pair[0].x, pair[1].y - pair[0].y);
+  const svg = $('msArea').querySelector('svg');
+  if (svg){
+    const colors = { ref: '#2f7fd4', w: '#c0392b', h: '#3e8e63' };
+    svg.innerHTML = Object.keys(measure.pins).map(k => {
+      const p = measure.pins[k];
+      return '<line x1="' + p[0].x + '" y1="' + p[0].y + '" x2="' + p[1].x + '" y2="' + p[1].y +
+        '" stroke="' + colors[k] + '" stroke-width="3" stroke-dasharray="6 4"/>';
+    }).join('');
+  }
+  const refPx = dist(measure.pins.ref);
+  const wMm = measureByRef(refPx, measure.ref.mm, dist(measure.pins.w));
+  const hMm = measureByRef(refPx, measure.ref.mm, dist(measure.pins.h));
+  measure.result = { wMm, hMm };
+  $('msOut').textContent = (wMm && hMm)
+    ? 'Виходить наклейка приблизно ' + wMm + ' × ' + hMm + ' мм. Округли до рівного, якщо близько.'
+    : 'Розстав мітки: сині — по краях еталона, червоні — по ширині наклейки, зелені — по висоті.';
+}
+
+$('msApply').onclick = () => {
+  if (!measure.result || !measure.result.wMm) return;
+  $('rlW').value = Math.min(48, measure.result.wMm);
+  $('rlH').value = measure.result.hMm;
+  $('rlGap').value = 2;
+  $('rlOff').value = Math.max(0, ((PRINT_WIDTH_MM - Math.min(48, measure.result.wMm)) / 2)).toFixed(1);
+  formToRoll();
+  $('rlPreset').value = '__custom';
+  $('msOut').textContent = 'Розміри взяті. Перевір калібрувальною лінійкою, перш ніж друкувати всю пачку.';
+};
+
+/* ════════ ПРИНТЕР: налаштування ════════ */
+function bindSetting(id, key, fmt, transform){
+  const el = $(id), out = $(id + 'V');
+  const upd = () => {
+    const v = transform ? transform(+el.value) : +el.value;
+    settings[key] = v;
+    DB.set(key, v);
+    out.textContent = fmt ? fmt(+el.value) : el.value;
+  };
+  el.value = settings[key];
+  el.addEventListener('input', upd);
+  upd();
+}
+bindSetting('devEnergy', 'energy', v => Math.round(v / 1000) + 'k');
+bindSetting('devSpeed', 'speed');
+bindSetting('devFeed', 'feed');
+bindSetting('devChunk', 'chunk');
+bindSetting('devDelay', 'delay');
+$('devLattice').checked = settings.lattice;
+$('devLattice').addEventListener('change', e => { settings.lattice = e.target.checked; DB.set('lattice', settings.lattice); });
+$('devCoalesce').checked = settings.coalesce;
+$('devCoalesce').addEventListener('change', e => { settings.coalesce = e.target.checked; DB.set('coalesce', settings.coalesce); });
+
+$('devRefresh').onclick = async () => {
+  if (!Printer.connected) return ui.dock('Принтер не підключений', '');
+  try{ await Printer.write(cmdState()); log('запит стану'); }catch(e){ log('не вдалось: ' + e.message); }
+};
+$('devFeedBtn').onclick = async () => { if (Printer.connected) await Printer.write(cmdFeed(60)); };
+$('devRetract').onclick = async () => { if (Printer.connected) await Printer.write(cmdRetract(30)); };
+$('devClear').onclick = () => { $('devLog').textContent = '—'; };
+
+$('devTest').onclick = async () => {
+  const L = layout();
+  const s = newSheet(L.continuous ? 260 : L.heightPx);
+  const ctx = s.ctx;
+  ctx.fillStyle = '#000';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'center';
+  ctx.font = '800 30px ' + FONTS.sans;
+  ctx.fillText('ТЕСТ ДРУКУ', s.x0 + s.w / 2, 10);
+  ctx.font = '500 18px ' + FONTS.sans;
+  ctx.fillText(Printer.name || 'принтер', s.x0 + s.w / 2, 48);
+  // клин сірого — одразу видно, чи не задерта щільність
+  for (let i = 0; i < 16; i++){
+    const v = Math.round(255 * (1 - i / 15));
+    ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+    ctx.fillRect(s.x0 + 10 + i * ((s.w - 20) / 16), 78, (s.w - 20) / 16, 46);
+  }
+  ctx.fillStyle = '#000';
+  ctx.font = '600 16px ' + FONTS.mono;
+  ctx.fillText('щільність ' + settings.energy + ' · швидкість ' + settings.speed, s.x0 + s.w / 2, 134);
+  // тонкі лінії — перевірка роздільності
+  for (let i = 0; i < 8; i++) ctx.fillRect(s.x0 + 12, 160 + i * 6, s.w - 24, i % 2 ? 1 : 2);
+  ctx.fillText(new Date().toLocaleString('uk-UA'), s.x0 + s.w / 2, 216);
+
+  const bits = dither(toGray(sctx.getImageData(0, 0, sheet.width, sheet.height).data, sheet.width * sheet.height),
+    sheet.width, sheet.height, 'floyd', 128);
+  const packed = packBits(bits, sheet.width, sheet.height);
+  const packets = buildJob(packed, {
+    rows: sheet.height, rowBytes: ROW_BYTES,
+    speed: settings.speed, energy: settings.energy,
+    feed: rollFeed(L, sheet.height, settings.feed),
+    lattice: settings.lattice, coalesceBlank: settings.coalesce,
+  });
+  if (!Printer.connected) return ui.dock('Принтер не підключений', '');
+  ui.dock('Друкую тест…', '');
+  try{ await Printer.send(packets, 'тестовий друк'); }catch(e){}
+};
+
+/* ════════ ПЛАНЕР ════════ */
+let fbLoading = false;
+function loadFirebase(){
+  if (window.firebase || fbLoading) return;
+  fbLoading = true;
+  const files = ['app', 'auth', 'firestore'];
+  let chain = Promise.resolve();
+  files.forEach(f => {
+    chain = chain.then(() => new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-' + f + '-compat.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }));
+  });
+  chain.then(() => {
+    firebase.initializeApp({
+      apiKey: 'AIzaSyAtHp8tsubQ_v4iSi2zkfCZTgKKMjm2VGA',
+      authDomain: 'wedding-6e47f.firebaseapp.com',
+      projectId: 'wedding-6e47f',
+      storageBucket: 'wedding-6e47f.firebasestorage.app',
+      messagingSenderId: '87093437583',
+      appId: '1:87093437583:web:d1ec82c0bca2f0334f3cfa',
+    });
+    log('планер: бібліотеки готові');
+  }).catch(() => { $('plErr').textContent = 'Не вдалось завантажити бібліотеки — потрібен інтернет.'; });
+}
+
+$('plBtn').onclick = async () => {
+  const err = $('plErr');
+  err.textContent = '';
+  if (!window.firebase){ err.textContent = 'Ще завантажується, спробуй за секунду.'; loadFirebase(); return; }
+  const email = $('plEmail').value.trim(), pass = $('plPass').value;
+  if (!email || !pass){ err.textContent = 'Впиши email і пароль.'; return; }
+  $('plBtn').textContent = 'Заходжу…';
+  try{
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    const snap = await firebase.firestore().collection('wedding').doc('state').get();
+    planner.state = snap.exists ? snap.data() : {};
+    $('plLogin').hidden = true;
+    $('plPick').hidden = false;
+    $('plLoaded').textContent = 'дані завантажені';
+    renderPlannerList();
+  }catch(e){
+    err.textContent = 'Не вдалось: ' + (e.code === 'auth/wrong-password' ? 'невірний пароль' : e.message);
+  }finally{ $('plBtn').textContent = 'Завантажити'; }
+};
+
+function renderPlannerList(){
+  const items = plannerItems();
+  $('plFilterWrap').hidden = $('plKind').value !== 'tasks';
+  const box = $('plList');
+  box.innerHTML = '';
+  if (!items.length){ box.innerHTML = '<p class="note">У цьому розділі порожньо.</p>'; render(); return; }
+  const ul = document.createElement('ul');
+  ul.className = 'picks';
+  items.forEach(it => {
+    if (planner.picked[it.id] === undefined) planner.picked[it.id] = true;
+    const li = document.createElement('li');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!planner.picked[it.id];
+    cb.onchange = () => { planner.picked[it.id] = cb.checked; render(); };
+    const sp = document.createElement('span'); sp.textContent = it.main;
+    const em = document.createElement('em'); em.textContent = it.sub || '';
+    li.appendChild(cb); li.appendChild(sp); li.appendChild(em);
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  render();
+}
+$('plKind').addEventListener('change', () => { planner.picked = {}; renderPlannerList(); });
+$('plFilter').addEventListener('change', () => { planner.picked = {}; renderPlannerList(); });
+$('plAll').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = true); renderPlannerList(); };
+$('plNone').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = false); renderPlannerList(); };
+
+/* ════════ КНОПКИ ════════ */
+$('btnConnect').onclick = async () => {
+  if (Printer.connected){ Printer.disconnect(); return; }
+  try{ await Printer.connect(); }
+  catch(e){
+    if (e && e.name === 'NotFoundError') ui.conn();       // просто закрила список — це не помилка
+    else { ui.conn('Не вдалось підключитись'); log('підключення: ' + (e && e.message)); }
+  }
+};
+$('btnPrint').onclick = () => printCurrent({ text: 'текст', photo: 'фото', list: 'список', planner: 'з планера', roll: 'лінійка', dev: 'текст' }[activeTab]);
+
+/* ── тема ── */
+(function theme(){
+  const b = $('themeToggle');
+  const sysDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+  function apply(m){
+    if (m) document.documentElement.setAttribute('data-theme', m);
+    else document.documentElement.removeAttribute('data-theme');
+    b.textContent = (m === 'dark' || (!m && sysDark())) ? '☀️' : '🌙';
+  }
+  apply(localStorage.getItem('wed-theme') || null);
+  b.onclick = () => {
+    const cur = document.documentElement.getAttribute('data-theme') || (sysDark() ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    try{ localStorage.setItem('wed-theme', next); }catch(e){}
+    apply(next);
+  };
+})();
+
+/* ── попередження про Bluetooth ── */
+(function btCheck(){
+  if (Printer.supported()) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const el = $('btWarn');
+  el.hidden = false;
+  el.innerHTML = isIOS
+    ? '<b>Safari на iPhone не вміє Bluetooth</b>Це обмеження самого Safari, а не сторінки. Постав безкоштовний браузер <b>Bluefy</b> з App Store, відкрий у ньому це посилання — і все запрацює. Решта вкладок (перегляд, розміри, QR) працює й тут.'
+    : '<b>Цей браузер не вміє Web Bluetooth</b>Відкрий сторінку в Chrome, Edge або Opera. Малювати й дивитись перегляд можна й тут.';
+  const copy = document.createElement('button');
+  copy.className = 'btn wide';
+  copy.style.marginTop = '10px';
+  copy.textContent = 'Скопіювати посилання';
+  copy.onclick = () => {
+    navigator.clipboard.writeText(location.href)
+      .then(() => { copy.textContent = 'Скопійовано ✓'; })
+      .catch(() => { copy.textContent = location.href; });
+  };
+  el.appendChild(copy);
+  $('btnConnect').disabled = true;
+  $('btnPrint').disabled = true;
+})();
+
+/* ── старт ── */
+fillRollSelect();
+rollToForm();
+renderSavedRolls();
+ui.conn();
+ui.devState();
+$('txtBody').value = DB.get('lastText', 'Катя & Діма\n6 вересня 2026');
+$('txtBody').addEventListener('input', () => DB.set('lastText', $('txtBody').value));
+
+// шрифти вантажаться асинхронно; поки їх нема, canvas міряє текст іншим
+// шрифтом і перегляд бреше — тому перемальовуємо, щойно вони приїдуть
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+render();
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+log('застосунок готовий · ' + VERSION);
+</script>
+</body>
+</html>
