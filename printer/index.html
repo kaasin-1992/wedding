@@ -373,14 +373,20 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     </div>
     <div class="card">
       <h2>Друк</h2>
-      <div class="slider"><span>Щільність</span><input type="range" id="devEnergy" min="4000" max="48000" step="1000" value="24000"><b id="devEnergyV">24k</b></div>
-      <div class="slider"><span>Швидкість</span><input type="range" id="devSpeed" min="8" max="48" value="32"><b id="devSpeedV">32</b></div>
+      <div id="mxOnly" hidden>
+        <div class="slider"><span>Щільність</span><input type="range" id="devIntensity" min="1" max="255" value="93"><b id="devIntensityV">93</b></div>
+      </div>
+      <div id="classicOnly">
+        <div class="slider"><span>Щільність</span><input type="range" id="devEnergy" min="4000" max="48000" step="1000" value="24000"><b id="devEnergyV">24k</b></div>
+        <div class="slider"><span>Швидкість</span><input type="range" id="devSpeed" min="8" max="48" value="32"><b id="devSpeedV">32</b></div>
+      </div>
       <div class="slider"><span>Відступ</span><input type="range" id="devFeed" min="0" max="200" value="80"><b id="devFeedV">80</b></div>
       <p class="note">Блідий друк лікується щільністю, а не яскравістю фото. Якщо папір чорніє й пахне — навпаки, зменш.</p>
       <div class="row" style="margin-top:10px">
         <button class="btn" id="devFeedBtn">↓ Подати папір</button>
         <button class="btn" id="devRetract">↑ Втягнути</button>
       </div>
+      <p class="note" id="devFeedNote" hidden></p>
     </div>
     <div class="card">
       <h2>Тонкі налаштування</h2>
@@ -420,6 +426,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 </div>
 
 <script src="../lib/catprinter.js"></script>
+<script src="../lib/mxw01.js"></script>
 <script src="../lib/qr.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
@@ -431,7 +438,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
    Тому попередній перегляд показує саме те, що вилізе на стрічці,
    а не «приблизно схоже».
    ════════════════════════════════════════════════════════════════════════ */
-const VERSION = 'printer-v1';
+const VERSION = 'printer-v2 (класичний + MXW01)';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -450,15 +457,29 @@ function log(msg){
 }
 
 /* ════════ ПІДКЛЮЧЕННЯ ДО ПРИНТЕРА ════════
-   Найголовніше тут — не «як підключитись», а «як не відвалитись». Кадри
-   пишуться без підтвердження, тому єдиний спосіб не переповнити буфер
-   принтера — самим тримати темп і паузи. */
+
+   Під цією назвою продаються дві РІЗНІ родини заліза, і говорять вони
+   по-різному:
+
+   • класична («котяча»: GB01, GT01, MX05…) — преамбула 51 78, зображення
+     йде рядок за рядком звичайними командами в AE01;
+   • MXW01 — преамбула 22 21, є третя характеристика AE03, і друк це діалог:
+     питаємо стан → просимо дозвіл на N рядків → чекаємо «так» → ллємо
+     зображення суцільним потоком → кажемо «все» → чекаємо, поки додрукує.
+
+   Тому тут не один драйвер, а два, і модель визначається за наявністю AE03
+   одразу після під'єднання. Спільне для обох — темп: писати без пауз не
+   можна нікуди, переповнений буфер рве з'єднання на будь-якій моделі. */
 const Printer = {
-  device: null, server: null, tx: null, rx: null,
-  status: null, name: '', connecting: false, wantConnected: false,
-  job: null,
+  device: null, server: null, svc: null,
+  tx: null, rx: null, data: null,
+  model: 'classic',
+  status: null, mxStatusInfo: null, name: '',
+  connecting: false, wantConnected: false, printing: false,
+  job: null, waiters: [],
 
   get connected(){ return !!(this.device && this.device.gatt && this.device.gatt.connected && this.tx); },
+  get isMX(){ return this.model === 'mxw01'; },
 
   supported(){ return typeof navigator !== 'undefined' && !!navigator.bluetooth; },
 
@@ -466,9 +487,15 @@ const Printer = {
     if (!this.supported()) throw new Error('Цей браузер не вміє Bluetooth');
     this.connecting = true; ui.conn();
     try{
+      // MXW01 рекламує AE30, класичні — AF30. Шукаємо обидва, інакше
+      // список пристроїв буде просто порожній і виглядатиме як «не працює».
       this.device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [CAT_ADV_SRV] }],
-        optionalServices: [CAT_PRINT_SRV],
+        filters: [
+          { services: [CAT_PRINT_SRV] },
+          { services: [CAT_ADV_SRV] },
+          { namePrefix: 'MX' },
+        ],
+        optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV],
       });
       this.device.addEventListener('gattserverdisconnected', () => this.onDrop());
       this.wantConnected = true;
@@ -478,28 +505,75 @@ const Printer = {
 
   async open(){
     this.server = await this.device.gatt.connect();
-    const svc = await this.server.getPrimaryService(CAT_PRINT_SRV);
-    this.tx = await svc.getCharacteristic(CAT_PRINT_TX_CHAR);
+    this.svc = null;
+    for (const uuid of [CAT_PRINT_SRV, CAT_ADV_SRV]){
+      try{ this.svc = await this.server.getPrimaryService(uuid); break; }catch(e){}
+    }
+    if (!this.svc) throw new Error('Не знайшов сервіс принтера');
+
+    this.tx = await this.svc.getCharacteristic(CAT_TX_CHAR);
+
+    // ОСЬ ТУТ і визначається модель: AE03 є тільки в MXW01
+    this.data = null;
+    try{ this.data = await this.svc.getCharacteristic(MX_DATA); }catch(e){}
+    this.model = this.data ? 'mxw01' : 'classic';
+
     try{
-      this.rx = await svc.getCharacteristic(CAT_PRINT_RX_CHAR);
+      this.rx = await this.svc.getCharacteristic(CAT_RX_CHAR);
       await this.rx.startNotifications();
-      this.rx.addEventListener('characteristicvaluechanged', e => {
-        const st = parseStatus(new Uint8Array(e.target.value.buffer));
-        if (st){ this.status = st; ui.conn(); ui.devState(); }
-      });
+      this.rx.addEventListener('characteristicvaluechanged', e => this.onNotify(new Uint8Array(e.target.value.buffer)));
     }catch(e){ log('нотифікації недоступні: ' + e.message); }
+
     this.name = this.device.name || 'Міні-принтер';
-    log('підключено: ' + this.name);
-    ui.conn(); ui.devState();
-    await this.write(cmdState());
+    log('підключено: ' + this.name + ' · протокол ' + (this.isMX ? 'MXW01' : 'класичний'));
+    ui.conn(); ui.devState(); ui.modelControls();
+    await this.write(this.isMX ? mxStatus() : cmdState());
   },
 
-  /* Обрив. Якщо він стався посеред друку — не викидаємо завдання, а даємо
-     його доробити: рядки незалежні один від одного, тож достатньо повторити
-     службову преамбулу й піти далі з місця обриву. */
+  /* Усі відповіді принтера пишемо в журнал у hex. Живого MXW01 в мене під
+     рукою не було, тож якщо щось піде не так — саме звідси й буде видно, що
+     насправді відповідає пристрій. */
+  onNotify(bytes){
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    log('◀ ' + hex);
+
+    if (this.isMX){
+      const n = mxParseNotification(bytes);
+      if (!n) return;
+      if (n.cmd === MX_CMD.STATUS){
+        this.mxStatusInfo = mxParseStatus(n.payload);
+        ui.conn(); ui.devState();
+      }
+      this.waiters = this.waiters.filter(w => {
+        if (w.cmd !== n.cmd) return true;
+        w.resolve(n);
+        return false;
+      });
+      return;
+    }
+    const st = parseStatus(bytes);
+    if (st){ this.status = st; ui.conn(); ui.devState(); }
+  },
+
+  /* Чекаємо на конкретну відповідь. Без тайм-ауту застосунок би просто завис
+     мовчки — а так буде видно, на якому саме кроці принтер не відповів. */
+  waitFor(cmd, ms, what){
+    return new Promise((resolve, reject) => {
+      const w = { cmd, resolve };
+      this.waiters.push(w);
+      setTimeout(() => {
+        if (!this.waiters.includes(w)) return;
+        this.waiters = this.waiters.filter(x => x !== w);
+        reject(new Error('Принтер не відповів на «' + what + '»'));
+      }, ms || 6000);
+    });
+  },
+
   onDrop(){
     log('з\'єднання розірвано');
-    this.tx = null; this.rx = null;
+    this.tx = null; this.rx = null; this.data = null;
+    this.waiters.forEach(w => w.resolve && w.resolve(null));
+    this.waiters = [];
     ui.conn();
     if (this.job && this.job.running){
       this.job.running = false;
@@ -518,18 +592,34 @@ const Printer = {
       try{
         await this.open();
         log('перепідключено з ' + attempt + '-ї спроби');
-        if (this.job && this.job.interrupted) await this.resume();
+        if (this.job && this.job.interrupted) await this.afterReconnect();
         return;
       }catch(e){ log('спроба ' + attempt + ' не вдалась: ' + e.message); }
     }
     if (!this.connected) ui.conn('Не вдалось перепідключитись');
   },
 
+  /* Що робити з перерваним завданням — залежить від моделі.
+     Класичний друкує рядки незалежно, тож можна продовжити з місця обриву.
+     MXW01 наперед замовив рівно N рядків: недоливши їх, ми лишили принтер
+     чекати, і «продовжити» вже неможливо — чесніше сказати про це прямо,
+     ніж вдавати відновлення й отримати пів наклейки. */
+  async afterReconnect(){
+    if (this.isMX){
+      try{ await this.write(mxCancel()); }catch(e){}
+      this.job = null;
+      ui.dock('Друк обірвався', 'MXW01 не вміє продовжувати — запусти ще раз');
+      log('MXW01: завдання скасовано, потрібен повторний запуск');
+      return;
+    }
+    await this.resume();
+  },
+
   disconnect(){
     this.wantConnected = false;
     this.job = null;
     try{ if (this.device && this.device.gatt.connected) this.device.gatt.disconnect(); }catch(e){}
-    this.tx = null; this.status = null;
+    this.tx = null; this.data = null; this.status = null; this.mxStatusInfo = null;
     ui.conn(); ui.devState();
   },
 
@@ -539,9 +629,89 @@ const Printer = {
     else await this.tx.writeValue(bytes);
   },
 
-  /* Відправка завдання. Ведемо лік НАДІСЛАНИМ ПАКЕТАМ, а не байтам:
-     тільки так після обриву можна продовжити з цілого рядка, а не з
-     половини кадру, яку принтер однаково викине. */
+  async writeData(bytes){
+    if (!this.data) throw new Error('Немає каналу даних');
+    if (this.data.writeValueWithoutResponse) await this.data.writeValueWithoutResponse(bytes);
+    else await this.data.writeValue(bytes);
+  },
+
+  /* ── ЄДИНИЙ ВХІД ДЛЯ ДРУКУ ──
+     Вкладки не знають і не мають знати, який там протокол: вони дають
+     упаковані біти, кількість рядків і скільки порожніх рядків дописати
+     після. Розгалуження живе тільки тут. */
+  async printImage(packed, rows, extraRows, label){
+    if (!this.connected){ ui.dock('Принтер не підключений', 'спершу натисни «Підключити»'); return; }
+    if (this.printing){ ui.dock('Зачекай', 'попереднє завдання ще друкується'); return; }
+    this.printing = true;
+    try{
+      if (this.isMX) await this.printMX(packed, rows, extraRows, label);
+      else await this.printClassic(packed, rows, extraRows, label);
+    }catch(e){
+      log('друк: ' + e.message);
+      ui.dock('Друк не вдався', e.message);
+    }finally{ this.printing = false; }
+  },
+
+  async printClassic(packed, rows, extraRows, label){
+    const packets = buildJob(packed, {
+      rows, rowBytes: ROW_BYTES,
+      speed: settings.speed,
+      energy: settings.energy,
+      feed: extraRows,
+      lattice: settings.lattice,
+      coalesceBlank: settings.coalesce,
+    });
+    ui.dock('Друкую…', label);
+    await this.send(packets, label);
+  },
+
+  /* Повний діалог MXW01. Кожен крок або дочекався відповіді, або чесно
+     впав з поясненням — мовчазних зависань тут бути не повинно. */
+  async printMX(packed, rows, extraRows, label){
+    const img = mxPrepareImage(packed, rows, extraRows);
+    ui.dock('Друкую…', label);
+
+    await this.write(mxIntensity(settings.intensity));
+    await sleep(30);
+
+    await this.write(mxStatus());
+    const st = await this.waitFor(MX_CMD.STATUS, 6000, 'запит стану');
+    if (st){
+      const info = mxParseStatus(st.payload);
+      const problem = mxStatusProblem(info);
+      if (problem) throw new Error(problem);
+    }
+
+    await this.write(mxPrint(img.rows, MX_MODE_1BPP));
+    const ack = await this.waitFor(MX_CMD.PRINT, 6000, 'запит на друк');
+    if (ack && ack.payload.length && ack.payload[0] !== 0x00){
+      throw new Error('Принтер відхилив завдання (код ' + ack.payload[0] + ')');
+    }
+
+    const chunks = mxDataChunks(img.data, settings.chunk);
+    this.job = { running: true, interrupted: false, label, sent: 0, total: chunks.length };
+    for (let i = 0; i < chunks.length; i++){
+      if (!this.job || !this.job.running) return;
+      await this.writeData(chunks[i]);
+      this.job.sent = i + 1;
+      if (settings.delay) await sleep(settings.delay);
+      if (i % 4 === 0) ui.progress(this.job.sent / chunks.length, label);
+    }
+    ui.progress(1, label);
+
+    await this.write(mxFlush());
+    // друк триває довше за передачу — чекаємо саме фізичного завершення
+    await this.waitFor(MX_CMD.COMPLETE, 60000, 'завершення друку').catch(e => {
+      log('не дочекався сигналу про завершення: ' + e.message);
+    });
+    this.job = null;
+    ui.dock('Надруковано', label);
+    log('готово: ' + label + ' · ' + img.rows + ' рядків, ' + img.data.length + ' байт');
+  },
+
+  /* Відправка для класичного протоколу. Ведемо лік НАДІСЛАНИМ ПАКЕТАМ,
+     а не байтам: тільки так після обриву можна продовжити з цілого рядка,
+     а не з половини кадру, яку принтер однаково викине. */
   async send(packets, label){
     this.job = { packets, sent: 0, running: true, interrupted: false, label: label || 'Друк' };
     await this.pump();
@@ -599,8 +769,9 @@ const Printer = {
 
 /* ════════ НАЛАШТУВАННЯ ДРУКУ ════════ */
 const settings = {
-  energy: DB.get('energy', DEF_ENERGY),
-  speed: DB.get('speed', DEF_SPEED),
+  energy: DB.get('energy', DEF_ENERGY),          // класичний протокол
+  speed: DB.get('speed', DEF_SPEED),             // класичний протокол
+  intensity: DB.get('intensity', MX_DEF_INTENSITY), // MXW01
   feed: DB.get('feed', DEF_FEED),
   chunk: DB.get('chunk', 120),
   delay: DB.get('delay', 14),
@@ -1096,25 +1267,13 @@ function currentBits(){
 }
 
 async function printCurrent(label){
-  if (!Printer.connected){
-    ui.dock('Принтер не підключений', 'спершу натисни «Підключити»');
-    return;
-  }
   const bits = currentBits();
   const packed = packBits(bits, sheet.width, sheet.height);
   const L = layout();
-  const packets = buildJob(packed, {
-    rows: sheet.height,
-    rowBytes: ROW_BYTES,
-    speed: settings.speed,
-    energy: settings.energy,
-    feed: rollFeed(L, sheet.height, settings.feed),
-    lattice: settings.lattice,
-    coalesceBlank: settings.coalesce,
-  });
-  ui.dock('Друкую…', label || 'завдання');
-  try{ await Printer.send(packets, label || 'завдання'); }
-  catch(e){ /* повідомлення вже показане */ }
+  // скільки протягнути після надрукованого: на суцільній стрічці — щоб було
+  // що відірвати, на наклейках — рівно до початку наступної
+  const feed = rollFeed(L, sheet.height, settings.feed);
+  await Printer.printImage(packed, sheet.height, feed, label || 'завдання');
 }
 
 /* ════════ ІНТЕРФЕЙС ════════ */
@@ -1125,7 +1284,7 @@ const ui = {
     if (Printer.connected){
       dot.className = 'dot on';
       name.textContent = Printer.name;
-      const problem = statusProblem(Printer.status);
+      const problem = Printer.isMX ? mxStatusProblem(Printer.mxStatusInfo) : statusProblem(Printer.status);
       state.textContent = problem || 'готовий до друку';
       dot.className = problem ? 'dot err' : 'dot on';
       btn.textContent = 'Відключити';
@@ -1148,15 +1307,42 @@ const ui = {
   devState(){
     const el = $('devState');
     if (!Printer.connected){ el.innerHTML = 'Принтер не підключений.'; return; }
-    const st = Printer.status;
-    const rows = [
-      ['Пристрій', Printer.name],
-      ['Папір', st ? (st.outOfPaper ? '<b style="color:var(--err)">скінчився</b>' : 'є') : '—'],
-      ['Кришка', st ? (st.coverOpen ? '<b style="color:var(--err)">відкрита</b>' : 'закрита') : '—'],
-      ['Температура', st ? (st.overheat ? '<b style="color:var(--err)">перегрів</b>' : 'нормальна') : '—'],
-      ['Живлення', st ? (st.lowPower ? '<b style="color:var(--warn)">сідає батарея</b>' : 'достатнє') : '—'],
-    ];
+    let rows;
+    if (Printer.isMX){
+      const st = Printer.mxStatusInfo;
+      const problem = mxStatusProblem(st);
+      // «—» означає «принтер ще не сказав», і це чесніше за вигаданий нуль
+      rows = [
+        ['Пристрій', Printer.name],
+        ['Протокол', 'MXW01'],
+        ['Стан', st ? (problem ? '<b style="color:var(--err)">' + problem + '</b>' : 'готовий') : '—'],
+        ['Батарея', st && st.battery != null ? st.battery + '%' : '—'],
+        ['Температура', st && st.temperature != null ? st.temperature + '°' : '—'],
+      ];
+    } else {
+      const st = Printer.status;
+      rows = [
+        ['Пристрій', Printer.name],
+        ['Протокол', 'класичний'],
+        ['Папір', st ? (st.outOfPaper ? '<b style="color:var(--err)">скінчився</b>' : 'є') : '—'],
+        ['Кришка', st ? (st.coverOpen ? '<b style="color:var(--err)">відкрита</b>' : 'закрита') : '—'],
+        ['Температура', st ? (st.overheat ? '<b style="color:var(--err)">перегрів</b>' : 'нормальна') : '—'],
+        ['Живлення', st ? (st.lowPower ? '<b style="color:var(--warn)">сідає батарея</b>' : 'достатнє') : '—'],
+      ];
+    }
     el.innerHTML = rows.map(r => '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line)"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>').join('');
+  },
+
+  /* Показуємо тільки ті регулятори, які ця модель насправді розуміє —
+     краще сховати, ніж лишити повзунок, що нічого не робить. */
+  modelControls(){
+    const mx = Printer.connected && Printer.isMX;
+    $('mxOnly').hidden = !mx;
+    $('classicOnly').hidden = mx;
+    // у протоколі MXW01 нема команди втягування — кнопка була б обманом
+    $('devRetract').disabled = mx;
+    $('devFeedNote').hidden = !mx;
+    if (mx) $('devFeedNote').textContent = 'MXW01 не має окремої команди подачі: «Подати папір» друкує порожню смужку, а втягування ця модель не вміє взагалі.';
   },
 };
 
@@ -1456,6 +1642,7 @@ function bindSetting(id, key, fmt, transform){
 }
 bindSetting('devEnergy', 'energy', v => Math.round(v / 1000) + 'k');
 bindSetting('devSpeed', 'speed');
+bindSetting('devIntensity', 'intensity');
 bindSetting('devFeed', 'feed');
 bindSetting('devChunk', 'chunk');
 bindSetting('devDelay', 'delay');
@@ -1466,10 +1653,28 @@ $('devCoalesce').addEventListener('change', e => { settings.coalesce = e.target.
 
 $('devRefresh').onclick = async () => {
   if (!Printer.connected) return ui.dock('Принтер не підключений', '');
-  try{ await Printer.write(cmdState()); log('запит стану'); }catch(e){ log('не вдалось: ' + e.message); }
+  try{
+    await Printer.write(Printer.isMX ? mxStatus() : cmdState());
+    log('запит стану');
+  }catch(e){ log('не вдалось: ' + e.message); }
 };
-$('devFeedBtn').onclick = async () => { if (Printer.connected) await Printer.write(cmdFeed(60)); };
-$('devRetract').onclick = async () => { if (Printer.connected) await Printer.write(cmdRetract(30)); };
+
+/* Подача. У класичного це окрема команда, у MXW01 такої нема — тому там
+   просто друкуємо порожню смужку потрібної висоти. Результат для людини
+   однаковий: папір виїхав. */
+$('devFeedBtn').onclick = async () => {
+  if (!Printer.connected) return;
+  if (Printer.isMX){
+    const rows = 60;
+    await Printer.printImage(new Uint8Array(rows * ROW_BYTES), rows, 0, 'подача паперу');
+  } else {
+    await Printer.write(cmdFeed(60));
+  }
+};
+$('devRetract').onclick = async () => {
+  if (!Printer.connected || Printer.isMX) return;
+  await Printer.write(cmdRetract(30));
+};
 $('devClear').onclick = () => { $('devLog').textContent = '—'; };
 
 $('devTest').onclick = async () => {
@@ -1491,7 +1696,8 @@ $('devTest').onclick = async () => {
   }
   ctx.fillStyle = '#000';
   ctx.font = '600 16px ' + FONTS.mono;
-  ctx.fillText('щільність ' + settings.energy + ' · швидкість ' + settings.speed, s.x0 + s.w / 2, 134);
+  ctx.fillText(Printer.isMX ? 'щільність ' + settings.intensity
+    : 'щільність ' + settings.energy + ' · швидкість ' + settings.speed, s.x0 + s.w / 2, 134);
   // тонкі лінії — перевірка роздільності
   for (let i = 0; i < 8; i++) ctx.fillRect(s.x0 + 12, 160 + i * 6, s.w - 24, i % 2 ? 1 : 2);
   ctx.fillText(new Date().toLocaleString('uk-UA'), s.x0 + s.w / 2, 216);
@@ -1499,15 +1705,7 @@ $('devTest').onclick = async () => {
   const bits = dither(toGray(sctx.getImageData(0, 0, sheet.width, sheet.height).data, sheet.width * sheet.height),
     sheet.width, sheet.height, 'floyd', 128);
   const packed = packBits(bits, sheet.width, sheet.height);
-  const packets = buildJob(packed, {
-    rows: sheet.height, rowBytes: ROW_BYTES,
-    speed: settings.speed, energy: settings.energy,
-    feed: rollFeed(L, sheet.height, settings.feed),
-    lattice: settings.lattice, coalesceBlank: settings.coalesce,
-  });
-  if (!Printer.connected) return ui.dock('Принтер не підключений', '');
-  ui.dock('Друкую тест…', '');
-  try{ await Printer.send(packets, 'тестовий друк'); }catch(e){}
+  await Printer.printImage(packed, sheet.height, rollFeed(L, sheet.height, settings.feed), 'тестовий друк');
 };
 
 /* ════════ ПЛАНЕР ════════ */
@@ -1644,6 +1842,7 @@ rollToForm();
 renderSavedRolls();
 ui.conn();
 ui.devState();
+ui.modelControls();
 $('txtBody').value = DB.get('lastText', 'Катя & Діма\n6 вересня 2026');
 $('txtBody').addEventListener('input', () => DB.set('lastText', $('txtBody').value));
 
