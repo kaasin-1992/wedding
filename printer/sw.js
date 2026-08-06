@@ -1,6 +1,6 @@
 // Імʼя кешу — це і є версія. Бампаючи його, ми змушуємо браузер поставити новий SW:
 // install перезаписує ASSETS свіжими копіями, activate видаляє кеш зі старим імʼям.
-const CACHE = 'wedding-printer-v1';
+const CACHE = 'wedding-printer-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   '../icon-192.png',
   '../icon-512.png',
   '../lib/catprinter.js',
+  '../lib/mxw01.js',
   '../lib/qr.js'
 ];
 
