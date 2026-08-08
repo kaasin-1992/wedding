@@ -394,6 +394,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
         <button class="btn" id="devRefresh">Оновити стан</button>
         <button class="btn" id="devTest">Тестовий друк</button>
       </div>
+      <button class="btn wide primary" id="devSolid" style="margin-top:10px">⬛ Суцільна чорна смуга</button>
+      <p class="note">Якщо друк виходить порожнім — тисни це. Смуга з самих чорних точок, без тексту й обробки. <b>Вийшла чорна</b> — дані доходять, справа в зображенні чи режимі. <b>Порожня</b> — дані до принтера не доїжджають, і тоді допоможуть перемикачі нижче.</p>
     </div>
     <div class="card">
       <h2>Друк</h2>
@@ -416,6 +418,14 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <h2>Тонкі налаштування</h2>
       <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="40" max="240" step="20" value="120"><b id="devChunkV">120</b></div>
       <div class="slider"><span>Пауза, мс</span><input type="range" id="devDelay" min="0" max="60" step="2" value="14"><b id="devDelayV">14</b></div>
+      <label class="chk"><input type="checkbox" id="devSafeWrite" checked> Надійний запис даних (з підтвердженням)</label>
+      <label class="fld" id="mxModeWrap" hidden><span>Режим друку MXW01</span>
+        <select id="devMxMode">
+          <option value="0">0x00 — один біт на піксель</option>
+          <option value="1">0x01 — інший варіант</option>
+        </select>
+      </label>
+      <p class="note" id="mxModeNote" hidden>Опис протоколу MXW01 у цьому місці суперечить сам собі: в одній таблиці стоїть 0x00, в іншій 0x01. Якщо смуга виходить порожня — перемкни й спробуй ще раз.</p>
       <label class="chk"><input type="checkbox" id="devLattice" checked> Службова преамбула друку</label>
       <label class="chk"><input type="checkbox" id="devCoalesce"> Прискорювати порожні ділянки</label>
       <p class="note">Якщо принтер зривається посеред довгого друку — зменш порцію й збільш паузу. Саме переповнений буфер, а не Bluetooth, найчастіше й рве з'єднання.</p>
@@ -460,9 +470,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=7"></script>
-<script src="../lib/mxw01.js?v=7"></script>
-<script src="../lib/qr.js?v=7"></script>
+<script src="../lib/catprinter.js?v=8"></script>
+<script src="../lib/mxw01.js?v=8"></script>
+<script src="../lib/qr.js?v=8"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -476,7 +486,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v7 · без залежності від кешу';
+const VERSION = 'v8 · чорна смуга + режими';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -765,22 +775,42 @@ const Printer = {
     else await this.tx.writeValue(bytes);
   },
 
+  /* Запис самого зображення. «Без підтвердження» швидше, але саме тут
+     байти можуть тихо загубитись — а виглядає це як порожня стрічка:
+     принтер отримав замовлення на N рядків і жодного байта, тож слухняно
+     протягнув N порожніх рядків. Тому за замовчуванням пишемо З
+     підтвердженням і рахуємо, скільки реально пройшло. */
   async writeData(bytes){
     if (!this.data) throw new Error('Немає каналу даних');
-    if (this.data.writeValueWithoutResponse) await this.data.writeValueWithoutResponse(bytes);
-    else await this.data.writeValue(bytes);
+    const safe = settings.safeWrite && !this.noSafeWrite && this.data.writeValue;
+    if (safe){
+      try{
+        await this.data.writeValue(bytes);
+        this.bytesSent += bytes.length;
+        return;
+      }catch(e){
+        // AE03 в описі протоколу — «write without response». Якщо пристрій
+        // не приймає запис із підтвердженням, це не привід валити друк:
+        // відступаємо на швидкий шлях і більше не пробуємо повільний.
+        this.noSafeWrite = true;
+        log('надійний запис недоступний (' + (e.name || 'Error') + ') — переходжу на швидкий');
+      }
+    }
+    if (!this.data.writeValueWithoutResponse) throw new Error('Характеристика даних не приймає запис');
+    await this.data.writeValueWithoutResponse(bytes);
+    this.bytesSent += bytes.length;
   },
 
   /* ── ЄДИНИЙ ВХІД ДЛЯ ДРУКУ ──
      Вкладки не знають і не мають знати, який там протокол: вони дають
      упаковані біти, кількість рядків і скільки порожніх рядків дописати
      після. Розгалуження живе тільки тут. */
-  async printImage(packed, rows, extraRows, label){
+  async printImage(packed, rows, extraRows, label, rawImage){
     if (!this.connected){ needPrinter(); return; }
     if (this.printing){ toast('Попереднє завдання ще друкується', 3000); return; }
     this.printing = true;
     try{
-      if (this.isMX) await this.printMX(packed, rows, extraRows, label);
+      if (this.isMX) await this.printMX(packed, rows, extraRows, label, rawImage);
       else await this.printClassic(packed, rows, extraRows, label);
     }catch(e){
       log('друк: ' + e.message);
@@ -803,9 +833,11 @@ const Printer = {
 
   /* Повний діалог MXW01. Кожен крок або дочекався відповіді, або чесно
      впав з поясненням — мовчазних зависань тут бути не повинно. */
-  async printMX(packed, rows, extraRows, label){
-    const img = mxPrepareImage(packed, rows, extraRows);
+  async printMX(packed, rows, extraRows, label, rawImage){
+    const img = rawImage || mxPrepareImage(packed, rows, extraRows);
     ui.dock('Друкую…', label);
+    this.bytesSent = 0;
+    this.noSafeWrite = false;
 
     await this.write(mxIntensity(settings.intensity));
     await sleep(30);
@@ -818,7 +850,8 @@ const Printer = {
       if (problem) throw new Error(problem);
     }
 
-    await this.write(mxPrint(img.rows, MX_MODE_1BPP));
+    log('запит на друк: ' + img.rows + ' рядків, режим 0x' + settings.mxMode.toString(16));
+    await this.write(mxPrint(img.rows, settings.mxMode));
     const ack = await this.waitFor(MX_CMD.PRINT, 6000, 'запит на друк');
     if (ack && ack.payload.length && ack.payload[0] !== 0x00){
       throw new Error('Принтер відхилив завдання (код ' + ack.payload[0] + ')');
@@ -828,20 +861,30 @@ const Printer = {
     this.job = { running: true, interrupted: false, label, sent: 0, total: chunks.length };
     for (let i = 0; i < chunks.length; i++){
       if (!this.job || !this.job.running) return;
-      await this.writeData(chunks[i]);
+      try{
+        await this.writeData(chunks[i]);
+      }catch(e){
+        // не ковтаємо: втрачена порція — це і є порожня стрічка
+        throw new Error('Порція ' + (i + 1) + '/' + chunks.length + ' не пройшла: ' + e.message);
+      }
       this.job.sent = i + 1;
       if (settings.delay) await sleep(settings.delay);
       if (i % 4 === 0) ui.progress(this.job.sent / chunks.length, label);
     }
     ui.progress(1, label);
+    log('надіслано в AE03: ' + this.bytesSent + ' з ' + img.data.length + ' байт (' + chunks.length + ' порцій)');
 
     await this.write(mxFlush());
     // друк триває довше за передачу — чекаємо саме фізичного завершення
+    let confirmed = true;
     await this.waitFor(MX_CMD.COMPLETE, 60000, 'завершення друку').catch(e => {
+      confirmed = false;
       log('не дочекався сигналу про завершення: ' + e.message);
     });
     this.job = null;
-    ui.dock('Надруковано', label);
+    // «Надруковано» без підтвердження від принтера було б припущенням
+    ui.dock(confirmed ? 'Надруковано' : 'Дані надіслані', label);
+    if (!confirmed) toast('Дані надіслані, але принтер не підтвердив завершення', 7000);
     log('готово: ' + label + ' · ' + img.rows + ' рядків, ' + img.data.length + ' байт');
   },
 
@@ -913,6 +956,8 @@ const settings = {
   delay: DB.get('delay', 14),
   lattice: DB.get('lattice', true),
   coalesce: DB.get('coalesce', false),
+  safeWrite: DB.get('safeWrite', true),      // писати зображення з підтвердженням
+  mxMode: DB.get('mxMode', MX_MODE_1BPP),    // четвертий байт команди A9
 };
 
 /* ════════ РУЛОН ════════ */
@@ -1475,6 +1520,14 @@ const ui = {
     const mx = Printer.connected && Printer.isMX;
     $('mxOnly').hidden = !mx;
     $('classicOnly').hidden = mx;
+    $('mxModeWrap').hidden = !mx;
+    $('mxModeNote').hidden = !mx;
+    // 120 байт може не вміщатись у MTU без фрагментації — для MXW01 обережніше
+    if (mx && DB.get('chunk', null) == null && settings.chunk > 100){
+      settings.chunk = 100;
+      $('devChunk').value = 100;
+      $('devChunkV').textContent = '100';
+    }
     // у протоколі MXW01 нема команди втягування — кнопка була б обманом
     // не вимикаємо: натомість кнопка скаже, що ця модель так не вміє
     $('devFeedNote').hidden = !mx;
@@ -1786,6 +1839,27 @@ $('devLattice').checked = settings.lattice;
 $('devLattice').addEventListener('change', e => { settings.lattice = e.target.checked; DB.set('lattice', settings.lattice); });
 $('devCoalesce').checked = settings.coalesce;
 $('devCoalesce').addEventListener('change', e => { settings.coalesce = e.target.checked; DB.set('coalesce', settings.coalesce); });
+$('devSafeWrite').checked = settings.safeWrite;
+$('devSafeWrite').addEventListener('change', e => { settings.safeWrite = e.target.checked; DB.set('safeWrite', settings.safeWrite); });
+$('devMxMode').value = String(settings.mxMode);
+$('devMxMode').addEventListener('change', e => {
+  settings.mxMode = +e.target.value;
+  DB.set('mxMode', settings.mxMode);
+  toast('Режим 0x0' + settings.mxMode + '. Спробуй чорну смугу ще раз', 4000);
+});
+
+/* Вирішальна перевірка каналу даних: смуга з самих одиниць. */
+$('devSolid').onclick = async () => {
+  if (!needPrinter()) return;
+  if (Printer.isMX){
+    const img = mxSolidBlack(120);
+    log('чорна смуга: ' + img.rows + ' рядків, ' + img.data.length + ' байт самих 0xFF');
+    await Printer.printImage(null, img.rows, 0, 'чорна смуга', img);
+  } else {
+    const rows = 120;
+    await Printer.printImage(new Uint8Array(rows * ROW_BYTES).fill(0xff), rows, 0, 'чорна смуга');
+  }
+};
 
 /* Спільна перевірка для всіх дій, що вимагають принтера: або кажемо чому
    не можемо, або робимо. Мовчки не виходимо ніколи. */
