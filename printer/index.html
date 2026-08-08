@@ -151,6 +151,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     <h1>Друк <em>без</em> реклами</h1>
     <p class="sub">Текст, фото, списки, QR і наклейки — прямо з браузера</p>
     <a class="back" href="../">← усі наші сторінки</a>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px" id="verMark"></div>
   </header>
 
   <div class="banner bt" id="btWarn" hidden></div>
@@ -159,6 +160,16 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     <span class="dot" id="connDot"></span>
     <span class="who"><b id="connName">Принтер не підключений</b><span id="connState">натисни «Підключити»</span></span>
     <button class="btn primary" id="btnConnect">Підключити</button>
+  </div>
+
+  <div class="banner err" id="notFound" hidden>
+    <b>Принтера немає в списку?</b>
+    <ol style="margin:8px 0 0;padding-left:20px;line-height:1.6">
+      <li><b>Закрий Fun Print</b> (і будь-який інший застосунок принтера). Поки принтер тримає з'єднання з ним, він перестає себе показувати — і зникає зі списку для всіх інших.</li>
+      <li>Вимкни й увімкни сам принтер кнопкою.</li>
+      <li>Спробуй «Показати всі пристрої» — там видно геть усе, що поруч, і MXW01 можна вибрати за іменем.</li>
+    </ol>
+    <button class="btn wide" id="btnAnyDevice" style="margin-top:10px">Показати всі пристрої</button>
   </div>
 
   <nav class="tabs" id="tabs" role="tablist">
@@ -438,7 +449,10 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
    Тому попередній перегляд показує саме те, що вилізе на стрічці,
    а не «приблизно схоже».
    ════════════════════════════════════════════════════════════════════════ */
-const VERSION = 'printer-v2 (класичний + MXW01)';
+/* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
+   перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
+   було видно, і ми гадали. */
+const VERSION = 'v3 · класичний + MXW01';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -483,20 +497,31 @@ const Printer = {
 
   supported(){ return typeof navigator !== 'undefined' && !!navigator.bluetooth; },
 
-  async connect(){
+  /* Пошук пристрою.
+
+     Тут легко втратити принтер ще до будь-якого протоколу. Web Bluetooth
+     фільтрує за UUID у РЕКЛАМНОМУ пакеті, а чимало цих принтерів кладуть
+     туди лише ім'я й віддають сервіс уже після під'єднання — тоді фільтр
+     за сервісом не знаходить нічого, і список порожній.
+     Тому фільтруємо ще й за іменами відомих родин, а якщо не помогло —
+     є режим «показати всі», який не може не спрацювати. */
+  async connect(anyDevice){
     if (!this.supported()) throw new Error('Цей браузер не вміє Bluetooth');
     this.connecting = true; ui.conn();
     try{
-      // MXW01 рекламує AE30, класичні — AF30. Шукаємо обидва, інакше
-      // список пристроїв буде просто порожній і виглядатиме як «не працює».
-      this.device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: [CAT_PRINT_SRV] },
-          { services: [CAT_ADV_SRV] },
-          { namePrefix: 'MX' },
-        ],
-        optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV],
-      });
+      const options = anyDevice
+        ? { acceptAllDevices: true, optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV] }
+        : {
+            filters: [
+              { services: [CAT_PRINT_SRV] },   // MXW01 рекламує AE30
+              { services: [CAT_ADV_SRV] },     // класичні — AF30
+              { namePrefix: 'MX' }, { namePrefix: 'GB' }, { namePrefix: 'GT' },
+              { namePrefix: 'YT' }, { namePrefix: 'Cat' },
+            ],
+            optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV],
+          };
+      log(anyDevice ? 'шукаю ВСІ пристрої поруч' : 'шукаю принтер за сервісом та іменем');
+      this.device = await navigator.bluetooth.requestDevice(options);
       this.device.addEventListener('gattserverdisconnected', () => this.onDrop());
       this.wantConnected = true;
       await this.open();
@@ -1784,14 +1809,28 @@ $('plAll').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] 
 $('plNone').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = false); renderPlannerList(); };
 
 /* ════════ КНОПКИ ════════ */
-$('btnConnect').onclick = async () => {
+/* Порожній список і закритий список приходять однією й тією ж помилкою
+   NotFoundError — розрізнити їх з коду не можна. Раніше ми в обох випадках
+   просто нічого не робили, і «принтера нема в списку» виглядало як зламаний
+   застосунок. Тепер показуємо, що робити далі. */
+async function doConnect(anyDevice){
   if (Printer.connected){ Printer.disconnect(); return; }
-  try{ await Printer.connect(); }
-  catch(e){
-    if (e && e.name === 'NotFoundError') ui.conn();       // просто закрила список — це не помилка
-    else { ui.conn('Не вдалось підключитись'); log('підключення: ' + (e && e.message)); }
+  try{
+    await Printer.connect(anyDevice);
+    $('notFound').hidden = true;
+  }catch(e){
+    if (e && e.name === 'NotFoundError'){
+      ui.conn();
+      if (!anyDevice) $('notFound').hidden = false;
+      log('пристрій не вибрано (список порожній або закритий)');
+    } else {
+      ui.conn('Не вдалось підключитись');
+      log('підключення: ' + (e && e.message));
+    }
   }
-};
+}
+$('btnConnect').onclick = () => doConnect(false);
+$('btnAnyDevice').onclick = () => doConnect(true);
 $('btnPrint').onclick = () => printCurrent({ text: 'текст', photo: 'фото', list: 'список', planner: 'з планера', roll: 'лінійка', dev: 'текст' }[activeTab]);
 
 /* ── тема ── */
@@ -1840,6 +1879,7 @@ $('btnPrint').onclick = () => printCurrent({ text: 'текст', photo: 'фот�
 fillRollSelect();
 rollToForm();
 renderSavedRolls();
+$('verMark').textContent = VERSION;
 ui.conn();
 ui.devState();
 ui.modelControls();
