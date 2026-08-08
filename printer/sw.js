@@ -1,6 +1,6 @@
 // Імʼя кешу — це і є версія. Бампаючи його, ми змушуємо браузер поставити новий SW:
 // install перезаписує ASSETS свіжими копіями, activate видаляє кеш зі старим імʼям.
-const CACHE = 'wedding-printer-v8';
+const CACHE = 'wedding-printer-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -13,9 +13,9 @@ const ASSETS = [
   '../lib/catprinter.js',
   '../lib/mxw01.js',
   '../lib/qr.js',
-  '../lib/catprinter.js?v=8',
-  '../lib/mxw01.js?v=8',
-  '../lib/qr.js?v=8'
+  '../lib/catprinter.js?v=9',
+  '../lib/mxw01.js?v=9',
+  '../lib/qr.js?v=9'
 ];
 
 // Новий воркер забирає керування ОДРАЗУ, не чекаючи закриття всіх вкладок.

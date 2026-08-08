@@ -416,7 +416,10 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     </div>
     <div class="card">
       <h2>Тонкі налаштування</h2>
-      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="40" max="240" step="20" value="120"><b id="devChunkV">120</b></div>
+      <!-- Мінімум саме 20: стільки вміщає BLE-пакет, поки більший розмір не
+           узгоджено. Раніше найменшим було 40, тож найнадійніший розмір був
+           просто недосяжний — і жодні зміни налаштувань не могли зарадити. -->
+      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="20" max="240" step="20" value="20"><b id="devChunkV">20</b></div>
       <div class="slider"><span>Пауза, мс</span><input type="range" id="devDelay" min="0" max="60" step="2" value="14"><b id="devDelayV">14</b></div>
       <label class="chk"><input type="checkbox" id="devSafeWrite" checked> Надійний запис даних (з підтвердженням)</label>
       <label class="fld" id="mxModeWrap" hidden><span>Режим друку MXW01</span>
@@ -470,9 +473,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=8"></script>
-<script src="../lib/mxw01.js?v=8"></script>
-<script src="../lib/qr.js?v=8"></script>
+<script src="../lib/catprinter.js?v=9"></script>
+<script src="../lib/mxw01.js?v=9"></script>
+<script src="../lib/qr.js?v=9"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -486,7 +489,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v8 · чорна смуга + режими';
+const VERSION = 'v9 · порція 20 байт + замір часу';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -858,6 +861,7 @@ const Printer = {
     }
 
     const chunks = mxDataChunks(img.data, settings.chunk);
+    const startedAt = Date.now();
     this.job = { running: true, interrupted: false, label, sent: 0, total: chunks.length };
     for (let i = 0; i < chunks.length; i++){
       if (!this.job || !this.job.running) return;
@@ -872,7 +876,20 @@ const Printer = {
       if (i % 4 === 0) ui.progress(this.job.sent / chunks.length, label);
     }
     ui.progress(1, label);
-    log('надіслано в AE03: ' + this.bytesSent + ' з ' + img.data.length + ' байт (' + chunks.length + ' порцій)');
+
+    /* ЧАС — найчесніший свідок того, чи дані справді пішли.
+       По BluetoothLE кілька тисяч байтів фізично не можуть пройти миттєво:
+       це щонайменше секунди. Якщо передача «завершилась» за мить, значить
+       записи проковтуються, не доходячи до пристрою, — і саме тому стрічка
+       виїжджає порожня. Цю цифру видно в журналі, і вона одразу все каже. */
+    const took = (Date.now() - startedAt) / 1000;
+    const speed = took > 0 ? Math.round(this.bytesSent / took) : 0;
+    log('надіслано в AE03: ' + this.bytesSent + ' з ' + img.data.length + ' байт, ' +
+        chunks.length + ' порцій по ' + settings.chunk + ' — за ' + took.toFixed(2) + ' с (' + speed + ' Б/с)');
+    if (took < 0.3 && img.data.length > 2000){
+      toast('Дані «пішли» за ' + took.toFixed(2) + ' с — це надто швидко для Bluetooth. Схоже, вони не доходять до принтера.', 12000);
+      log('ПІДОЗРА: передача неправдоподібно швидка — записи, схоже, губляться');
+    }
 
     await this.write(mxFlush());
     // друк триває довше за передачу — чекаємо саме фізичного завершення
@@ -952,7 +969,9 @@ const settings = {
   speed: DB.get('speed', DEF_SPEED),             // класичний протокол
   intensity: DB.get('intensity', MX_DEF_INTENSITY), // MXW01
   feed: DB.get('feed', DEF_FEED),
-  chunk: DB.get('chunk', 120),
+  // 20 байт — розмір, що гарантовано проходить у BLE без узгодження MTU.
+  // Повільніше, зате доїжджає; підняти можна повзунком, коли друк запрацює.
+  chunk: DB.get('chunk', 20),
   delay: DB.get('delay', 14),
   lattice: DB.get('lattice', true),
   coalesce: DB.get('coalesce', false),
@@ -1522,11 +1541,13 @@ const ui = {
     $('classicOnly').hidden = mx;
     $('mxModeWrap').hidden = !mx;
     $('mxModeNote').hidden = !mx;
-    // 120 байт може не вміщатись у MTU без фрагментації — для MXW01 обережніше
-    if (mx && DB.get('chunk', null) == null && settings.chunk > 100){
-      settings.chunk = 100;
-      $('devChunk').value = 100;
-      $('devChunkV').textContent = '100';
+    /* Для MXW01 канал даних описаний як «write without response». Запис ІЗ
+       підтвердженням на такій характеристиці може не кинути помилку, а тихо
+       нічого не зробити — і це виглядає точно як наш симптом: усе миттєво
+       «успішно», а стрічка порожня. Тому за замовчуванням тут швидкий запис. */
+    if (mx && DB.get('safeWrite', null) == null && settings.safeWrite){
+      settings.safeWrite = false;
+      $('devSafeWrite').checked = false;
     }
     // у протоколі MXW01 нема команди втягування — кнопка була б обманом
     // не вимикаємо: натомість кнопка скаже, що ця модель так не вміє
