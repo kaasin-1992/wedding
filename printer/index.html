@@ -395,6 +395,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
         <button class="btn" id="devTest">Тестовий друк</button>
       </div>
       <button class="btn wide primary" id="devSolid" style="margin-top:10px">⬛ Суцільна чорна смуга</button>
+      <button class="btn wide" id="devLadder" style="margin-top:8px">🪜 Драбинка щільності</button>
+      <p class="note">Друкує п'ять смуг поспіль із дедалі більшою енергією нагріву: 0x40, 0x80, 0xB0, 0xE0, 0xFF. Якщо хоч одна лишить слід на папері — питання лише в щільності. Займе близько хвилини й сантиметрів шість стрічки.</p>
       <p class="note">Якщо друк виходить порожнім — тисни це. Смуга з самих чорних точок, без тексту й обробки. <b>Вийшла чорна</b> — дані доходять, справа в зображенні чи режимі. <b>Порожня</b> — дані до принтера не доїжджають, і тоді допоможуть перемикачі нижче.</p>
     </div>
     <div class="card">
@@ -475,9 +477,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=11"></script>
-<script src="../lib/mxw01.js?v=11"></script>
-<script src="../lib/qr.js?v=11"></script>
+<script src="../lib/catprinter.js?v=12"></script>
+<script src="../lib/mxw01.js?v=12"></script>
+<script src="../lib/qr.js?v=12"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -491,7 +493,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v11 · один рядок на запис';
+const VERSION = 'v12 · драбинка щільності';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -906,6 +908,23 @@ const Printer = {
         .map(b => b.toString(16).padStart(2, '0')).join(' '));
     }
     this.job = null;
+
+    /* Питаємо стан ЩЕ РАЗ, уже після друку. Помилка, якої не було перед
+       завданням, цілком може зʼявитись під час нього — і тоді принтер сам
+       скаже, що пішло не так, замість наших здогадок. */
+    try{
+      await this.write(mxStatus());
+      const after = await this.waitFor(MX_CMD.STATUS, 4000, 'стан після друку');
+      if (after){
+        const info = mxParseStatus(after.frame);
+        const problem = mxStatusProblem(info);
+        log('стан після друку: ' + (problem || 'без помилок') +
+            (info && info.battery != null ? ' · батарея ' + info.battery + '%' : '') +
+            (info && info.temperature != null ? ' · ' + info.temperature + '°' : ''));
+        if (problem) toast('Принтер після друку каже: ' + problem, 10000);
+      }
+    }catch(e){ log('стан після друку не отримано: ' + e.message); }
+
     // «Надруковано» без підтвердження від принтера було б припущенням
     ui.dock(confirmed ? 'Надруковано' : 'Дані надіслані', label);
     if (!confirmed) toast('Дані надіслані, але принтер не підтвердив завершення', 7000);
@@ -1885,6 +1904,36 @@ $('devReset').onclick = () => {
     .forEach(k => { try{ localStorage.removeItem('wed-printer-' + k); }catch(e){} });
   toast('Налаштування скинуто, перезавантажую…', 4000);
   setTimeout(() => location.reload(), 700);
+};
+
+/* Драбинка щільності.
+
+   Протокол у нас уже побайтово збігається з робочою реалізацією MXW01:
+   рамка, CRC, порядок бітів (одиниця = чорна точка), послідовність команд,
+   один рядок на запис. Якщо за таких умов папір лишається білим, найпростіше
+   з нерозглянутого — енергії просто не вистачає, щоб термопапір потемнів.
+   П'ять смуг за один захід перевіряють увесь діапазон замість п'яти раундів
+   листування. */
+$('devLadder').onclick = async () => {
+  if (!needPrinter()) return;
+  if (!Printer.isMX){ toast('Драбинка поки лише для MXW01', 4000); return; }
+  const steps = [0x40, 0x80, 0xb0, 0xe0, 0xff];
+  const saved = { chunk: settings.chunk, delay: settings.delay, mode: settings.mxMode, intensity: settings.intensity };
+  settings.chunk = 48; settings.delay = 15; settings.mxMode = MX_MODE_1BPP;
+  try{
+    for (let i = 0; i < steps.length; i++){
+      settings.intensity = steps[i];
+      toast('Смуга ' + (i + 1) + ' з ' + steps.length + ': щільність 0x' + steps[i].toString(16).toUpperCase(), 6000);
+      log('── смуга ' + (i + 1) + ': щільність 0x' + steps[i].toString(16) + ' ──');
+      const img = mxSolidBlack(90);
+      await Printer.printImage(null, img.rows, 0, 'смуга ' + (i + 1) + '/5', img);
+      await sleep(600);
+    }
+    toast('Драбинка надрукована. Котра смуга залишила слід? Перша — найслабша.', 15000);
+  } finally {
+    settings.chunk = saved.chunk; settings.delay = saved.delay;
+    settings.mxMode = saved.mode; settings.intensity = saved.intensity;
+  }
 };
 
 /* Вирішальна перевірка каналу даних: смуга з самих одиниць.
