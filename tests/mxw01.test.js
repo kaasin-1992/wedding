@@ -4,7 +4,7 @@ import {
   mxCommand, mxStatus, mxFlush, mxIntensity, mxPrint, mxCancel,
   mxParseNotification, mxParseStatus, mxStatusProblem,
   mxPrepareImage, mxDataChunks,
-  MX_CMD, MX_ROW_BYTES, MX_MIN_BYTES, MX_MIN_ROWS, MX_MODE_1BPP,
+  MX_CMD, MX_ROW_BYTES, MX_MIN_BYTES, MX_MIN_ROWS, MX_MODE_1BPP, MX_MODE_ALT, mxSolidBlack,
 } from '../lib/mxw01.js';
 
 describe('mxCommand', () => {
@@ -205,5 +205,36 @@ describe('bit packing shared with the classic driver', () => {
     const packed = packBits(bits, 384, 1);
     expect(packed.length).toBe(MX_ROW_BYTES);
     expect(packed[0]).toBe(0x01);
+  });
+});
+
+describe('mxSolidBlack', () => {
+  it('is every bit set — no canvas, no dithering, nothing to get wrong', () => {
+    // Вирішальна перевірка каналу даних: якщо ЦЕ виходить порожнім,
+    // байти до принтера не доходять, і шукати треба не в зображенні.
+    const img = mxSolidBlack(120);
+    expect(img.rows).toBe(120);
+    expect(img.data.length).toBe(120 * MX_ROW_BYTES);
+    expect(img.data.every(b => b === 0xff)).toBe(true);
+  });
+  it('never goes below the minimum the printer accepts', () => {
+    expect(mxSolidBlack(5).rows).toBe(MX_MIN_ROWS);
+    expect(mxSolidBlack().rows).toBe(MX_MIN_ROWS);
+  });
+});
+
+describe('print mode byte', () => {
+  it('puts the chosen mode in the fourth payload byte', () => {
+    // Опис протоколу суперечливий: у таблиці 0x01, у послідовності 0x00.
+    // Тому значення має бути перемикачем, а не зашитою константою.
+    expect(mxPrint(100, MX_MODE_1BPP)[9]).toBe(0x00);
+    expect(mxPrint(100, MX_MODE_ALT)[9]).toBe(0x01);
+  });
+  it('keeps the line count intact whichever mode is chosen', () => {
+    [MX_MODE_1BPP, MX_MODE_ALT].forEach(mode => {
+      const f = mxPrint(300, mode);
+      expect(f[6] | (f[7] << 8)).toBe(300);
+      expect(f[8]).toBe(0x30);
+    });
   });
 });
