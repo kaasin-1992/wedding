@@ -162,14 +162,18 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     <button class="btn primary" id="btnConnect">Підключити</button>
   </div>
 
+  <div class="row" style="margin:-4px 0 12px">
+    <button class="btn ghost" id="btnOnlyPrinters" style="font-size:13px">Показати лише принтери</button>
+  </div>
+
   <div class="banner err" id="notFound" hidden>
     <b>Принтера немає в списку?</b>
     <ol style="margin:8px 0 0;padding-left:20px;line-height:1.6">
-      <li><b>Закрий Fun Print</b> (і будь-який інший застосунок принтера). Поки принтер тримає з'єднання з ним, він перестає себе показувати — і зникає зі списку для всіх інших.</li>
+      <li><b>Закрий Fun Print</b> (змахни з перемикача застосунків). Поки принтер тримає з'єднання з ним, він перестає себе показувати — і зникає зі списку для всіх інших.</li>
       <li>Вимкни й увімкни сам принтер кнопкою.</li>
-      <li>Спробуй «Показати всі пристрої» — там видно геть усе, що поруч, і MXW01 можна вибрати за іменем.</li>
+      <li>Тисни «Підключити» ще раз — список показує геть усі пристрої поруч, і MXW01 треба вибрати за іменем.</li>
     </ol>
-    <button class="btn wide" id="btnAnyDevice" style="margin-top:10px">Показати всі пристрої</button>
+    <p class="note" style="margin-top:10px">Те, що принтера немає в Налаштуваннях iPhone → Bluetooth, — <b>нормально</b> і нічого не означає. Такі принтери не спарюються з телефоном, застосунки з'єднуються з ними напряму.</p>
   </div>
 
   <nav class="tabs" id="tabs" role="tablist">
@@ -408,6 +412,12 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <p class="note">Якщо принтер зривається посеред довгого друку — зменш порцію й збільш паузу. Саме переповнений буфер, а не Bluetooth, найчастіше й рве з'єднання.</p>
     </div>
     <div class="card">
+      <h2>🩺 Діагностика</h2>
+      <p class="note">Збирає все, що потрібно знати, коли «не працює»: чи вміє браузер Bluetooth, чи доступний радіомодуль, які пристрої вже дозволені сторінці. Один скріншот цієї панелі відповідає одразу на все.</p>
+      <button class="btn wide" id="devDiag" style="margin-top:10px">Перевірити</button>
+      <div class="log" id="devDiagOut" hidden></div>
+    </div>
+    <div class="card">
       <h2>Журнал</h2>
       <div class="log" id="devLog">—</div>
       <button class="btn wide ghost" id="devClear" style="margin-top:8px">Очистити</button>
@@ -452,7 +462,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v3 · класичний + MXW01';
+const VERSION = 'v4 · всі пристрої + діагностика';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -499,19 +509,19 @@ const Printer = {
 
   /* Пошук пристрою.
 
-     Тут легко втратити принтер ще до будь-якого протоколу. Web Bluetooth
-     фільтрує за UUID у РЕКЛАМНОМУ пакеті, а чимало цих принтерів кладуть
-     туди лише ім'я й віддають сервіс уже після під'єднання — тоді фільтр
-     за сервісом не знаходить нічого, і список порожній.
-     Тому фільтруємо ще й за іменами відомих родин, а якщо не помогло —
-     є режим «показати всі», який не може не спрацювати. */
-  async connect(anyDevice){
+     ЗА ЗАМОВЧУВАННЯМ ПОКАЗУЄМО ВСЕ, і це навмисно. Web Bluetooth фільтрує
+     за UUID у РЕКЛАМНОМУ пакеті, а чимало цих принтерів кладуть туди лише
+     ім'я й віддають сервіс аж після під'єднання. На живому MXW01 саме це й
+     сталось: рідний застосунок його бачить (отже принтер рекламується), а
+     наш фільтрований список був порожній. Довший список — мала ціна за те,
+     що принтер у ньому точно є. Фільтрований пошук лишається окремою
+     кнопкою для тих, кому зручніший короткий список. */
+  async connect(onlyPrinters){
     if (!this.supported()) throw new Error('Цей браузер не вміє Bluetooth');
     this.connecting = true; ui.conn();
     try{
-      const options = anyDevice
-        ? { acceptAllDevices: true, optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV] }
-        : {
+      const options = onlyPrinters
+        ? {
             filters: [
               { services: [CAT_PRINT_SRV] },   // MXW01 рекламує AE30
               { services: [CAT_ADV_SRV] },     // класичні — AF30
@@ -519,8 +529,9 @@ const Printer = {
               { namePrefix: 'YT' }, { namePrefix: 'Cat' },
             ],
             optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV],
-          };
-      log(anyDevice ? 'шукаю ВСІ пристрої поруч' : 'шукаю принтер за сервісом та іменем');
+          }
+        : { acceptAllDevices: true, optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV] };
+      log(onlyPrinters ? 'шукаю за сервісом та іменем' : 'показую ВСІ пристрої поруч');
       this.device = await navigator.bluetooth.requestDevice(options);
       this.device.addEventListener('gattserverdisconnected', () => this.onDrop());
       this.wantConnected = true;
@@ -1702,6 +1713,56 @@ $('devRetract').onclick = async () => {
 };
 $('devClear').onclick = () => { $('devLog').textContent = '—'; };
 
+/* Діагностика. Розбирати «не працює» по одному питанню за раунд надто
+   довго — тут одразу все, що визначає, чи Bluetooth узагалі можливий. */
+$('devDiag').onclick = async () => {
+  const out = $('devDiagOut');
+  out.hidden = false;
+  const lines = [];
+  const yes = v => v ? 'так' : 'НІ';
+
+  lines.push('версія збірки : ' + VERSION);
+  lines.push('адреса        : ' + location.origin);
+  // без захищеного контексту Bluetooth недоступний за визначенням
+  lines.push('https         : ' + yes(window.isSecureContext));
+  lines.push('браузер вміє Bluetooth : ' + yes(!!navigator.bluetooth));
+
+  if (!navigator.bluetooth){
+    lines.push('');
+    lines.push('→ Це Safari або інший браузер без Web Bluetooth.');
+    lines.push('  Потрібен Bluefy з App Store.');
+    out.textContent = lines.join('\n');
+    return;
+  }
+
+  try{
+    const avail = navigator.bluetooth.getAvailability
+      ? await navigator.bluetooth.getAvailability()
+      : null;
+    lines.push('радіомодуль доступний  : ' + (avail == null ? 'браузер не каже' : yes(avail)));
+  }catch(e){ lines.push('радіомодуль доступний  : помилка — ' + e.message); }
+
+  try{
+    if (navigator.bluetooth.getDevices){
+      const devs = await navigator.bluetooth.getDevices();
+      lines.push('уже дозволені пристрої : ' + (devs.length
+        ? devs.map(d => (d.name || 'без імені') + ' [' + d.id.slice(0, 8) + '…]').join(', ')
+        : 'жодного'));
+    } else {
+      lines.push('уже дозволені пристрої : браузер не підтримує перелік');
+    }
+  }catch(e){ lines.push('уже дозволені пристрої : помилка — ' + e.message); }
+
+  lines.push('');
+  lines.push('стан з\'єднання : ' + (Printer.connected
+    ? Printer.name + ' · протокол ' + (Printer.isMX ? 'MXW01' : 'класичний')
+    : 'не підключено'));
+  lines.push('браузер : ' + navigator.userAgent);
+
+  out.textContent = lines.join('\n');
+  log('діагностика виконана');
+};
+
 $('devTest').onclick = async () => {
   const L = layout();
   const s = newSheet(L.continuous ? 260 : L.heightPx);
@@ -1813,15 +1874,15 @@ $('plNone').onclick = () => { plannerItems().forEach(it => planner.picked[it.id]
    NotFoundError — розрізнити їх з коду не можна. Раніше ми в обох випадках
    просто нічого не робили, і «принтера нема в списку» виглядало як зламаний
    застосунок. Тепер показуємо, що робити далі. */
-async function doConnect(anyDevice){
+async function doConnect(onlyPrinters){
   if (Printer.connected){ Printer.disconnect(); return; }
   try{
-    await Printer.connect(anyDevice);
+    await Printer.connect(onlyPrinters);
     $('notFound').hidden = true;
   }catch(e){
     if (e && e.name === 'NotFoundError'){
       ui.conn();
-      if (!anyDevice) $('notFound').hidden = false;
+      $('notFound').hidden = false;
       log('пристрій не вибрано (список порожній або закритий)');
     } else {
       ui.conn('Не вдалось підключитись');
@@ -1830,7 +1891,7 @@ async function doConnect(anyDevice){
   }
 }
 $('btnConnect').onclick = () => doConnect(false);
-$('btnAnyDevice').onclick = () => doConnect(true);
+$('btnOnlyPrinters').onclick = () => doConnect(true);
 $('btnPrint').onclick = () => printCurrent({ text: 'текст', photo: 'фото', list: 'список', planner: 'з планера', roll: 'лінійка', dev: 'текст' }[activeTab]);
 
 /* ── тема ── */
