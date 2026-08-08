@@ -1,6 +1,6 @@
 // Імʼя кешу — це і є версія. Бампаючи його, ми змушуємо браузер поставити новий SW:
 // install перезаписує ASSETS свіжими копіями, activate видаляє кеш зі старим імʼям.
-const CACHE = 'wedding-printer-v6';
+const CACHE = 'wedding-printer-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -8,13 +8,24 @@ const ASSETS = [
   '../icon-180.png',
   '../icon-192.png',
   '../icon-512.png',
+  // з ?v= і без: сторінка просить версіоновані адреси, а кеш за
+  // замовчуванням враховує рядок запиту — інакше офлайн-фолбек не знайдеться
   '../lib/catprinter.js',
   '../lib/mxw01.js',
-  '../lib/qr.js'
+  '../lib/qr.js',
+  '../lib/catprinter.js?v=7',
+  '../lib/mxw01.js?v=7',
+  '../lib/qr.js?v=7'
 ];
 
+// Новий воркер забирає керування ОДРАЗУ, не чекаючи закриття всіх вкладок.
+// Патерн із банером «є оновлення» скопіювався сюди з планера лише наполовину:
+// сторінка ніколи не надсилала SKIP_WAITING, тож свіжий воркер міг лежати й
+// чекати вічно. Для цього застосунку негайне оновлення важливіше за банер:
+// тестувати старою збіркою й не знати про це — найдорожча з можливих втрат.
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
 });
 
 self.addEventListener('message', e => {
@@ -49,8 +60,12 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return;
 
   if (isVersioned(e.request)) {
+    // cache:'no-store' — принципово. «Спершу мережа» не рятує, якщо мережа
+    // віддає копію з HTTP-кешу браузера: GitHub Pages шле HTML із
+    // max-age=600, і сторінка ще десять хвилин лишається старою. Саме через
+    // це виправлення доїхало до телефона з запізненням на цілий цикл.
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, { cache: 'no-store' })
         .then(res => put(e.request, res))
         .catch(() => caches.match(e.request).then(hit =>
           hit || (e.request.destination === 'document' ? caches.match('./index.html') : undefined)
