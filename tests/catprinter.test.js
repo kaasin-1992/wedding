@@ -5,6 +5,7 @@ import {
   toGray, adjust, autoLevels, dither, packBits, isBlankRow,
   buildJob, toChunks, CMD, ROW_BYTES, PRINT_WIDTH,
   mmToDots, dotsToMm, rollLayout, rollFeed, measureByRef, rulerMarks, ROLL_PRESETS,
+  uuid16, CAT_PRINT_SRV_STR, CAT_ADV_SRV_STR, CAT_PRINT_SRV, CAT_ADV_SRV,
 } from '../lib/catprinter.js';
 
 describe('crc8', () => {
@@ -359,5 +360,23 @@ describe('rulerMarks', () => {
     expect(marks[10]).toEqual({ mm: 10, dots: 80, major: true, mid: true });
     expect(marks[5].major).toBe(false);
     expect(marks[5].mid).toBe(true);
+  });
+});
+
+describe('uuid16', () => {
+  it('expands a 16-bit id into the full canonical UUID string', () => {
+    // Bluefy на iPhone не розбирає 16-бітні UUID числом і падає з
+    // «Request payload could not be parsed» ще до показу списку пристроїв.
+    // Тому повна форма — не косметика, а умова роботи на iOS.
+    expect(uuid16(0xae30)).toBe('0000ae30-0000-1000-8000-00805f9b34fb');
+    expect(uuid16(0xae01)).toBe('0000ae01-0000-1000-8000-00805f9b34fb');
+    expect(uuid16(0xaf30)).toBe('0000af30-0000-1000-8000-00805f9b34fb');
+  });
+  it('pads short ids to four hex digits', () => {
+    expect(uuid16(0x1a)).toBe('0000001a-0000-1000-8000-00805f9b34fb');
+  });
+  it('exports the printer services in string form', () => {
+    expect(CAT_PRINT_SRV_STR).toBe(uuid16(CAT_PRINT_SRV));
+    expect(CAT_ADV_SRV_STR).toBe(uuid16(CAT_ADV_SRV));
   });
 });
