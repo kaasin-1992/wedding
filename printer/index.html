@@ -141,9 +141,18 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 .roll-item b{flex:1;min-width:0;font-weight:600}
 .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:var(--bg);
   border:1px solid var(--line);border-radius:10px;padding:9px;max-height:180px;overflow:auto;white-space:pre-wrap;color:var(--muted)}
+
+/* Плашка-повідомлення. Потрібна саме зверху й саме поверх усього: доки
+   відгук на невдалий клік був лише в нижній панелі, він губився, і будь-яка
+   заблокована дія виглядала як «нічого не відбувається». */
+#toast{position:fixed;left:12px;right:12px;top:12px;z-index:60;background:var(--wine);color:#fff;
+  border-radius:14px;padding:13px 15px;font-size:14px;line-height:1.5;font-weight:600;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);display:none;cursor:pointer}
+#toast.show{display:block}
 </style>
 </head>
 <body>
+<div id="toast" role="status"></div>
 <button class="theme-toggle" id="themeToggle" aria-label="Тема">🌙</button>
 <div class="wrap">
   <header>
@@ -462,7 +471,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v4 · всі пристрої + діагностика';
+const VERSION = 'v5 · кожна дія відповідає';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -479,6 +488,33 @@ function log(msg){
   el.textContent = (el.textContent === '—' ? '' : el.textContent + '\n') + time + '  ' + msg;
   el.scrollTop = el.scrollHeight;
 }
+
+/* ЖОДНА ДІЯ НЕ СМІЄ ЗАКІНЧУВАТИСЬ ТИШЕЮ.
+   Раніше половина кнопок при непідключеному принтері просто робила return,
+   а відгук на решту йшов у нижню панель, якої на верхніх вкладках не видно.
+   Для людини це виглядало як «клацаю, і нічого не відбувається» — найгірший
+   можливий стан, бо незрозуміло навіть, чи клік дійшов. */
+let toastTimer = 0;
+function toast(msg, ms){
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms || 5000);
+  log('▲ ' + msg);
+}
+document.getElementById('toast').onclick = function(){ this.classList.remove('show'); };
+
+/* Якщо скрипт десь упаде, сторінка лишиться на вигляд живою, але мертвою:
+   обробники не навішені, кліки нікуди не ведуть. Показуємо помилку на
+   екрані — краще незрозумілий текст, ніж мовчазна порожнеча. */
+window.addEventListener('error', e => {
+  toast('Помилка в застосунку: ' + (e.message || 'невідома') + ' — покажи це повідомлення', 15000);
+});
+window.addEventListener('unhandledrejection', e => {
+  const r = e.reason;
+  toast('Помилка: ' + ((r && r.message) || r || 'невідома'), 12000);
+});
 
 /* ════════ ПІДКЛЮЧЕННЯ ДО ПРИНТЕРА ════════
 
@@ -676,8 +712,8 @@ const Printer = {
      упаковані біти, кількість рядків і скільки порожніх рядків дописати
      після. Розгалуження живе тільки тут. */
   async printImage(packed, rows, extraRows, label){
-    if (!this.connected){ ui.dock('Принтер не підключений', 'спершу натисни «Підключити»'); return; }
-    if (this.printing){ ui.dock('Зачекай', 'попереднє завдання ще друкується'); return; }
+    if (!this.connected){ needPrinter(); return; }
+    if (this.printing){ toast('Попереднє завдання ще друкується', 3000); return; }
     this.printing = true;
     try{
       if (this.isMX) await this.printMX(packed, rows, extraRows, label);
@@ -1376,7 +1412,7 @@ const ui = {
     $('mxOnly').hidden = !mx;
     $('classicOnly').hidden = mx;
     // у протоколі MXW01 нема команди втягування — кнопка була б обманом
-    $('devRetract').disabled = mx;
+    // не вимикаємо: натомість кнопка скаже, що ця модель так не вміє
     $('devFeedNote').hidden = !mx;
     if (mx) $('devFeedNote').textContent = 'MXW01 не має окремої команди подачі: «Подати папір» друкує порожню смужку, а втягування ця модель не вміє взагалі.';
   },
@@ -1687,29 +1723,49 @@ $('devLattice').addEventListener('change', e => { settings.lattice = e.target.ch
 $('devCoalesce').checked = settings.coalesce;
 $('devCoalesce').addEventListener('change', e => { settings.coalesce = e.target.checked; DB.set('coalesce', settings.coalesce); });
 
+/* Спільна перевірка для всіх дій, що вимагають принтера: або кажемо чому
+   не можемо, або робимо. Мовчки не виходимо ніколи. */
+function needPrinter(){
+  if (Printer.connected) return true;
+  if (!Printer.supported()){
+    toast('Цей браузер не вміє Bluetooth — відкрий сторінку в Bluefy', 8000);
+    $('btWarn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    toast('Спершу підключи принтер — кнопка «Підключити» вгорі', 6000);
+    $('connBar').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  return false;
+}
+
 $('devRefresh').onclick = async () => {
-  if (!Printer.connected) return ui.dock('Принтер не підключений', '');
+  if (!needPrinter()) return;
   try{
     await Printer.write(Printer.isMX ? mxStatus() : cmdState());
-    log('запит стану');
-  }catch(e){ log('не вдалось: ' + e.message); }
+    toast('Запитала стан — відповідь з\'явиться нижче', 3000);
+  }catch(e){ toast('Не вдалось запитати стан: ' + e.message); }
 };
 
 /* Подача. У класичного це окрема команда, у MXW01 такої нема — тому там
    просто друкуємо порожню смужку потрібної висоти. Результат для людини
    однаковий: папір виїхав. */
 $('devFeedBtn').onclick = async () => {
-  if (!Printer.connected) return;
+  if (!needPrinter()) return;
   if (Printer.isMX){
     const rows = 60;
     await Printer.printImage(new Uint8Array(rows * ROW_BYTES), rows, 0, 'подача паперу');
   } else {
     await Printer.write(cmdFeed(60));
+    toast('Подаю папір', 2500);
   }
 };
 $('devRetract').onclick = async () => {
-  if (!Printer.connected || Printer.isMX) return;
+  if (!needPrinter()) return;
+  if (Printer.isMX){
+    toast('MXW01 не вміє втягувати папір — такої команди в нього немає', 6000);
+    return;
+  }
   await Printer.write(cmdRetract(30));
+  toast('Втягую папір', 2500);
 };
 $('devClear').onclick = () => { $('devLog').textContent = '—'; };
 
@@ -1875,7 +1931,9 @@ $('plNone').onclick = () => { plannerItems().forEach(it => planner.picked[it.id]
    просто нічого не робили, і «принтера нема в списку» виглядало як зламаний
    застосунок. Тепер показуємо, що робити далі. */
 async function doConnect(onlyPrinters){
-  if (Printer.connected){ Printer.disconnect(); return; }
+  if (Printer.connected){ Printer.disconnect(); toast('Принтер відключено', 2500); return; }
+  // Кнопку більше не блокуємо — натомість вона говорить, чому не може.
+  if (!Printer.supported()){ needPrinter(); return; }
   try{
     await Printer.connect(onlyPrinters);
     $('notFound').hidden = true;
@@ -1932,8 +1990,9 @@ $('btnPrint').onclick = () => printCurrent({ text: 'текст', photo: 'фот�
       .catch(() => { copy.textContent = location.href; });
   };
   el.appendChild(copy);
-  $('btnConnect').disabled = true;
-  $('btnPrint').disabled = true;
+  // Кнопки НЕ вимикаємо. Вимкнена кнопка не дає жодного відгуку на дотик —
+  // саме через це «клацаю, і нічого не відбувається». Хай вони натискаються
+  // і щоразу кажуть, чому нічого не вийде.
 })();
 
 /* ── старт ── */
