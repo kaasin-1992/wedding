@@ -471,7 +471,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v5 · кожна дія відповідає';
+const VERSION = 'v6 · UUID рядком + перебір способів';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -545,53 +545,102 @@ const Printer = {
 
   /* Пошук пристрою.
 
-     ЗА ЗАМОВЧУВАННЯМ ПОКАЗУЄМО ВСЕ, і це навмисно. Web Bluetooth фільтрує
-     за UUID у РЕКЛАМНОМУ пакеті, а чимало цих принтерів кладуть туди лише
-     ім'я й віддають сервіс аж після під'єднання. На живому MXW01 саме це й
-     сталось: рідний застосунок його бачить (отже принтер рекламується), а
-     наш фільтрований список був порожній. Довший список — мала ціна за те,
-     що принтер у ньому точно є. Фільтрований пошук лишається окремою
-     кнопкою для тих, кому зручніший короткий список. */
+     Журнал Bluefy на живому телефоні сказав рівно те, що треба було знати:
+       RequestDevice — «Request payload could not be parsed.»
+     Тобто браузер навіть не намагався шукати — він не зміг РОЗІБРАТИ наші
+     параметри. Специфікація дозволяє 16-бітні UUID числом, Chrome це
+     приймає, а Bluefy — ні: йому потрібен повний рядок.
+
+     Тому, по-перше, усюди тепер рядки. По-друге, не сподіваємось на один
+     правильний виклик: перебираємо способи від найканонічнішого до
+     найекзотичнішого й пишемо в журнал, який саме чим упав. Наступного
+     разу не доведеться гадати. */
+  requestStrategies(onlyPrinters){
+    const S = [CAT_PRINT_SRV_STR, CAT_ADV_SRV_STR];
+    const N = [CAT_PRINT_SRV, CAT_ADV_SRV];
+    const names = [{ namePrefix: 'MX' }, { namePrefix: 'GB' }, { namePrefix: 'GT' },
+                   { namePrefix: 'YT' }, { namePrefix: 'Cat' }];
+
+    const wide = [
+      { name: 'усі пристрої + сервіси рядком', opts: { acceptAllDevices: true, optionalServices: S } },
+      { name: 'усі пристрої, один сервіс', opts: { acceptAllDevices: true, optionalServices: [S[0]] } },
+      { name: 'усі пристрої + сервіси числом', opts: { acceptAllDevices: true, optionalServices: N } },
+    ];
+    const narrow = [
+      { name: 'сервіс рядком', opts: { filters: [{ services: [S[0]] }], optionalServices: S } },
+      { name: 'обидва сервіси рядком', opts: { filters: [{ services: [S[0]] }, { services: [S[1]] }], optionalServices: S } },
+      { name: 'за іменем + сервіси', opts: { filters: names, optionalServices: S } },
+      { name: 'за іменем, без сервісів', opts: { filters: names } },
+      { name: 'сервіс числом', opts: { filters: [{ services: [N[0]] }], optionalServices: N } },
+    ];
+    // остання надія: найкоротший можливий запит. Підключитись дасть, але
+    // без optionalServices сервіс потім не відкриється — тому в самому кінці
+    const bare = [{ name: 'найкоротший запит', opts: { acceptAllDevices: true } }];
+
+    return onlyPrinters ? narrow.concat(wide, bare) : wide.concat(narrow, bare);
+  },
+
   async connect(onlyPrinters){
     if (!this.supported()) throw new Error('Цей браузер не вміє Bluetooth');
     this.connecting = true; ui.conn();
+    this.lastError = null;
     try{
-      const options = onlyPrinters
-        ? {
-            filters: [
-              { services: [CAT_PRINT_SRV] },   // MXW01 рекламує AE30
-              { services: [CAT_ADV_SRV] },     // класичні — AF30
-              { namePrefix: 'MX' }, { namePrefix: 'GB' }, { namePrefix: 'GT' },
-              { namePrefix: 'YT' }, { namePrefix: 'Cat' },
-            ],
-            optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV],
-          }
-        : { acceptAllDevices: true, optionalServices: [CAT_PRINT_SRV, CAT_ADV_SRV] };
-      log(onlyPrinters ? 'шукаю за сервісом та іменем' : 'показую ВСІ пристрої поруч');
-      this.device = await navigator.bluetooth.requestDevice(options);
+      const tries = this.requestStrategies(onlyPrinters);
+      let lastErr = null;
+      for (let i = 0; i < tries.length; i++){
+        const t = tries[i];
+        try{
+          log('спосіб ' + (i + 1) + '/' + tries.length + ': ' + t.name);
+          this.device = await navigator.bluetooth.requestDevice(t.opts);
+          log('спосіб «' + t.name + '» спрацював');
+          break;
+        }catch(e){
+          lastErr = e;
+          const tag = (e && e.name) || 'Error';
+          log('  ↳ ' + tag + ': ' + ((e && e.message) || ''));
+          // список відкрився, але користувач нічого не вибрав — далі не перебираємо
+          if (tag === 'NotFoundError') throw e;
+          this.device = null;
+        }
+      }
+      if (!this.device){ this.lastError = lastErr; throw lastErr || new Error('Не вдалось відкрити список пристроїв'); }
+
       this.device.addEventListener('gattserverdisconnected', () => this.onDrop());
       this.wantConnected = true;
       await this.open();
-    } finally { this.connecting = false; ui.conn(); }
+    }catch(e){ this.lastError = e; throw e; }
+    finally { this.connecting = false; ui.conn(); }
+  },
+
+  /* Той самий урок, що й у пошуку: UUID передаємо РЯДКОМ. Bluefy не розбирає
+     16-бітні числа, і якщо тут лишити число, то підключення пройде, а сервіс
+     не відкриється — з таким самим незрозумілим «не вдалось». Числову форму
+     лишаємо другою спробою, щоб не зламати те, де вона працює. */
+  async getChar(short){
+    let err = null;
+    for (const id of [uuid16(short), short]){
+      try{ return await this.svc.getCharacteristic(id); }catch(e){ err = e; }
+    }
+    throw err;
   },
 
   async open(){
     this.server = await this.device.gatt.connect();
     this.svc = null;
-    for (const uuid of [CAT_PRINT_SRV, CAT_ADV_SRV]){
-      try{ this.svc = await this.server.getPrimaryService(uuid); break; }catch(e){}
+    for (const uuid of [CAT_PRINT_SRV_STR, CAT_ADV_SRV_STR, CAT_PRINT_SRV, CAT_ADV_SRV]){
+      try{ this.svc = await this.server.getPrimaryService(uuid); log('сервіс: ' + uuid); break; }catch(e){}
     }
-    if (!this.svc) throw new Error('Не знайшов сервіс принтера');
+    if (!this.svc) throw new Error('Пристрій підключився, але сервісу принтера в ньому немає — схоже, це не той пристрій');
 
-    this.tx = await this.svc.getCharacteristic(CAT_TX_CHAR);
+    this.tx = await this.getChar(CAT_TX_CHAR);
 
     // ОСЬ ТУТ і визначається модель: AE03 є тільки в MXW01
     this.data = null;
-    try{ this.data = await this.svc.getCharacteristic(MX_DATA); }catch(e){}
+    try{ this.data = await this.getChar(MX_DATA); }catch(e){}
     this.model = this.data ? 'mxw01' : 'classic';
 
     try{
-      this.rx = await this.svc.getCharacteristic(CAT_RX_CHAR);
+      this.rx = await this.getChar(CAT_RX_CHAR);
       await this.rx.startNotifications();
       this.rx.addEventListener('characteristicvaluechanged', e => this.onNotify(new Uint8Array(e.target.value.buffer)));
     }catch(e){ log('нотифікації недоступні: ' + e.message); }
@@ -1813,6 +1862,10 @@ $('devDiag').onclick = async () => {
   lines.push('стан з\'єднання : ' + (Printer.connected
     ? Printer.name + ' · протокол ' + (Printer.isMX ? 'MXW01' : 'класичний')
     : 'не підключено'));
+  if (Printer.lastError){
+    lines.push('остання помилка : ' + (Printer.lastError.name || 'Error') +
+      ' — ' + (Printer.lastError.message || ''));
+  }
   lines.push('браузер : ' + navigator.userAgent);
 
   out.textContent = lines.join('\n');
@@ -1942,11 +1995,39 @@ async function doConnect(onlyPrinters){
       ui.conn();
       $('notFound').hidden = false;
       log('пристрій не вибрано (список порожній або закритий)');
-    } else {
-      ui.conn('Не вдалось підключитись');
-      log('підключення: ' + (e && e.message));
+      toast('Пристрій не вибрано. Якщо список був порожній — читай підказку нижче', 7000);
+      return;
     }
+    // Показуємо СПРАВЖНЮ причину. Голе «не вдалось підключитись» коштувало
+    // нам кількох раундів переписування: розгадка лежала в журналі браузера,
+    // а не в застосунку.
+    const name = (e && e.name) || 'Error';
+    const msg = (e && e.message) || '';
+    ui.conn('Не вдалось: ' + name);
+    log('підключення провалилось: ' + name + ' — ' + msg);
+    toast(connectHint(name, msg), 14000);
   }
+}
+
+/* Переклад помилок Web Bluetooth на дію, яку можна зробити руками. */
+function connectHint(name, msg){
+  const m = String(msg || '');
+  if (/could not be parsed|payload/i.test(m)) {
+    return 'Браузер не зрозумів запит пошуку (' + name + '). Я перебрала всі відомі варіанти — покажи мені журнал із ⚙️.';
+  }
+  if (name === 'NotAllowedError') {
+    return 'Доступ до Bluetooth заборонений. Налаштування iPhone → Bluefy → увімкни Bluetooth.';
+  }
+  if (name === 'SecurityError') {
+    return 'Сторінка відкрита не по https або Bluetooth заблокований. Відкрий саме https://весілля.лютевесілля.укр/printer/';
+  }
+  if (name === 'NetworkError') {
+    return 'Пристрій знайдено, але з\'єднання не вдалось. Вимкни й увімкни принтер і спробуй ще раз.';
+  }
+  if (name === 'InvalidStateError') {
+    return 'Bluetooth не готовий. Перевір, що він увімкнений, і спробуй ще раз.';
+  }
+  return 'Не вдалось: ' + name + (m ? ' — ' + m : '') + '. Покажи мені журнал із ⚙️.';
 }
 $('btnConnect').onclick = () => doConnect(false);
 $('btnOnlyPrinters').onclick = () => doConnect(true);
