@@ -416,10 +416,10 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     </div>
     <div class="card">
       <h2>Тонкі налаштування</h2>
-      <!-- Мінімум саме 20: стільки вміщає BLE-пакет, поки більший розмір не
-           узгоджено. Раніше найменшим було 40, тож найнадійніший розмір був
-           просто недосяжний — і жодні зміни налаштувань не могли зарадити. -->
-      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="20" max="240" step="20" value="20"><b id="devChunkV">20</b></div>
+      <!-- Крок 48 — це один рядок зображення. Довільний розмір розриває
+           рядок посередині: принтер такі дані приймає, підтверджує друк і
+           видає білий папір. -->
+      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="48" max="480" step="48" value="192"><b id="devChunkV">192</b></div>
       <div class="slider"><span>Пауза, мс</span><input type="range" id="devDelay" min="0" max="60" step="2" value="14"><b id="devDelayV">14</b></div>
       <label class="chk"><input type="checkbox" id="devSafeWrite" checked> Надійний запис даних (з підтвердженням)</label>
       <label class="fld" id="mxModeWrap" hidden><span>Режим друку MXW01</span>
@@ -441,6 +441,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <h3>Версія застаріла?</h3>
       <p class="note">Якщо «версія збірки» вище не та, про яку я казала, — телефон тримає стару копію. Ця кнопка чистить усі кеші й завантажує сторінку заново.</p>
       <button class="btn wide" id="devUpdate" style="margin-top:8px">🔄 Оновити застосунок</button>
+      <button class="btn wide ghost" id="devReset" style="margin-top:8px">↩️ Скинути налаштування друку</button>
+      <p class="note">Збережені налаштування живуть довше за версії: якщо колись виставити щось вручну, нові значення за замовчуванням уже не застосуються. Ця кнопка повертає все до типового.</p>
     </div>
     <div class="card">
       <h2>Журнал</h2>
@@ -473,9 +475,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=9"></script>
-<script src="../lib/mxw01.js?v=9"></script>
-<script src="../lib/qr.js?v=9"></script>
+<script src="../lib/catprinter.js?v=10"></script>
+<script src="../lib/mxw01.js?v=10"></script>
+<script src="../lib/qr.js?v=10"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -489,7 +491,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v9 · порція 20 байт + замір часу';
+const VERSION = 'v10 · порції по цілих рядках';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -690,7 +692,7 @@ const Printer = {
       const n = mxParseNotification(bytes);
       if (!n) return;
       if (n.cmd === MX_CMD.STATUS){
-        this.mxStatusInfo = mxParseStatus(n.payload);
+        this.mxStatusInfo = mxParseStatus(bytes);   // саме КАДР, не payload
         ui.conn(); ui.devState();
       }
       this.waiters = this.waiters.filter(w => {
@@ -848,7 +850,7 @@ const Printer = {
     await this.write(mxStatus());
     const st = await this.waitFor(MX_CMD.STATUS, 6000, 'запит стану');
     if (st){
-      const info = mxParseStatus(st.payload);
+      const info = mxParseStatus(st.frame);
       const problem = mxStatusProblem(info);
       if (problem) throw new Error(problem);
     }
@@ -894,10 +896,15 @@ const Printer = {
     await this.write(mxFlush());
     // друк триває довше за передачу — чекаємо саме фізичного завершення
     let confirmed = true;
-    await this.waitFor(MX_CMD.COMPLETE, 60000, 'завершення друку').catch(e => {
+    const done = await this.waitFor(MX_CMD.COMPLETE, 60000, 'завершення друку').catch(e => {
       confirmed = false;
       log('не дочекався сигналу про завершення: ' + e.message);
+      return null;
     });
+    if (done && done.payload && done.payload.length){
+      log('принтер про завершення: ' + Array.from(done.payload)
+        .map(b => b.toString(16).padStart(2, '0')).join(' '));
+    }
     this.job = null;
     // «Надруковано» без підтвердження від принтера було б припущенням
     ui.dock(confirmed ? 'Надруковано' : 'Дані надіслані', label);
@@ -969,9 +976,9 @@ const settings = {
   speed: DB.get('speed', DEF_SPEED),             // класичний протокол
   intensity: DB.get('intensity', MX_DEF_INTENSITY), // MXW01
   feed: DB.get('feed', DEF_FEED),
-  // 20 байт — розмір, що гарантовано проходить у BLE без узгодження MTU.
-  // Повільніше, зате доїжджає; підняти можна повзунком, коли друк запрацює.
-  chunk: DB.get('chunk', 20),
+  // 192 = рівно чотири рядки по 48 байт. Кратність рядку тут важливіша за
+  // сам розмір: довільна нарізка розриває рядок посередині.
+  chunk: DB.get('chunk', 192),
   delay: DB.get('delay', 14),
   lattice: DB.get('lattice', true),
   coalesce: DB.get('coalesce', false),
@@ -1868,6 +1875,16 @@ $('devMxMode').addEventListener('change', e => {
   DB.set('mxMode', settings.mxMode);
   toast('Режим 0x0' + settings.mxMode + '. Спробуй чорну смугу ще раз', 4000);
 });
+
+/* Збережене налаштування перебиває нове значення за замовчуванням — і
+   мовчки. Саме так порція лишилась 200, коли типовою вже була інша: людина
+   міняла повзунки, а нові типові значення до неї так і не доїхали. */
+$('devReset').onclick = () => {
+  ['energy', 'speed', 'intensity', 'feed', 'chunk', 'delay', 'lattice', 'coalesce', 'safeWrite', 'mxMode']
+    .forEach(k => { try{ localStorage.removeItem('wed-printer-' + k); }catch(e){} });
+  toast('Налаштування скинуто, перезавантажую…', 4000);
+  setTimeout(() => location.reload(), 700);
+};
 
 /* Вирішальна перевірка каналу даних: смуга з самих одиниць. */
 $('devSolid').onclick = async () => {

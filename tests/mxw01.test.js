@@ -86,12 +86,25 @@ describe('mxParseNotification', () => {
 });
 
 describe('mxParseStatus', () => {
+  // Індекси відлічуються від початку КАДРУ, а не payload — це підтвердив
+  // живий MXW01, і саме тому кадр тут будується цілком, із преамбулою.
   const frame = (flag, err, battery, temp) => {
-    const p = new Uint8Array(14);
+    const p = new Uint8Array(16);
+    p[0] = 0x22; p[1] = 0x21; p[2] = 0xa1; p[3] = 0x03; p[4] = 0x0a;
     p[6] = 0; p[9] = battery == null ? 80 : battery; p[10] = temp == null ? 25 : temp;
     p[12] = flag; p[13] = err || 0;
     return p;
   };
+
+  it('reads the real reply a live MXW01 sent', () => {
+    // 22 21 a1 03 0a 00 00 00 00 64 1d 00 00 00 02 02 00
+    const real = Uint8Array.from([0x22,0x21,0xa1,0x03,0x0a,0x00,0x00,0x00,0x00,0x64,0x1d,0x00,0x00,0x00,0x02,0x02,0x00]);
+    const st = mxParseStatus(real);
+    expect(st.battery).toBe(100);
+    expect(st.temperature).toBe(29);
+    expect(st.ok).toBe(true);
+    expect(st.errorCode).toBe(0);
+  });
 
   it('reads battery, temperature and the ok flag', () => {
     const st = mxParseStatus(frame(0, 0, 73, 31));
@@ -185,9 +198,10 @@ describe('mxPrepareImage', () => {
 });
 
 describe('mxDataChunks', () => {
-  it('splits the image stream into fixed-size pieces', () => {
+  it('splits the image stream into fixed-size pieces when alignment is off', () => {
+    // Вирівнювання по рядку можна вимкнути — тоді ріжемо рівно як просили.
     const data = Uint8Array.from({ length: 10 }, (_, i) => i);
-    expect(mxDataChunks(data, 4).map(c => Array.from(c)))
+    expect(mxDataChunks(data, 4, false).map(c => Array.from(c)))
       .toEqual([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]]);
   });
   it('preserves every byte', () => {
@@ -236,5 +250,23 @@ describe('print mode byte', () => {
       expect(f[6] | (f[7] << 8)).toBe(300);
       expect(f[8]).toBe(0x30);
     });
+  });
+});
+
+describe('row-aligned chunking', () => {
+  it('rounds the chunk size down to whole rows', () => {
+    // Довільна нарізка розриває рядок посередині: принтер такі дані приймає,
+    // підтверджує друк і видає білий папір.
+    expect(mxDataChunks(new Uint8Array(480), 200)[0].length).toBe(192);   // 4 рядки
+    expect(mxDataChunks(new Uint8Array(480), 20)[0].length).toBe(MX_ROW_BYTES);
+    expect(mxDataChunks(new Uint8Array(480), 100)[0].length).toBe(96);    // 2 рядки
+  });
+  it('never produces a chunk smaller than one row', () => {
+    mxDataChunks(new Uint8Array(MX_ROW_BYTES * 5), 10).slice(0, -1)
+      .forEach(c => expect(c.length % MX_ROW_BYTES).toBe(0));
+  });
+  it('still preserves every byte', () => {
+    const data = new Uint8Array(MX_MIN_BYTES);
+    expect(mxDataChunks(data, 192).reduce((n, c) => n + c.length, 0)).toBe(MX_MIN_BYTES);
   });
 });
