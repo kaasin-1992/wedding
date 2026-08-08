@@ -419,7 +419,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <!-- Крок 48 — це один рядок зображення. Довільний розмір розриває
            рядок посередині: принтер такі дані приймає, підтверджує друк і
            видає білий папір. -->
-      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="48" max="480" step="48" value="192"><b id="devChunkV">192</b></div>
+      <div class="slider"><span>Порція, байт</span><input type="range" id="devChunk" min="48" max="480" step="48" value="48"><b id="devChunkV">48</b></div>
       <div class="slider"><span>Пауза, мс</span><input type="range" id="devDelay" min="0" max="60" step="2" value="14"><b id="devDelayV">14</b></div>
       <label class="chk"><input type="checkbox" id="devSafeWrite" checked> Надійний запис даних (з підтвердженням)</label>
       <label class="fld" id="mxModeWrap" hidden><span>Режим друку MXW01</span>
@@ -475,9 +475,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=10"></script>
-<script src="../lib/mxw01.js?v=10"></script>
-<script src="../lib/qr.js?v=10"></script>
+<script src="../lib/catprinter.js?v=11"></script>
+<script src="../lib/mxw01.js?v=11"></script>
+<script src="../lib/qr.js?v=11"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -491,7 +491,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v10 · порції по цілих рядках';
+const VERSION = 'v11 · один рядок на запис';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -976,10 +976,11 @@ const settings = {
   speed: DB.get('speed', DEF_SPEED),             // класичний протокол
   intensity: DB.get('intensity', MX_DEF_INTENSITY), // MXW01
   feed: DB.get('feed', DEF_FEED),
-  // 192 = рівно чотири рядки по 48 байт. Кратність рядку тут важливіша за
-  // сам розмір: довільна нарізка розриває рядок посередині.
-  chunk: DB.get('chunk', 192),
-  delay: DB.get('delay', 14),
+  // 48 = РІВНО ОДИН рядок. Стільки пише робоча реалізація MXW01, і стільки
+  // ж гарантовано вміщається в Bluetooth-пакет: більший запис може не влізти
+  // в узгоджений розмір і тихо пропасти — а виглядає це як білий папір.
+  chunk: DB.get('chunk', 48),
+  delay: DB.get('delay', 15),
   lattice: DB.get('lattice', true),
   coalesce: DB.get('coalesce', false),
   safeWrite: DB.get('safeWrite', true),      // писати зображення з підтвердженням
@@ -1886,16 +1887,28 @@ $('devReset').onclick = () => {
   setTimeout(() => location.reload(), 700);
 };
 
-/* Вирішальна перевірка каналу даних: смуга з самих одиниць. */
+/* Вирішальна перевірка каналу даних: смуга з самих одиниць.
+
+   Іде ЗАВЖДИ еталонними значеннями — тими самими, що в робочій реалізації
+   MXW01: один рядок на запис, пауза 15 мс, щільність 0x5D, режим 0. Свої
+   повзунки тут навмисно не враховуються: сенс цієї кнопки в тому, щоб дати
+   однозначну відповідь, а не перевіряти чиїсь давні налаштування. */
 $('devSolid').onclick = async () => {
   if (!needPrinter()) return;
-  if (Printer.isMX){
-    const img = mxSolidBlack(120);
-    log('чорна смуга: ' + img.rows + ' рядків, ' + img.data.length + ' байт самих 0xFF');
-    await Printer.printImage(null, img.rows, 0, 'чорна смуга', img);
-  } else {
-    const rows = 120;
-    await Printer.printImage(new Uint8Array(rows * ROW_BYTES).fill(0xff), rows, 0, 'чорна смуга');
+  const saved = { chunk: settings.chunk, delay: settings.delay, mode: settings.mxMode, intensity: settings.intensity };
+  settings.chunk = 48; settings.delay = 15; settings.mxMode = MX_MODE_1BPP; settings.intensity = MX_DEF_INTENSITY;
+  log('чорна смуга еталонними значеннями: порція 48 (один рядок), пауза 15 мс, щільність 0x5D, режим 0x00');
+  try{
+    if (Printer.isMX){
+      const img = mxSolidBlack(120);
+      await Printer.printImage(null, img.rows, 0, 'чорна смуга', img);
+    } else {
+      const rows = 120;
+      await Printer.printImage(new Uint8Array(rows * ROW_BYTES).fill(0xff), rows, 0, 'чорна смуга');
+    }
+  } finally {
+    settings.chunk = saved.chunk; settings.delay = saved.delay;
+    settings.mxMode = saved.mode; settings.intensity = saved.intensity;
   }
 };
 
