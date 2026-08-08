@@ -425,6 +425,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <p class="note">Збирає все, що потрібно знати, коли «не працює»: чи вміє браузер Bluetooth, чи доступний радіомодуль, які пристрої вже дозволені сторінці. Один скріншот цієї панелі відповідає одразу на все.</p>
       <button class="btn wide" id="devDiag" style="margin-top:10px">Перевірити</button>
       <div class="log" id="devDiagOut" hidden></div>
+      <h3>Версія застаріла?</h3>
+      <p class="note">Якщо «версія збірки» вище не та, про яку я казала, — телефон тримає стару копію. Ця кнопка чистить усі кеші й завантажує сторінку заново.</p>
+      <button class="btn wide" id="devUpdate" style="margin-top:8px">🔄 Оновити застосунок</button>
     </div>
     <div class="card">
       <h2>Журнал</h2>
@@ -455,9 +458,11 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
   </div>
 </div>
 
-<script src="../lib/catprinter.js"></script>
-<script src="../lib/mxw01.js"></script>
-<script src="../lib/qr.js"></script>
+<!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
+     зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
+<script src="../lib/catprinter.js?v=7"></script>
+<script src="../lib/mxw01.js?v=7"></script>
+<script src="../lib/qr.js?v=7"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -471,10 +476,20 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v6 · UUID рядком + перебір способів';
+const VERSION = 'v7 · без залежності від кешу';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* UUID у повній формі рахуємо ТУТ, а не беремо з бібліотеки.
+   Причина конкретна: одного разу свіжий HTML поєднався зі старим
+   lib/catprinter.js із кешу, і сторінка впала з «Can't find variable:
+   CAT_PRINT_SRV_STR» — тобто розсипалась через залежність від версії
+   сусіднього файлу. Числові константи є в бібліотеці з першого дня, тож
+   від них рядок можна побудувати самим і більше не залежати ні від чого. */
+const U16 = short => '0000' + short.toString(16).padStart(4, '0') + '-0000-1000-8000-00805f9b34fb';
+const SRV_MAIN = U16(CAT_PRINT_SRV);
+const SRV_ADV  = U16(CAT_ADV_SRV);
 
 /* ── збереження налаштувань ── */
 const DB = {
@@ -556,7 +571,7 @@ const Printer = {
      найекзотичнішого й пишемо в журнал, який саме чим упав. Наступного
      разу не доведеться гадати. */
   requestStrategies(onlyPrinters){
-    const S = [CAT_PRINT_SRV_STR, CAT_ADV_SRV_STR];
+    const S = [SRV_MAIN, SRV_ADV];
     const N = [CAT_PRINT_SRV, CAT_ADV_SRV];
     const names = [{ namePrefix: 'MX' }, { namePrefix: 'GB' }, { namePrefix: 'GT' },
                    { namePrefix: 'YT' }, { namePrefix: 'Cat' }];
@@ -618,7 +633,7 @@ const Printer = {
      лишаємо другою спробою, щоб не зламати те, де вона працює. */
   async getChar(short){
     let err = null;
-    for (const id of [uuid16(short), short]){
+    for (const id of [U16(short), short]){
       try{ return await this.svc.getCharacteristic(id); }catch(e){ err = e; }
     }
     throw err;
@@ -627,7 +642,7 @@ const Printer = {
   async open(){
     this.server = await this.device.gatt.connect();
     this.svc = null;
-    for (const uuid of [CAT_PRINT_SRV_STR, CAT_ADV_SRV_STR, CAT_PRINT_SRV, CAT_ADV_SRV]){
+    for (const uuid of [SRV_MAIN, SRV_ADV, CAT_PRINT_SRV, CAT_ADV_SRV]){
       try{ this.svc = await this.server.getPrimaryService(uuid); log('сервіс: ' + uuid); break; }catch(e){}
     }
     if (!this.svc) throw new Error('Пристрій підключився, але сервісу принтера в ньому немає — схоже, це не той пристрій');
@@ -1818,6 +1833,27 @@ $('devRetract').onclick = async () => {
 };
 $('devClear').onclick = () => { $('devLog').textContent = '—'; };
 
+/* Ручний вихід із залежаної версії. Автоматика (skipWaiting + no-store)
+   має справлятись сама, але коли не справилась, людині потрібна кнопка,
+   а не порада «спробуй почистити кеш браузера». */
+$('devUpdate').onclick = async () => {
+  toast('Чищу кеші й перезавантажую…', 8000);
+  try{
+    if (window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      log('видалено кешів: ' + keys.length);
+    }
+    if (navigator.serviceWorker){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+      log('знято реєстрацій воркера: ' + regs.length);
+    }
+  }catch(e){ log('очищення: ' + e.message); }
+  // ?v= з часом — щоб і HTTP-кеш браузера точно віддав свіжий HTML
+  location.replace(location.pathname + '?fresh=' + Date.now());
+};
+
 /* Діагностика. Розбирати «не працює» по одному питанню за раунд надто
    довго — тут одразу все, що визначає, чи Bluetooth узагалі можливий. */
 $('devDiag').onclick = async () => {
@@ -2094,6 +2130,22 @@ render();
 
 if ('serviceWorker' in navigator){
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  /* Коли новий воркер перебрав керування — перезавантажуємось РІВНО раз,
+     щоб підхопити свіжий код.
+
+     Дві умови тут обовʼязкові, і я перевірила це на власній шкоді:
+     • hadController — на ПЕРШІЙ установці воркера керування теж «змінюється»,
+       з нічого на щось. Перезавантажуватись тут нема сенсу: код і так свіжий.
+       Без цієї перевірки сторінка входила в цикл перезавантажень і не встигала
+       навіть домалюватись;
+     • reloadedOnce — щоб навіть у несподіваному випадку не крутитись вічно. */
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloadedOnce = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadedOnce) return;
+    reloadedOnce = true;
+    location.reload();
+  });
 }
 log('застосунок готовий · ' + VERSION);
 </script>
