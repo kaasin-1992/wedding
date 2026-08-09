@@ -191,6 +191,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     <button role="tab" data-tab="list" aria-selected="false">✅ Списки та QR</button>
     <button role="tab" data-tab="planner" aria-selected="false">💍 З планера</button>
     <button role="tab" data-tab="roll" aria-selected="false">🏷 Рулон</button>
+    <button role="tab" data-tab="docs" aria-selected="false">💾 Бланки</button>
     <button role="tab" data-tab="dev" aria-selected="false">⚙️ Принтер</button>
   </nav>
 
@@ -385,8 +386,42 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     </div>
   </section>
 
+  <!-- ══════════ БЛАНКИ ══════════ -->
+  <section id="tab-docs" hidden>
+    <div class="card">
+      <h2>📤 Картинка для Fun Print</h2>
+      <p class="note">Прямий друк на цей принтер поки не вдався, зате Fun Print друкує картинки з галереї справно. Тож застосунок складає макет — рівно 384 точки завширшки, з даними з планера, QR і розмірами наклейок, — а віддає готовий файл.</p>
+      <label class="fld" style="margin-top:12px"><span>Збільшення</span>
+        <select id="exScale">
+          <option value="1">×1 — рівно 384 точки</option>
+          <option value="2" selected>×2 — надійніше</option>
+          <option value="4">×4 — найбільший файл</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="exMargin" checked> Білі поля по краях</label>
+      <p class="note">Fun Print може перемальовувати картинку під себе. Збільшена копія переживає це без розмиття, а поля не дають обрізати краї.</p>
+      <button class="btn primary wide" id="exNow" style="margin-top:10px">📤 Зберегти картинку</button>
+      <p class="note" id="exNote" style="margin-top:8px"></p>
+    </div>
+
+    <div class="card">
+      <h2>Мої бланки</h2>
+      <p class="note">Зберігає не картинку, а сам макет: що написано, які налаштування, який рулон. Так його можна відкрити й доредагувати, а не лише передрукувати — і він важить байти, а не мегабайти.</p>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="docName" placeholder="Назва бланка">
+        <button class="btn" id="docSave">Зберегти</button>
+      </div>
+      <div id="docList" style="margin-top:12px"></div>
+    </div>
+  </section>
+
   <!-- ══════════ ПРИНТЕР ══════════ -->
   <section id="tab-dev" hidden>
+    <div class="banner bt">
+      <b>Прямий друк на MXW01 поки не вдався</b>
+      Перевірено й виключено: протокол побайтово збігається з робочою реалізацією (рамка, контрольна сума, порядок бітів, набір команд, один рядок на запис), дані доходять, принтер відповідає «згоден» і підтверджує друк, щільність пройдена від 0x40 до максимуму — папір лишається білим.
+      <br><br>Робочий шлях зараз — вкладка <b>💾 Бланки</b>: застосунок складає макет і віддає картинку, а друкує Fun Print. Кнопки нижче лишаються — код робочий, і колись може знадобитись.
+    </div>
     <div class="card">
       <h2>Стан</h2>
       <div id="devState" class="note">Принтер не підключений.</div>
@@ -471,15 +506,16 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <span id="dockSub">—</span>
       <div class="bar"><i id="dockBar"></i></div>
     </div>
+    <button class="btn" id="btnExport" title="Картинка для Fun Print">📤</button>
     <button class="btn primary" id="btnPrint">Друк</button>
   </div>
 </div>
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=12"></script>
-<script src="../lib/mxw01.js?v=12"></script>
-<script src="../lib/qr.js?v=12"></script>
+<script src="../lib/catprinter.js?v=13"></script>
+<script src="../lib/mxw01.js?v=13"></script>
+<script src="../lib/qr.js?v=13"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -493,7 +529,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v12 · драбинка щільності';
+const VERSION = 'v13 · картинки для Fun Print';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1342,6 +1378,10 @@ function drawPlanner(measureOnly){
 
 /* ── який збирач активний ── */
 let activeTab = 'text';
+/* «Бланки» нічого не малюють — вони лише зберігають і віддають. Тому
+   перегляд там має показувати те, що складено на попередній вкладці,
+   а не підмінятись порожнечею. */
+let drawTab = 'text';
 const DRAWERS = { text: drawText, photo: drawPhoto, list: drawListOrQR, planner: drawPlanner, roll: drawRuler, dev: drawText };
 
 /* На вкладці «Списки та QR» друкуємо те, що заповнене; якщо обидва —
@@ -1390,7 +1430,7 @@ function fitPhoto(mode){
 let lastHeight = 0;
 
 function render(){
-  const draw = DRAWERS[activeTab] || drawText;
+  const draw = DRAWERS[drawTab] || DRAWERS[activeTab] || drawText;
   try{ draw(false); }catch(e){ log('перегляд: ' + e.message); }
   lastHeight = sheet.height;
 
@@ -1503,6 +1543,152 @@ async function printCurrent(label){
   await Printer.printImage(packed, sheet.height, feed, label || 'завдання');
 }
 
+/* ════════ КАРТИНКА ДЛЯ FUN PRINT ════════
+
+   Прямий друк на MXW01 так і не піддався: протокол побайтово збігається з
+   робочою реалізацією, дані доходять, принтер підтверджує друк — і папір
+   лишається білим навіть на максимальній щільності. Зате Fun Print друкує
+   картинки з галереї справно.
+
+   Тож застосунок робить те, що вміє найкраще — складає макет, — і віддає
+   готовий файл. Джерело те саме, що в перегляді (processedCanvas), тож
+   картинка гарантовано збігається з тим, що видно на екрані. */
+function exportCanvas(){
+  const src = processedCanvas();
+  const scale = +$('exScale').value || 2;
+  const pad = $('exMargin').checked ? 8 * scale : 0;
+
+  const out = document.createElement('canvas');
+  out.width = src.width * scale + pad * 2;
+  out.height = src.height * scale + pad * 2;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  // без згладжування: інакше збільшення розмиває точки в сірий кисіль
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, src.width, src.height, pad, pad, src.width * scale, src.height * scale);
+  return out;
+}
+
+function exportName(){
+  const d = new Date();
+  const two = n => String(n).padStart(2, '0');
+  // назва від того, що НАМАЛЬОВАНО, а не від відкритої вкладки: з «Бланків»
+  // інакше кожен файл звався б однаково
+  const tab = { text: 'tekst', photo: 'foto', list: 'spysok', planner: 'planer', roll: 'liniyka', dev: 'tekst' }[drawTab] || 'druk';
+  return 'printer-' + tab + '-' + d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) +
+         '-' + two(d.getHours()) + two(d.getMinutes()) + '.png';
+}
+
+async function exportImage(){
+  const canvas = exportCanvas();
+  const name = exportName();
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (!blob){ toast('Не вдалось зібрати картинку', 6000); return; }
+
+  const mm = (sheet.height / DOTS_PER_MM).toFixed(0);
+  $('exNote').textContent = canvas.width + '×' + canvas.height + ' точок · ' + mm + ' мм стрічки · ' + Math.round(blob.size / 1024) + ' КБ';
+
+  /* На iPhone системний аркуш — найкоротший шлях: там одразу і «Зберегти
+     в Фото», і «Відкрити у Fun Print». Завантаження файлу лишається
+     запасним шляхом для комп'ютера. */
+  const file = new File([blob], name, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    try{
+      await navigator.share({ files: [file], title: 'Друк на міні-принтері' });
+      toast('Готово. У Fun Print вибери цю картинку з галереї', 8000);
+      log('картинка віддана через «Поділитись»: ' + name);
+      return;
+    }catch(e){
+      if (e && e.name === 'AbortError') return;      // просто закрила аркуш
+      log('поділитись не вдалось: ' + e.message + ' — завантажую файлом');
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(e){} }, 500);
+  toast('Картинка збережена: ' + name, 7000);
+  log('картинка збережена файлом: ' + name);
+}
+
+$('exNow').onclick = exportImage;
+$('btnExport').onclick = exportImage;
+
+/* ════════ МОЇ БЛАНКИ ════════
+   Зберігаємо РЕЦЕПТ, а не картинку. У планері вже був болючий випадок, коли
+   base64-зображення переповнили сховище й застосунок перестав зберігати
+   будь-що. Рецепт важить байти, і його можна відкрити й доредагувати. */
+const DOC_FIELDS = [
+  'txtBody', 'txtFont', 'txtSize', 'txtLead', 'txtAlign', 'txtBold', 'txtInvert', 'txtRule',
+  'lsTitle', 'lsBody', 'lsSize', 'lsBoxes', 'lsNums',
+  'qrText', 'qrCap', 'qrLevel', 'qrSize',
+];
+
+function snapshotDoc(){
+  const fields = {};
+  DOC_FIELDS.forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    fields[id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  // зі сторінки «Бланки» зберігаємо ту вкладку, яку насправді видно в перегляді
+  return { tab: drawTab, fields, roll: roll, ts: Date.now(), mm: Math.round(sheet.height / DOTS_PER_MM) };
+}
+
+function restoreDoc(doc){
+  Object.keys(doc.fields || {}).forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!doc.fields[id];
+    else el.value = doc.fields[id];
+  });
+  if (doc.roll){ roll = Object.assign({}, doc.roll); DB.set('roll', roll); fillRollSelect(); rollToForm(); }
+  const tabBtn = document.querySelector('[data-tab="' + (doc.tab || 'text') + '"]');
+  if (tabBtn) tabBtn.click();
+  render();
+}
+
+let docs = DB.get('docs', []);
+
+function renderDocs(){
+  const box = $('docList');
+  box.innerHTML = '';
+  if (!docs.length){ box.innerHTML = '<p class="note">Поки порожньо. Склади щось на будь-якій вкладці й натисни «Зберегти».</p>'; return; }
+  docs.forEach((d, i) => {
+    const row = document.createElement('div');
+    row.className = 'roll-item';
+    const b = document.createElement('b');
+    b.textContent = d.name;
+    const sub = document.createElement('span');
+    sub.className = 'note';
+    sub.textContent = new Date(d.ts).toLocaleDateString('uk-UA') + ' · ' + (d.mm || '?') + ' мм';
+    const open = document.createElement('button');
+    open.className = 'btn'; open.textContent = 'Відкрити';
+    open.onclick = () => { restoreDoc(d); toast('Відкрито: ' + d.name, 3000); };
+    const pic = document.createElement('button');
+    pic.className = 'btn'; pic.textContent = '📤';
+    pic.title = 'Картинка';
+    pic.onclick = async () => { restoreDoc(d); await sleep(250); await exportImage(); };
+    const del = document.createElement('button');
+    del.className = 'btn ghost'; del.textContent = '✕';
+    del.onclick = () => { docs.splice(i, 1); DB.set('docs', docs); renderDocs(); };
+    row.appendChild(b); row.appendChild(sub); row.appendChild(open); row.appendChild(pic); row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+$('docSave').onclick = () => {
+  const name = $('docName').value.trim();
+  if (!name){ toast('Спершу назви бланк', 3000); return; }
+  docs.push(Object.assign({ name }, snapshotDoc()));
+  DB.set('docs', docs);
+  $('docName').value = '';
+  renderDocs();
+  toast('Збережено: ' + name, 3000);
+};
+
 /* ════════ ІНТЕРФЕЙС ════════ */
 const ui = {
   conn(msg){
@@ -1588,8 +1774,10 @@ $('tabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tab]');
   if (!btn) return;
   activeTab = btn.dataset.tab;
+  if (activeTab !== 'docs') drawTab = activeTab;
   [...$('tabs').children].forEach(b => b.setAttribute('aria-selected', String(b === btn)));
-  ['text', 'photo', 'list', 'planner', 'roll', 'dev'].forEach(t => { $('tab-' + t).hidden = (t !== activeTab); });
+  ['text', 'photo', 'list', 'planner', 'roll', 'docs', 'dev'].forEach(t => { $('tab-' + t).hidden = (t !== activeTab); });
+  if (activeTab === 'docs') renderDocs();
   if (activeTab === 'planner') loadFirebase();
   render();
 });
