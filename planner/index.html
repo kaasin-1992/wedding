@@ -1224,14 +1224,16 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 
 <div class="modal-overlay" id="exportCsv" style="display:none">
   <div class="modal-box st-box">
-    <div class="st-title">Вивантажити для Notion</div>
+    <div class="st-title">Вивантажити</div>
     <div class="st-note" style="margin-top:0;padding-top:0;border-top:none;">
-      Файл відкриється як <b>готова база</b> з колонками, фільтрами й сумами.<br>
-      У Notion: сторінка → <b>/import</b> → <b>CSV</b> → обрати файл.
+      <b>Таблиці для Notion:</b> сторінка → <b>/import</b> → <b>CSV</b> → обрати файл.<br>
+      <b>Список для друку:</b> дві картинки (Софі й Хвильовий) під ширину стрічки —
+      збережи в галерею і друкуй із <b>Fun Print</b>.
     </div>
     <div class="st-list" style="margin-top:16px;">
-      <button class="modal-btn" id="expBudget" type="button">💰 Бюджет</button>
-      <button class="modal-btn" id="expGuests" type="button">👥 Гості</button>
+      <button class="modal-btn" id="expBudget" type="button">💰 Бюджет → CSV</button>
+      <button class="modal-btn" id="expGuests" type="button">👥 Гості → CSV</button>
+      <button class="modal-btn" id="expPrint" type="button">🖨 Список гостей → картинки</button>
     </div>
     <div class="modal-actions">
       <button class="modal-btn ghost" id="expClose" type="button">Закрити</button>
@@ -1349,7 +1351,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button type="button" id="copyTabLinkBtn" title="Скопіювати посилання на цю вкладку">🔗 Лінк на розділ</button>
   <button type="button" id="freeSpaceBtn" title="Звільнити памʼять браузера (фото в хмарі не постраждають)">🧹 Звільнити памʼять</button>
   <button type="button" id="selfTestBtn" title="Перевірити, чи все справді працює — застосунок перевірить себе сам">🩺 Все працює?</button>
-  <button type="button" id="exportCsvBtn" title="Вивантажити бюджет і гостей файлом, який Notion імпортує як готову базу">⬇️ Для Notion</button>
+  <button type="button" id="exportCsvBtn" title="Вивантажити дані: таблиці для Notion або список гостей для друку">⬇️ Вивантажити</button>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -2299,8 +2301,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-09.2';
-const APP_CACHE='wedding-planner-v8';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-09.3';
+const APP_CACHE='wedding-planner-v9';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -3879,6 +3881,128 @@ function askConfirm(message, yesLabel='Додати', noLabel='Не додати
     no.onclick=()=>done(false);
   });
 }
+
+/* ── СПИСОК ГОСТЕЙ ДЛЯ МІНІ-ПРИНТЕРА ──
+   Друкується на вузькій стрічці й потрібен на ВХОДІ, коли гість приходить. Тому
+   сортування за абеткою (а не за статусом, як sortGuestList) і чекбокс для відмітки.
+   Катя: «потрібно щоб він готував файли для друку саме в застосунку фан прінт, бо
+   цей наш застосунок так і не друкує нормально». Тому віддаємо КАРТИНКИ (Fun Print
+   друкує з галереї), а не текст. */
+const дата=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const PRINT_VENUES=[
+  {key:'Софі',      head:'ГОСТІ — СОФІ',      sub:'збір 11:30 · церемонія ~13:00', ev:'ceremony'},
+  {key:'Хвильовий', head:'ГОСТІ — ХВИЛЬОВИЙ', sub:'збір 16:20 · церемонія 18:00',  ev:'party'},
+];
+// куди саме кличемо: факт із запрошень (#257) важливіший за загальне поле event
+function guestGoesTo(g, v){
+  if(g.inviteVenue) return g.inviteVenue===v.key;
+  const e=g.event||'both';
+  return e==='both' || e===v.ev;
+}
+function printVenueBlock(v){
+  const все=guests.filter(g=>g && g.name && guestGoesTo(g,v));
+  const відмовились=все.filter(g=>g.status==='declined').length;
+  const список=все.filter(g=>g.status!=='declined')
+    .sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+  const рядки=список.map(g=>{
+    let s='[ ] '+g.name;
+    if(g.plus1==='confirmed') s+=' +1';
+    const k=Number(g.kids)||0; if(k) s+=' · '+k+' дит.';
+    if(g.status==='pending') s+=' ?';
+    return s;
+  });
+  const дорослі=список.length+список.filter(g=>g.plus1==='confirmed').length;
+  const діти=список.reduce((n,g)=>n+(Number(g.kids)||0),0);
+  const підтв=список.filter(g=>g.status==='confirmed').length;
+  const чекаємо=список.filter(g=>g.status==='pending').length;
+  const хвіст=['Разом: '+(дорослі+діти)+' ('+дорослі+' доросл. + '+діти+' дит.)',
+               'Підтвердили: '+підтв+' · чекаємо: '+чекаємо];
+  if(відмовились) хвіст.push('Відмовились: '+відмовились+' — у списку немає');
+  return {head:v.head, sub:v.sub, lines:рядки.length?рядки:['(нікого)'], tail:хвіст};
+}
+
+/* Fun Print друкує КАРТИНКУ з галереї, а не текст — тож віддаємо готові PNG під
+   ширину стрічки. Сірих напівтонів не лишаємо: термопринтер перетворює їх на шум,
+   тому після малювання ріжемо все порогом у чистий чорно-білий (той самий поріг 128,
+   що й у нашому printer/index.html для штрихових зображень). */
+const PRINT_W=384;      // 58 мм при 203 dpi — стандартна ширина цих принтерів
+const PRINT_MAXH=2400;  // довші полотна деякі застосунки не тягнуть — ріжемо на частини
+function wrapForPrint(ctx, text, maxW){
+  const words=String(text).split(' ');
+  const out=[]; let line='';
+  words.forEach(w=>{
+    const probe=line?line+' '+w:w;
+    if(ctx.measureText(probe).width<=maxW || !line){ line=probe; return; }
+    out.push(line); line=w;
+  });
+  if(line) out.push(line);
+  return out;
+}
+function makePrintCanvases(block){
+  const PAD=10, LH=30, F='"Helvetica Neue",Arial,sans-serif';
+  const m=document.createElement('canvas').getContext('2d');
+  m.font='400 22px '+F;
+  // спершу розкладаємо все на рядки, аби знати справжню висоту
+  const рядки=[];
+  рядки.push({t:block.head, size:26, bold:true});
+  рядки.push({t:block.sub,  size:17, bold:false});
+  рядки.push({t:'', size:22});
+  block.lines.forEach(l=>{
+    m.font='400 22px '+F;
+    wrapForPrint(m, l, PRINT_W-PAD*2).forEach((w,i)=>рядки.push({t:(i?'    ':'')+w, size:22}));
+  });
+  рядки.push({t:'', size:22});
+  block.tail.forEach(t=>рядки.push({t, size:18}));
+
+  const perPage=Math.floor((PRINT_MAXH-PAD*2)/LH);
+  const сторінки=[];
+  for(let i=0;i<рядки.length;i+=perPage) сторінки.push(рядки.slice(i,i+perPage));
+
+  return сторінки.map(page=>{
+    const c=document.createElement('canvas');
+    c.width=PRINT_W; c.height=PAD*2+page.length*LH;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#000'; ctx.textBaseline='top';
+    page.forEach((r,i)=>{
+      if(!r.t) return;
+      ctx.font=(r.bold?'700 ':'400 ')+r.size+'px '+F;
+      ctx.fillText(r.t, PAD, PAD+i*LH+(LH-r.size)/2);
+    });
+    // поріг: жодних сірих країв, інакше друк «пливе»
+    const d=ctx.getImageData(0,0,c.width,c.height);
+    const px=d.data;
+    for(let i=0;i<px.length;i+=4){
+      const y=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+      const v=y<128?0:255;
+      px[i]=px[i+1]=px[i+2]=v; px[i+3]=255;
+    }
+    ctx.putImageData(d,0,0);
+    return c;
+  });
+}
+function downloadCanvas(c, name){
+  return new Promise(res=>c.toBlob(b=>{
+    const url=URL.createObjectURL(b);
+    const a=document.createElement('a'); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} res(); }, 400);
+  }, 'image/png'));
+}
+const PRINT_FILE={'Софі':'sofia','Хвильовий':'hvylovyi'};
+async function exportPrintList(){
+  let n=0;
+  for(const v of PRINT_VENUES){
+    const cs=makePrintCanvases(printVenueBlock(v));
+    for(let i=0;i<cs.length;i++){
+      const part=cs.length>1 ? '-'+(i+1) : '';
+      await downloadCanvas(cs[i], 'guests-'+PRINT_FILE[v.key]+part+'-'+дата()+'.png');
+      n++;
+    }
+  }
+  showToast('🖨 Готово: '+n+' картинк'+(n===1?'а':'и')+' для Fun Print — збережи в галерею і друкуй');
+}
+
 
 /* ════ ЗАПРОШЕННЯ З ПАРОЛЯМИ ════
    Катя надіслала тексти запрошень з ІНДИВІДУАЛЬНИМИ паролями до гри й попросила звірити
@@ -9876,8 +10000,8 @@ injectCmtButtons();
     // BOM обовʼязково: без нього Notion і Excel показують кирилицю кракозябрами
     return '﻿'+[headers, ...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
   }
-  function downloadCSV(name, text){
-    const url=URL.createObjectURL(new Blob([text], {type:'text/csv;charset=utf-8'}));
+  function downloadCSV(name, text, mime){
+    const url=URL.createObjectURL(new Blob([text], {type:(mime||'text/csv')+';charset=utf-8'}));
     const a=document.createElement('a');
     a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove();
@@ -9889,7 +10013,6 @@ injectCmtButtons();
   const L_EVENT={both:'Розпис + вечірка', ceremony:'Тільки розпис', party:'Тільки вечірка'};
   const L_STATUS={pending:'Очікує підтвердження', confirmed:'Підтвердив(ла)', declined:'Відмовив(ла)'};
   const L_PLUS1={none:'Без +1', pending:'+1 (не підтверджено)', confirmed:'+1 (підтверджено)'};
-  const дата=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 
   function exportBudgetCSV(){
     const rows=budget.map(b=>[
@@ -9924,6 +10047,7 @@ injectCmtButtons();
   else if(expBtn) expBtn.onclick=()=>{ expOv.style.display='flex'; };
   { const b1=document.getElementById('expBudget'); if(b1) b1.onclick=()=>{ try{ exportBudgetCSV(); }catch(e){ console.warn('export budget', e); showToast('Не вдалось вивантажити бюджет'); } }; }
   { const b2=document.getElementById('expGuests'); if(b2) b2.onclick=()=>{ try{ exportGuestsCSV(); }catch(e){ console.warn('export guests', e); showToast('Не вдалось вивантажити гостей'); } }; }
+  { const b3=document.getElementById('expPrint'); if(b3) b3.onclick=()=>{ try{ exportPrintList(); }catch(e){ console.warn('export print', e); showToast('Не вдалось зібрати список'); } }; }
   { const c=document.getElementById('expClose'); if(c) c.onclick=()=>{ expOv.style.display='none'; }; }
 
   const stOv=document.getElementById('selfTest');
