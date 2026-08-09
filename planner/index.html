@@ -1204,6 +1204,23 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button id="quickAddSubmit" class="submit-btn">Додати</button>
 </div>
 
+<div class="modal-overlay" id="exportCsv" style="display:none">
+  <div class="modal-box st-box">
+    <div class="st-title">Вивантажити для Notion</div>
+    <div class="st-note" style="margin-top:0;padding-top:0;border-top:none;">
+      Файл відкриється як <b>готова база</b> з колонками, фільтрами й сумами.<br>
+      У Notion: сторінка → <b>/import</b> → <b>CSV</b> → обрати файл.
+    </div>
+    <div class="st-list" style="margin-top:16px;">
+      <button class="modal-btn" id="expBudget" type="button">💰 Бюджет</button>
+      <button class="modal-btn" id="expGuests" type="button">👥 Гості</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="expClose" type="button">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="selfTest" style="display:none">
   <div class="modal-box st-box">
     <div class="st-title">Перевірка застосунку</div>
@@ -1314,6 +1331,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <button type="button" id="copyTabLinkBtn" title="Скопіювати посилання на цю вкладку">🔗 Лінк на розділ</button>
   <button type="button" id="freeSpaceBtn" title="Звільнити памʼять браузера (фото в хмарі не постраждають)">🧹 Звільнити памʼять</button>
   <button type="button" id="selfTestBtn" title="Перевірити, чи все справді працює — застосунок перевірить себе сам">🩺 Все працює?</button>
+  <button type="button" id="exportCsvBtn" title="Вивантажити бюджет і гостей файлом, який Notion імпортує як готову базу">⬇️ Для Notion</button>
 </nav>
 
 <div class="tabs-bar-wrap">
@@ -2254,8 +2272,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-07-31.2';
-const APP_CACHE='wedding-planner-v6';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-09.1';
+const APP_CACHE='wedding-planner-v7';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -9663,6 +9681,70 @@ injectCmtButtons();
       ? '<b>Все гаразд.</b> Якщо щось усе одно поводиться дивно — просто напиши мені, що саме, і я подивлюсь.'
       : '<b>Знайшла ' + bad + ' ' + (bad===1?'проблему':'проблеми') + '.</b> Що робити — написано в рядку вище. Якщо не допоможе — напиши мені.';
   }
+  /* ── ВИВАНТАЖЕННЯ ДЛЯ NOTION ──
+     Катя: «треба структурувати бюджет і список гостей, але в планері все висне».
+     Перенести за неї я не можу — її дані лежать у Firestore, доступу туди в мене немає,
+     а в Notion доступний лише читальний режим. Тому планер віддає CSV, який Notion
+     імпортує як готову базу з типізованими колонками. Заразом це виносить дані НАЗОВНІ:
+     працює навіть коли синхронізація крива, бо бере те, що зараз перед очима. */
+  function csvEscape(v){
+    if(v===null || v===undefined) return '';            // щоб не було рядка "undefined"
+    const s=String(v);
+    return /[",;\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }
+  function toCSV(headers, rows){
+    // BOM обовʼязково: без нього Notion і Excel показують кирилицю кракозябрами
+    return '﻿'+[headers, ...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  }
+  function downloadCSV(name, text){
+    const url=URL.createObjectURL(new Blob([text], {type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 1000);
+  }
+  // підписи дослівно ті самі, що вона бачить у полях планера
+  const L_SIDE={her:'Гості Каті', his:'Гості Діми'};
+  const L_GROUP={friends:'Друзі', family:'Родичі'};
+  const L_EVENT={both:'Розпис + вечірка', ceremony:'Тільки розпис', party:'Тільки вечірка'};
+  const L_STATUS={pending:'Очікує підтвердження', confirmed:'Підтвердив(ла)', declined:'Відмовив(ла)'};
+  const L_PLUS1={none:'Без +1', pending:'+1 (не підтверджено)', confirmed:'+1 (підтверджено)'};
+  const дата=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+  function exportBudgetCSV(){
+    const rows=budget.map(b=>[
+      b.name, b.cat,
+      Number(b.planned)||0, Number(b.paid)||0,
+      (Number(b.planned)||0)-(Number(b.paid)||0),      // залишок; відʼємний = переплата
+      b.who ? whoLabelOf(b.who) : '',
+    ]);
+    // назва ЛАТИНИЦЕЮ: Chromium мовчки викидає кириличне імʼя файлу й віддає його як
+    // «download» без розширення — Notion такий не імпортує, а на телефоні його не відкрити
+    downloadCSV('budget-'+дата()+'.csv',
+      toCSV(['Назва','Категорія','Заплановано','Сплачено','Залишок','Хто відповідає'], rows));
+    showToast('💰 Бюджет вивантажено ('+budget.length+') — імпортуй у Notion через /import');
+  }
+  function exportGuestsCSV(){
+    const rows=guests.map(g=>[
+      g.name,
+      L_SIDE[g.side]||'', L_GROUP[g.group]||'', L_EVENT[g.event]||'',
+      L_STATUS[g.status]||'', L_PLUS1[g.plus1]||'',
+      Number(g.kids)||0,
+      g.maybe?'Так':'Ні', g.alco?'Так':'Ні', g.veg?'Так':'Ні',
+    ]);
+    downloadCSV('guests-'+дата()+'.csv',
+      toCSV(['Імʼя','Сторона','Група','Подія','Статус','+1','Діти','Ще не впевнені','Алкоголь','Вегетаріанець'], rows));
+    showToast('👥 Гості вивантажені ('+guests.length+') — імпортуй у Notion через /import');
+  }
+  const expOv=document.getElementById('exportCsv');
+  const expBtn=document.getElementById('exportCsvBtn');
+  // гостю пропонувати нічого: бюджет і контакти для нього і так вирізані (stripGuestData)
+  if(expBtn && IS_GUEST) expBtn.style.display='none';
+  else if(expBtn) expBtn.onclick=()=>{ expOv.style.display='flex'; };
+  { const b1=document.getElementById('expBudget'); if(b1) b1.onclick=()=>{ try{ exportBudgetCSV(); }catch(e){ console.warn('export budget', e); showToast('Не вдалось вивантажити бюджет'); } }; }
+  { const b2=document.getElementById('expGuests'); if(b2) b2.onclick=()=>{ try{ exportGuestsCSV(); }catch(e){ console.warn('export guests', e); showToast('Не вдалось вивантажити гостей'); } }; }
+  { const c=document.getElementById('expClose'); if(c) c.onclick=()=>{ expOv.style.display='none'; }; }
+
   const stOv=document.getElementById('selfTest');
   const stb=document.getElementById('selfTestBtn');
   if(stb) stb.onclick=async()=>{
