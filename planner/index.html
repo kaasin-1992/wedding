@@ -1087,6 +1087,24 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .st-row.bad .st-body strong{color:var(--terra);}
 .st-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--muted);}
 .st-note b{color:var(--text);}
+/* Запрошення з паролями. Паролі — чутливе: живуть лише у приватному стані планера,
+   у репозиторій (а отже й на публічний сайт) не потрапляють. */
+.inv-wrap{margin-bottom:16px;}
+.inv-block{margin-top:14px;}
+.inv-h{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.inv-h.warn{color:var(--terra);}
+.inv-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;
+  padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);margin-bottom:6px;}
+.inv-row .inv-name{font-weight:600;color:var(--text);}
+.inv-row .inv-pass{font-family:var(--mono,monospace);font-size:12px;background:var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:2px 7px;letter-spacing:.06em;}
+.inv-row .inv-ven{font-size:11px;color:var(--muted);}
+.inv-row select{flex:1 1 140px;min-width:120px;font-family:var(--sans);font-size:13px;
+  padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);}
+.inv-row .inv-copy{margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;
+  color:var(--muted);font-family:inherit;font-size:12px;padding:5px 9px;cursor:pointer;min-height:30px;}
+.inv-sum{margin-top:12px;font-size:13px;line-height:1.6;color:var(--muted);}
+.inv-sum b{color:var(--text);}
 /* вибір картинки для ідеї */
 .imgpick-box{max-width:420px;text-align:left;}
 .imgpick-title{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:4px;}
@@ -1448,6 +1466,15 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   </div>
   <div class="stats-grid" id="guestStats"></div>
   <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">🎮 Оновити список гостей для гри</button>
+  <details class="add-section inv-wrap" id="invWrap">
+    <summary>💌 Запрошення з паролями — звірити зі списком</summary>
+    <div class="add-form">
+      <div class="section-hint" style="margin:0 0 8px;">Встав сюди повний текст усіх запрошень. Паролі збережуться <b>тільки в планері</b> (їх бачите ви з Дімою), у сайт не потрапляють.</div>
+      <textarea id="invPaste" class="game-concept" placeholder="── Тітка Тома  (Софі) ──&#10;Тітка Тома! Запрошуємо тебе на наше весілля 🤍&#10;…&#10;Твій пароль: HALUSHK4&#10;…"></textarea>
+      <button class="submit-btn" id="invParseBtn">Розібрати й звірити</button>
+      <div id="invReport"></div>
+    </div>
+  </details>
   <div class="sofia-limit-warn" id="sofiaLimitWarn"></div>
   <details class="roles-assign-wrap">
     <summary>🎬 Ролі на весіллі (ведуча, фотограф, відеограф)</summary>
@@ -2272,8 +2299,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-09.1';
-const APP_CACHE='wedding-planner-v7';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-09.2';
+const APP_CACHE='wedding-planner-v8';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -3851,6 +3878,159 @@ function askConfirm(message, yesLabel='Додати', noLabel='Не додати
     yes.onclick=()=>done(true);
     no.onclick=()=>done(false);
   });
+}
+
+/* ════ ЗАПРОШЕННЯ З ПАРОЛЯМИ ════
+   Катя надіслала тексти запрошень з ІНДИВІДУАЛЬНИМИ паролями до гри й попросила звірити
+   їх зі списком гостей. Паролі не можна класти в репозиторій: лютевесілля.укр роздається
+   з нього ж, тобто будь-який файл із ними став би публічним і знецінив саму ідею паролів.
+   Тому і зберігання, і звірка — тут, у застосунку: паролі лягають у ПРИВАТНИЙ стан
+   (wed-guests → Firestore), який бачать лише вона з Дімою. */
+const INV_VENUE_LINE={
+  'Софі':'(Софі · збір 11:30, церемонія ~13:00, «Бути Софі», Київ — усе це є і в грі в «Моє запрошення»)',
+  'Хвильовий':'(Хвильовий · збір 16:20, церемонія 18:00, «Хвильовий», Київ — усе це є і в грі в «Моє запрошення»)',
+};
+function parseInvites(text){
+  const lines=String(text||'').split(/\r?\n/);
+  const blocks=[]; let cur={header:null, venue:'', lines:[]};
+  const flush=()=>{ if(cur.header || cur.lines.some(l=>l.trim())) blocks.push(cur); };
+  lines.forEach(ln=>{
+    const h=/^──\s*(.+?)\s*\((Софі|Хвильовий)\)\s*──\s*$/.exec(ln.trim());
+    if(h){ flush(); cur={header:h[1].trim(), venue:h[2], lines:[]}; return; }
+    cur.lines.push(ln);
+  });
+  flush();
+  const out=[];
+  blocks.forEach(b=>{
+    const body=b.lines.join('\n');
+    let venue=b.venue;
+    // у обрізаного блоку заголовка нема — локацію ще можна взяти з хвостового рядка
+    if(!venue){ const m=/\((Софі|Хвильовий)\s*·/.exec(body); if(m) venue=m[1]; }
+    const pairs=[...body.matchAll(/^Пароль\s+(.+?):\s*([A-Za-z0-9]+)\s*$/gm)];
+    if(pairs.length){
+      const names=pairs.map(p=>p[1].trim());
+      // мапа пароля БЕРЕТЬСЯ З ЦЬОГО Ж БЛОКУ: глобальна «імʼя→пароль» дала б чужий пароль
+      // там, де двоє гостей звуться однаково (у Каті дві різні Марини)
+      const pp={}; pairs.forEach(p=>{ pp[p[1].trim()]=p[2].trim(); });
+      pairs.forEach(p=>out.push({name:p[1].trim(), pass:p[2].trim(), venue, partners:names, partnerPass:pp}));
+      return;
+    }
+    const one=/^Твій пароль:\s*([A-Za-z0-9]+)\s*$/m.exec(body);
+    if(one) out.push({name:(b.header||'').trim(), pass:one[1].trim(), venue, partners:[]});
+  });
+  return out;
+}
+function inviteMessage(entry, passOf){
+  const ven=INV_VENUE_LINE[entry.venue]||'';
+  if(entry.partners && entry.partners.length>1){
+    const names=entry.partners;
+    return names.join(', ')+'! Запрошуємо вас на наше весілля 🤍\n'
+      +'Заходьте сюди: https://лютевесілля.укр\n'
+      +names.map(n=>'Пароль '+n+': '+((entry.partnerPass&&entry.partnerPass[n])||(passOf&&passOf[n])||'')).join('\n')+'\n'
+      +'Всередині — гра-запрошення з нашою історією, а в кінці — анкета. Дайте відповідь до 20 серпня 🙏\n'+ven;
+  }
+  return entry.name+'! Запрошуємо тебе на наше весілля 🤍\n'
+    +'Заходь сюди: https://лютевесілля.укр\n'
+    +'Твій пароль: '+entry.pass+'\n'
+    +'Всередині — гра-запрошення з нашою історією, а в кінці — анкета. Дай відповідь до 20 серпня 🙏\n'+ven;
+}
+// звірка через ТОЙ САМИЙ матчер, що дедуплікує гостей (lib/guest-utils.js) — він уже вміє
+// українські варіанти імен. Неоднозначності НЕ вгадуємо: віддаємо їй на ручний вибір.
+function matchInvites(entries){
+  const res={matched:[], ambiguous:[], noGuest:[], noName:[], noInvite:[]};
+  const claims=new Map();   // guestId → скільки запрошень на нього претендує
+  const prelim=[];
+  const named=entries.filter(e=>{ if(!e.name){ res.noName.push(e); return false; } return true; });
+  // ПЕРШИЙ прохід — точні збіги. findDuplicateGuest навмисно нечіткий (Саша ≈ Олександр),
+  // і без цього пріоритету «Саша Гулєнко» перетягнув би «Олександра Герегу», зробивши
+  // неоднозначними обох — хоч один із них збігається дослівно.
+  const exact=new Map();
+  named.forEach(e=>{
+    const pool=guests.filter(g=>g.name && normName(g.name)===normName(e.name));
+    if(pool.length) exact.set(e, pool);
+  });
+  const зайняті=new Set();
+  exact.forEach(pool=>{ if(pool.length===1) зайняті.add(pool[0].id); });
+  named.forEach(e=>{
+    let pool=exact.get(e);
+    if(!pool){
+      const hit=findDuplicateGuest(e.name, guests);
+      pool=hit ? guests.filter(g=>g.name===hit && !зайняті.has(g.id)) : [];
+    }
+    prelim.push({e, pool});
+    if(pool.length===1) claims.set(pool[0].id, (claims.get(pool[0].id)||0)+1);
+  });
+  prelim.forEach(({e,pool})=>{
+    if(pool.length===1 && claims.get(pool[0].id)===1){ res.matched.push({...e, guest:pool[0]}); }
+    else if(pool.length>=1) res.ambiguous.push({...e, cands:pool.length?pool:guests.slice()});
+    else res.noGuest.push(e);
+  });
+  const covered=new Set(res.matched.map(m=>m.guest.id));
+  res.noInvite=guests.filter(g=>!covered.has(g.id));
+  return res;
+}
+let _invLast=null;
+function renderInviteReport(res, entries){
+  const box=document.getElementById('invReport'); if(!box) return;
+  const passOf={}; entries.forEach(e=>{ if(e.name) passOf[e.name]=e.pass; });
+  const row=(inner)=>'<div class="inv-row">'+inner+'</div>';
+  const html=[];
+  const блок=(title, warn, body)=>{ if(body) html.push('<div class="inv-block"><div class="inv-h'+(warn?' warn':'')+'">'+title+'</div>'+body+'</div>'); };
+
+  блок('✅ Збіглися ('+res.matched.length+')', false, res.matched.map((m,i)=>row(
+    '<span class="inv-name">'+esc(m.name)+'</span><span class="inv-pass">'+esc(m.pass)+'</span>'
+    +'<span class="inv-ven">'+esc(m.venue||'?')+'</span>'
+    +'<button type="button" class="inv-copy" data-invcopy="'+i+'">Копіювати</button>')).join(''));
+
+  блок('⚠️ Треба обрати вручну ('+res.ambiguous.length+')', true, res.ambiguous.map((a,i)=>row(
+    '<span class="inv-name">'+esc(a.name)+'</span><span class="inv-pass">'+esc(a.pass)+'</span>'
+    +'<select data-invpick="'+i+'"><option value="">— кому саме? —</option>'
+    +a.cands.map(g=>'<option value="'+esc(g.id)+'">'+esc(g.name)+'</option>').join('')+'</select>')).join(''));
+
+  блок('⚠️ Немає імені ('+res.noName.length+')', true, res.noName.map(n=>row(
+    '<span class="inv-pass">'+esc(n.pass)+'</span>'
+    +'<span class="inv-ven">'+esc(n.venue||'?')+'</span>'
+    +'<span style="color:var(--muted);font-size:12px;">блок обрізаний — впиши гостя вручну</span>')).join(''));
+
+  блок('⚠️ Є запрошення, але такого гостя немає в списку ('+res.noGuest.length+')', true,
+    res.noGuest.map(n=>row('<span class="inv-name">'+esc(n.name)+'</span><span class="inv-pass">'+esc(n.pass)+'</span><span class="inv-ven">'+esc(n.venue||'?')+'</span>')).join(''));
+
+  блок('⚠️ Є в списку, але запрошення не знайдено ('+res.noInvite.length+')', true,
+    res.noInvite.map(g=>row('<span class="inv-name">'+esc(g.name)+'</span>')).join(''));
+
+  html.push('<div class="inv-sum">Знайдено паролів: <b>'+entries.length+'</b> · збіглося: <b>'+res.matched.length+'</b></div>');
+  if(res.matched.length) html.push('<button class="submit-btn" id="invApply" style="margin-top:10px;">Записати паролі в картки гостей ('+res.matched.length+')</button>');
+  box.innerHTML=html.join('');
+
+  box.querySelectorAll('[data-invcopy]').forEach(b=>b.onclick=()=>{
+    const m=res.matched[+b.dataset.invcopy];
+    const txt=inviteMessage(m, passOf);
+    try{ navigator.clipboard.writeText(txt); showToast('📋 Повідомлення для «'+m.name+'» скопійовано'); }
+    catch(e){ console.log(txt); showToast('Не вдалось скопіювати — текст у консолі'); }
+  });
+  box.querySelectorAll('[data-invpick]').forEach(s=>s.onchange=()=>{
+    const a=res.ambiguous[+s.dataset.invpick];
+    const g=guests.find(x=>x.id===s.value);
+    if(g){ res.matched.push({...a, guest:g}); res.ambiguous.splice(+s.dataset.invpick,1); renderInviteReport(res, entries); }
+  });
+  const ap=document.getElementById('invApply');
+  if(ap) ap.onclick=()=>{
+    res.matched.forEach(m=>{ m.guest.invitePass=m.pass; m.guest.inviteVenue=m.venue||''; m.guest.updatedAt=syncNow(); });
+    saveJSON('wed-guests', guests); renderGuests();
+    showToast('✅ Паролі записано в '+res.matched.length+' карток гостей');
+  };
+  _invLast=res;
+}
+{
+  const ip=document.getElementById('invParseBtn');
+  if(ip) ip.onclick=()=>{
+    const t=(document.getElementById('invPaste')||{}).value||'';
+    const entries=parseInvites(t);
+    if(!entries.length){ showToast('Не знайшла жодного пароля — перевір, чи вставився весь текст'); return; }
+    renderInviteReport(matchInvites(entries), entries);
+  };
+  const iw=document.getElementById('invWrap');
+  if(iw && IS_GUEST) iw.style.display='none';   // паролі гостю не показуємо
 }
 
 document.getElementById('addGuestBtn').onclick=async()=>{
@@ -9731,9 +9911,10 @@ injectCmtButtons();
       L_STATUS[g.status]||'', L_PLUS1[g.plus1]||'',
       Number(g.kids)||0,
       g.maybe?'Так':'Ні', g.alco?'Так':'Ні', g.veg?'Так':'Ні',
+      g.invitePass||'', g.inviteVenue||'',
     ]);
     downloadCSV('guests-'+дата()+'.csv',
-      toCSV(['Імʼя','Сторона','Група','Подія','Статус','+1','Діти','Ще не впевнені','Алкоголь','Вегетаріанець'], rows));
+      toCSV(['Імʼя','Сторона','Група','Подія','Статус','+1','Діти','Ще не впевнені','Алкоголь','Вегетаріанець','Пароль','Локація запрошення'], rows));
     showToast('👥 Гості вивантажені ('+guests.length+') — імпортуй у Notion через /import');
   }
   const expOv=document.getElementById('exportCsv');
