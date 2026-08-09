@@ -1,6 +1,6 @@
 // Імʼя кешу — це і є версія. Бампаючи його, ми змушуємо браузер поставити новий SW:
 // install перезаписує ASSETS свіжими копіями, activate видаляє кеш зі старим імʼям.
-const CACHE = 'wedding-printer-v13';
+const CACHE = 'wedding-printer-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -13,9 +13,13 @@ const ASSETS = [
   '../lib/catprinter.js',
   '../lib/mxw01.js',
   '../lib/qr.js',
-  '../lib/catprinter.js?v=13',
-  '../lib/mxw01.js?v=13',
-  '../lib/qr.js?v=13'
+  '../lib/guest-utils.js',
+  './blanks.js',
+  '../lib/catprinter.js?v=14',
+  '../lib/mxw01.js?v=14',
+  '../lib/qr.js?v=14',
+  '../lib/guest-utils.js?v=14',
+  './blanks.js?v=14'
 ];
 
 // Новий воркер забирає керування ОДРАЗУ, не чекаючи закриття всіх вкладок.
@@ -46,7 +50,8 @@ self.addEventListener('activate', e => {
 // Тому обидва — network-first, з фолбеком у кеш для офлайну.
 const isVersioned = req => req.mode === 'navigate'
   || req.destination === 'document'
-  || /\/lib\/[^/]+\.js$/.test(new URL(req.url).pathname);
+  || /\/lib\/[^/]+\.js$/.test(new URL(req.url).pathname)
+  || /\/blanks\.js$/.test(new URL(req.url).pathname);
 
 function put(req, res) {
   const copy = res.clone();

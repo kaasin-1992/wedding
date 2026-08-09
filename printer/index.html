@@ -320,10 +320,20 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="tasks">Завдання</option>
           <option value="guests">Список гостей</option>
           <option value="badges">Бейджі гостей — по одному на наклейку</option>
+          <option value="schedS">⏰ Розклад дня — Софі</option>
+          <option value="schedW">⏰ Розклад дня — Хвильовий</option>
+          <option value="boxes">📦 Наклейки на коробки з декором</option>
+          <option value="bridesmaids">🎀 Дружки — наклейки з фото</option>
           <option value="seating">Розсадка по столах</option>
           <option value="contacts">Контакти</option>
         </select>
       </label>
+      <!-- Фото дружок живуть ЛИШЕ тут, у телефоні: у планері поля для них немає,
+           і тягнути обличчя через Firestore ми не хочемо. -->
+      <div id="plFaces" hidden>
+        <p class="note">Додай кожній фото з телефона — воно одразу стискається до розміру наклейки й чорно-білиться, тож у сховищі займає кілобайти, а не мегабайти. «шт.» — скільки копій друкувати: наклейку ліплять на багато коробок, одна штука марна.</p>
+        <div id="plFacesList"></div>
+      </div>
       <label class="fld" id="plFilterWrap"><span>Які саме</span>
         <select id="plFilter">
           <option value="undone">Тільки невиконані</option>
@@ -412,6 +422,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
         <button class="btn" id="docSave">Зберегти</button>
       </div>
       <div id="docList" style="margin-top:12px"></div>
+      <p class="note" style="margin-top:12px">Заготовки з Notion — традиції, ключові кадри, ліміт шуму. Це знімок, а не жива копія: Notion офлайн не відкривається, тож вміст вкарбовано в застосунок. Розклад дня сюди навмисно не входить — він живий у вкладці 💍.</p>
+      <button class="btn wide" id="docNotion">📥 Додати заготовки з Notion</button>
     </div>
   </section>
 
@@ -513,9 +525,11 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=13"></script>
-<script src="../lib/mxw01.js?v=13"></script>
-<script src="../lib/qr.js?v=13"></script>
+<script src="../lib/catprinter.js?v=14"></script>
+<script src="../lib/mxw01.js?v=14"></script>
+<script src="../lib/qr.js?v=14"></script>
+<script src="../lib/guest-utils.js?v=14"></script>
+<script src="blanks.js?v=14"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -529,7 +543,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v13 · картинки для Fun Print';
+const VERSION = 'v14 · локація гостей, коробки, дружки, розклад';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1280,6 +1294,20 @@ function drawRuler(){
 
 /* ── дані з планера ── */
 const planner = { state: null, picked: {} };
+const SIDE_UK = { her: 'її', his: 'його' };
+/* «по одній наклейці на позицію» — а не суцільний список */
+const PER_STICKER_KINDS = ['badges', 'boxes', 'bridesmaids'];
+
+/* Обличчя дружок: ключ — id людини з planner.partyHer, значення —
+   { png, n }. png — це вже готова чорно-біла картинка розміру наклейки
+   (кілобайти), а не оригінал із камери (мегабайти): у планері був випадок,
+   коли base64 переповнив сховище й застосунок перестав зберігати будь-що. */
+let faces = DB.get('faces', {});
+/* 160 — це стеля того, що взагалі вміщається на наклейку по висоті. Більше
+   зберігати марно: дизероване зображення стискається погано (кожна точка
+   шумить), і 240 коштувало б удвічі більше сховища заради пікселів, які
+   все одно стиснуться при малюванні. */
+const FACE_PX = 160;
 
 function plannerItems(){
   if (!planner.state) return [];
@@ -1294,10 +1322,47 @@ function plannerItems(){
     }).map(t => ({ id: t.id || t.title, main: t.title || t.name || '—', sub: t.deadline || (t.asap ? 'терміново' : '') }));
   }
   if (kind === 'guests' || kind === 'badges'){
+    /* Локація — те, задля чого список і друкується: на вході треба бачити,
+       кого куди кличемо. Рахує її guestVenueLabel з lib/guest-utils.js —
+       тим самим предикатом, що й розкладає гостей по локаційних списках у
+       планері, тож розійтись вони не можуть.
+       Сторона (her/his) раніше друкувалась СИРИМ КЛЮЧЕМ — на стрічці
+       вилазило латинське «her». На бейджі її взагалі немає сенсу: на вході
+       вона ні про що не каже, а місце на наклейці коштує. */
     return (st.guests || []).map((g, i) => ({
       id: g.id || String(i),
       main: g.name || g.title || '—',
-      sub: (g.table ? 'стіл ' + g.table : '') + (g.side ? ' · ' + g.side : ''),
+      sub: [guestVenueLabel(g),
+            g.table ? 'стіл ' + g.table : '',
+            kind === 'badges' ? '' : SIDE_UK[g.side] || ''].filter(Boolean).join(' · '),
+    }));
+  }
+  if (kind === 'schedS' || kind === 'schedW'){
+    const src = kind === 'schedS' ? st.scriptSofia : st.scriptWave;
+    return (src || []).filter(m => m && m.text)
+      .slice()
+      .sort((a, b) => String(a.time || '99:99').localeCompare(String(b.time || '99:99')))
+      // час — ПЕРШИМ: розклад читають по часу, а не по назві пункту
+      .map((m, i) => ({
+        id: m.id || String(i),
+        main: (m.time || '—') + '  ' + m.text,
+        sub: m.resp || '',
+      }));
+  }
+  if (kind === 'boxes'){
+    return (st.decor || []).filter(d => d && d.title).map((d, i) => ({
+      id: d.id || String(i),
+      main: d.title,
+      sub: [d.venue || '', d.note || ''].filter(Boolean).join(' · '),
+      venue: d.venue || '',
+      note: d.note || '',
+    }));
+  }
+  if (kind === 'bridesmaids'){
+    return (st.partyHer || []).filter(p => p && p.name).map((p, i) => ({
+      id: p.id || String(i),
+      main: p.name,
+      sub: p.note || '',
     }));
   }
   if (kind === 'seating'){
@@ -1322,6 +1387,94 @@ function drawPlanner(measureOnly){
     s.ctx.font = '500 20px ' + FONTS.sans;
     s.ctx.textAlign = 'center';
     s.ctx.fillText('Нічого не позначено', s.x0 + s.w / 2, 12);
+    return s.h;
+  }
+
+  /* ── наклейки на коробки з декором ──
+     На коробці має бути видно три речі: що всередині, куди їде і хто робив.
+     Останнє лишаємо порожнім квадратом: туди наліплюється наклейка з
+     обличчям дружки (розділ «🎀 Дружки»). */
+  if (kind === 'boxes'){
+    const one = L.continuous ? 190 : L.heightPx;
+    if (measureOnly) return one * items.length;
+    const s = newSheet(one * items.length);
+    const ctx = s.ctx;
+    const pad = 14;
+    items.forEach((it, i) => {
+      const y0 = i * one;
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '800 30px ' + FONTS.sans;
+      const title = wrapLines(ctx, it.main, s.w - pad * 2).slice(0, 2);
+      title.forEach((ln, k) => ctx.fillText(ln, s.x0 + pad, y0 + pad + k * 34));
+      let y = y0 + pad + title.length * 34 + 2;
+      if (it.note){
+        ctx.font = '500 18px ' + FONTS.sans;
+        wrapLines(ctx, it.note, s.w - pad * 2).slice(0, 2)
+          .forEach((ln, k) => ctx.fillText(ln, s.x0 + pad, y + k * 22));
+        y += Math.min(2, wrapLines(ctx, it.note, s.w - pad * 2).length) * 22;
+      }
+      if (it.venue){
+        ctx.font = '800 22px ' + FONTS.sans;
+        ctx.fillText(it.venue.toUpperCase(), s.x0 + pad, y + 4);
+      }
+      // квадрат «хто робив» — під наклейку з обличчям
+      const box = 54, bx = s.x0 + s.w - pad - box, by = y0 + one - pad - box;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(bx, by, box, box);
+      ctx.font = '500 15px ' + FONTS.sans;
+      ctx.textAlign = 'right';
+      ctx.fillText('хто робив:', bx - 8, by + box / 2 - 8);
+      ctx.textAlign = 'left';
+      if (i < items.length - 1 && L.continuous) ctx.fillRect(s.x0 + 20, (i + 1) * one - 1, s.w - 40, 2);
+    });
+    return s.h;
+  }
+
+  /* ── наклейки з обличчями дружок ──
+     Друкуємо стільки копій, скільки замовлено: сенс наклейки в тому, щоб
+     ліпити її на багато коробок і завдань, отже одна штука марна. */
+  if (kind === 'bridesmaids'){
+    const one = L.continuous ? 150 : L.heightPx;
+    const seq = [];
+    items.forEach(it => {
+      const f = faces[it.id] || {};
+      const n = Math.max(1, Number(f.n) || 1);
+      for (let k = 0; k < n; k++) seq.push(it);
+    });
+    if (measureOnly) return one * seq.length;
+    const s = newSheet(one * seq.length);
+    const ctx = s.ctx;
+    const pad = 12;
+    const side = Math.min(one - pad * 2, FACE_PX);
+    seq.forEach((it, i) => {
+      const y0 = i * one;
+      const f = faces[it.id] || {};
+      const img = f.img;   // готовий <img>, підготовлений faceImage()
+      ctx.fillStyle = '#000';
+      if (img && img.complete && img.naturalWidth){
+        ctx.drawImage(img, s.x0 + pad, y0 + (one - side) / 2, side, side);
+      } else {
+        ctx.lineWidth = 2; ctx.strokeStyle = '#000';
+        ctx.strokeRect(s.x0 + pad, y0 + (one - side) / 2, side, side);
+      }
+      const tx = s.x0 + pad + side + 12;
+      const tw = s.x0 + s.w - pad - tx;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '700 28px ' + FONTS.serif;
+      const nameLines = wrapLines(ctx, it.main, tw).slice(0, 2);
+      let y = y0 + (one - side) / 2;
+      nameLines.forEach((ln, k) => ctx.fillText(ln, tx, y + k * 30));
+      y += nameLines.length * 30 + 2;
+      if (it.sub){
+        ctx.font = '500 16px ' + FONTS.sans;
+        wrapLines(ctx, it.sub, tw).slice(0, 3).forEach((ln, k) => ctx.fillText(ln, tx, y + k * 19));
+      }
+      if (i < seq.length - 1 && L.continuous) ctx.fillRect(s.x0 + 20, (i + 1) * one - 1, s.w - 40, 2);
+    });
     return s.h;
   }
 
@@ -1360,7 +1513,8 @@ function drawPlanner(measureOnly){
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.font = '800 26px ' + FONTS.sans;
-  const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', contacts: 'Контакти' };
+  const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', contacts: 'Контакти',
+                   schedS: 'Розклад — Софі', schedW: 'Розклад — Хвильовий' };
   ctx.fillText(titles[kind] || 'Список', s.x0 + pad, pad);
   ctx.fillRect(s.x0 + pad, pad + 34, s.w - pad * 2, 2);
 
@@ -1463,7 +1617,7 @@ function render(){
 function checkOverflow(L){
   const box = $('pvOver');
   // бейджі — навмисно по наклейці на гостя, там «переповнення» нормальне
-  const perSticker = activeTab === 'planner' && $('plKind').value === 'badges';
+  const perSticker = activeTab === 'planner' && PER_STICKER_KINDS.includes($('plKind').value);
   const over = !L.continuous && sheet.height > L.heightPx && !perSticker;
   box.hidden = !over;
   if (!over) return;
@@ -1678,6 +1832,24 @@ function renderDocs(){
     box.appendChild(row);
   });
 }
+
+/* Заготовки з Notion лягають тим самим рецептом, що й свої бланки, — тож
+   їх можна відкрити й доредагувати. Повторне натискання нічого не дублює:
+   заготовку з такою ж назвою пропускаємо, а не додаємо вдруге. */
+$('docNotion').onclick = () => {
+  if (typeof NOTION_BLANKS === 'undefined'){ toast('Заготовки не завантажились — онови застосунок у ⚙️', 5000); return; }
+  const було = new Set(docs.map(d => d.name));
+  let додано = 0;
+  NOTION_BLANKS.forEach(b => {
+    if (було.has(b.name)) return;
+    docs.push({ name: b.name, tab: b.tab, fields: b.fields, roll: roll, ts: Date.now(), mm: 0 });
+    додано++;
+  });
+  if (!додано){ toast('Усі заготовки вже додані', 3000); return; }
+  DB.set('docs', docs);
+  renderDocs();
+  toast('Додано заготовок: ' + додано + ' (знімок Notion від ' + NOTION_SNAPSHOT + ')', 5000);
+};
 
 $('docSave').onclick = () => {
   const name = $('docName').value.trim();
@@ -2349,9 +2521,109 @@ $('plBtn').onclick = async () => {
   }finally{ $('plBtn').textContent = 'Завантажити'; }
 };
 
+/* Фото з телефона → одразу квадрат FACE_PX і чорно-біле з дизерингом.
+   Зберігаємо САМЕ результат: оригінал на кілька мегабайт у localStorage не
+   влізе, а на наклейці 240 точок він усе одно перетворився б на це саме. */
+function makeFacePng(file){
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('не вдалось прочитати файл'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('це не картинка'));
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = FACE_PX;
+        const cx = c.getContext('2d', { willReadFrequently: true });
+        cx.fillStyle = '#fff';
+        cx.fillRect(0, 0, FACE_PX, FACE_PX);
+        // вписуємо по короткій стороні — обличчя зазвичай посередині кадру
+        const k = Math.max(FACE_PX / img.width, FACE_PX / img.height);
+        const w = img.width * k, h = img.height * k;
+        cx.drawImage(img, (FACE_PX - w) / 2, (FACE_PX - h) / 2, w, h);
+        const d = cx.getImageData(0, 0, FACE_PX, FACE_PX);
+        const gray = autoLevels(toGray(d.data));
+        const bits = dither(gray, FACE_PX, FACE_PX, 'floyd', 128);
+        for (let i = 0; i < bits.length; i++){
+          const v = bits[i] ? 0 : 255;
+          d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v;
+          d.data[i * 4 + 3] = 255;
+        }
+        cx.putImageData(d, 0, 0);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+// <img> для малювання тримаємо окремо від збереженого png: у localStorage
+// їде тільки рядок, у пам'яті — готовий до drawImage об'єкт
+function faceImage(id){
+  const f = faces[id];
+  if (!f || !f.png) return;
+  if (f.img && f.img.src === f.png) return;
+  const img = new Image();
+  img.onload = () => render();
+  img.src = f.png;
+  f.img = img;
+}
+
+function saveFaces(){
+  // img — це живий об'єкт, у сховище він не потрібен і не серіалізується
+  const out = {};
+  Object.keys(faces).forEach(k => { out[k] = { png: faces[k].png, n: faces[k].n }; });
+  DB.set('faces', out);
+}
+
+function renderFaces(items){
+  const box = $('plFacesList');
+  box.innerHTML = '';
+  items.forEach(it => {
+    const f = faces[it.id] || (faces[it.id] = { png: '', n: 1 });
+    faceImage(it.id);
+    const row = document.createElement('div');
+    row.className = 'roll-item';
+    const thumb = document.createElement('img');
+    thumb.width = 40; thumb.height = 40;
+    thumb.style.cssText = 'border:1px solid var(--line);border-radius:6px;object-fit:cover;background:#fff';
+    if (f.png) thumb.src = f.png;
+    const b = document.createElement('b');
+    b.textContent = it.main;
+    const pick = document.createElement('input');
+    pick.type = 'file'; pick.accept = 'image/*'; pick.hidden = true;
+    pick.onchange = async () => {
+      const file = pick.files && pick.files[0];
+      if (!file) return;
+      try{
+        f.png = await makeFacePng(file);
+        f.img = null;
+        faceImage(it.id);
+        saveFaces();
+        renderPlannerList();
+        toast('Фото додано: ' + it.main, 3000);
+      }catch(e){ toast('Не вийшло: ' + (e.message || 'невідома помилка'), 5000); }
+    };
+    const btn = document.createElement('button');
+    btn.className = 'btn'; btn.textContent = f.png ? 'Змінити фото' : 'Фото';
+    btn.onclick = () => pick.click();
+    const n = document.createElement('input');
+    n.type = 'number'; n.min = '1'; n.max = '99'; n.value = String(f.n || 1);
+    n.style.width = '64px';
+    n.title = 'скільки копій друкувати';
+    n.onchange = () => { f.n = clamp(Number(n.value) || 1, 1, 99); n.value = String(f.n); saveFaces(); render(); };
+    row.appendChild(thumb); row.appendChild(b); row.appendChild(btn); row.appendChild(n); row.appendChild(pick);
+    box.appendChild(row);
+  });
+}
+
 function renderPlannerList(){
   const items = plannerItems();
-  $('plFilterWrap').hidden = $('plKind').value !== 'tasks';
+  const kind = $('plKind').value;
+  $('plFilterWrap').hidden = kind !== 'tasks';
+  $('plFaces').hidden = kind !== 'bridesmaids';
+  if (kind === 'bridesmaids') renderFaces(items);
   const box = $('plList');
   box.innerHTML = '';
   if (!items.length){ box.innerHTML = '<p class="note">У цьому розділі порожньо.</p>'; render(); return; }

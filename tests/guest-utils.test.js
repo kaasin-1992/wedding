@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank, sortGuestList, matchesAllFilters } from '../lib/guest-utils.js';
+import { normName, canon, lev, similarTok, findDuplicateGuest, headCount, totalPeople, peopleAt, applyFilter, guestRank, sortGuestList, matchesAllFilters, VENUES, guestGoesTo, guestVenues, guestVenueLabel, goesToBoth, otherVenue } from '../lib/guest-utils.js';
 
 describe('normName', () => {
   it('lowercases, strips punctuation and extra spaces', () => {
@@ -167,5 +167,62 @@ describe('matchesAllFilters (мультифільтри: АБО в межах к
   it('standalone filters (plus1/maybe/backup/wparty/pending) AND with everything else', () => {
     expect(matchesAllFilters(his, new Set(['his', 'maybe', 'plus1']))).toBe(true);
     expect(matchesAllFilters(his, new Set(['his', 'maybe', 'backup']))).toBe(false);
+  });
+});
+
+describe('локації гостя', () => {
+  it('event both (і порожній event) — обидві локації', () => {
+    expect(guestVenues({ event: 'both' })).toEqual(['Софі', 'Хвильовий']);
+    expect(guestVenues({})).toEqual(['Софі', 'Хвильовий']);   // типове значення — both
+  });
+
+  it('ceremony — лише Софі, party — лише Хвильовий', () => {
+    expect(guestVenues({ event: 'ceremony' })).toEqual(['Софі']);
+    expect(guestVenues({ event: 'party' })).toEqual(['Хвильовий']);
+  });
+
+  it('inviteVenue переважає event — це факт із самого запрошення', () => {
+    expect(guestVenues({ event: 'both', inviteVenue: 'Софі' })).toEqual(['Софі']);
+    expect(guestVenues({ event: 'ceremony', inviteVenue: 'Хвильовий' })).toEqual(['Хвильовий']);
+  });
+
+  it('guestVenueLabel дає три стани зі зведеного списку Каті', () => {
+    expect(guestVenueLabel({ event: 'both' })).toBe('Софі + Хвильовий');
+    expect(guestVenueLabel({ event: 'ceremony' })).toBe('Софі');
+    expect(guestVenueLabel({ event: 'party' })).toBe('Хвильовий');
+  });
+
+  it('невідома inviteVenue не бреше про локацію, а віддає «—»', () => {
+    expect(guestVenues({ inviteVenue: 'Десь ще' })).toEqual([]);
+    expect(guestVenueLabel({ inviteVenue: 'Десь ще' })).toBe('—');
+  });
+
+  it('goesToBoth і otherVenue', () => {
+    expect(goesToBoth({ event: 'both' })).toBe(true);
+    expect(goesToBoth({ event: 'party' })).toBe(false);
+    expect(otherVenue('Софі')).toBe('Хвильовий');
+    expect(otherVenue('Хвильовий')).toBe('Софі');
+  });
+
+  /* ГОЛОВНЕ. Позначка в рядку гостя й членство в списку локації мусять
+     рахуватись тим самим предикатом — інакше на стрічці буде гість із
+     позначкою «і Хвильовий», якого в списку Хвильового немає. */
+  it('інваріант: guestVenues збігається з guestGoesTo для кожної локації', () => {
+    const events = ['both', 'ceremony', 'party', '', undefined];
+    const invites = ['', 'Софі', 'Хвильовий'];
+    for (const event of events) {
+      for (const inviteVenue of invites) {
+        const g = { event, inviteVenue };
+        const venues = guestVenues(g);
+        for (const v of VENUES) {
+          expect(venues.includes(v.key)).toBe(guestGoesTo(g, v));
+        }
+      }
+    }
+  });
+
+  it('guestGoesTo не падає на порожньому гості', () => {
+    expect(guestGoesTo(null, VENUES[0])).toBe(false);
+    expect(guestVenues(null)).toEqual([]);
   });
 });

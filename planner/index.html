@@ -2376,7 +2376,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-npshop-cost':'npshopCostDone','wed-stickers-cost':'stickersCostDone','wed-vases-fix':'vasesFixDone','wed-dress-cost':'dressCostDone','wed-temu2-cost':'temu2CostDone','wed-temu2-split':'temu2SplitDone','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-npshop-cost':'npshopCostDone','wed-stickers-cost':'stickersCostDone','wed-vases-fix':'vasesFixDone','wed-dress-cost':'dressCostDone','wed-temu2-cost':'temu2CostDone','wed-temu2-split':'temu2SplitDone','wed-party-duties-seed':'partyDutiesSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -3035,6 +3035,7 @@ let vasesFixDone = loadJSON('wed-vases-fix', false); // чи вже перене
 let dressCostDone = loadJSON('wed-dress-cost', false); // чи вже внесено сукню із секонду + хімчистку + традиційний одяг у Софі (раз)
 let temu2CostDone = loadJSON('wed-temu2-cost', false); // чи вже внесено два нові замовлення Temu (20 і 14 товарів) у декор (раз)
 let temu2SplitDone = loadJSON('wed-temu2-split', false); // чи вже розкладено ті два замовлення Temu по категоріях (декор/вбрання/техніка) (раз)
+let partyDutiesSeeded = loadJSON('wed-party-duties-seed', false); // чи вже вписано доручення дружкам із Notion (раз)
 let wishpicksSeeded = loadJSON('wed-wishpicks-seed', false); // чи вже додано 5 посилань Wishpicks в Одяг (раз) — фото підтягнуться через "Обробити все" (мій сервер не може достукатись до wishpicks.com, але microlink з ЇЇ сесії — може)
 let orphanMediaCleaned = loadJSON('wed-orphan-media-cleaned', false); // чи вже прибрано осиротілі m_idea_* документи давно видалених ідей (раз)
 let hotels      = loadJSON('wed-hotels', []);
@@ -3889,36 +3890,42 @@ function askConfirm(message, yesLabel='Додати', noLabel='Не додати
    цей наш застосунок так і не друкує нормально». Тому віддаємо КАРТИНКИ (Fun Print
    друкує з галереї), а не текст. */
 const дата=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-const PRINT_VENUES=[
-  {key:'Софі',      head:'ГОСТІ — СОФІ',      sub:'збір 11:30 · церемонія ~13:00', ev:'ceremony'},
-  {key:'Хвильовий', head:'ГОСТІ — ХВИЛЬОВИЙ', sub:'збір 16:20 · церемонія 18:00',  ev:'party'},
-];
-// куди саме кличемо: факт із запрошень (#257) важливіший за загальне поле event
-function guestGoesTo(g, v){
-  if(g.inviteVenue) return g.inviteVenue===v.key;
-  const e=g.event||'both';
-  return e==='both' || e===v.ev;
-}
+/* key/ev беруться з VENUES (lib/guest-utils.js) — там же живе guestGoesTo,
+   яким рахується і членство в списку, і позначка ★ у рядку гостя. Тут
+   лишається тільки те, що стосується самого друку: шапка й підзаголовок. */
+const PRINT_HEAD={
+  'Софі':      {head:'ГОСТІ — СОФІ',      sub:'збір 11:30 · церемонія ~13:00'},
+  'Хвильовий': {head:'ГОСТІ — ХВИЛЬОВИЙ', sub:'збір 16:20 · церемонія 18:00'},
+};
+const PRINT_VENUES=VENUES.map(v=>({...v, ...PRINT_HEAD[v.key]}));
 function printVenueBlock(v){
   const все=guests.filter(g=>g && g.name && guestGoesTo(g,v));
   const відмовились=все.filter(g=>g.status==='declined').length;
   const список=все.filter(g=>g.status!=='declined')
     .sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+  /* Назву другої локації в кожен рядок не впишеш: 384 точки при шрифті 22px —
+     це ~33 знаки, а «[ ] Мама Леся Синявська» це вже 23. Тому позначаємо
+     зірочкою тих, хто йде на ОБИДВІ, а легенду пишемо один раз під шапкою.
+     Гість без зірочки — «лише ця локація». */
+  const обидві=список.filter(goesToBoth);
   const рядки=список.map(g=>{
-    let s='[ ] '+g.name;
+    let s='[ ] '+(goesToBoth(g)?'★ ':'')+g.name;
     if(g.plus1==='confirmed') s+=' +1';
     const k=Number(g.kids)||0; if(k) s+=' · '+k+' дит.';
     if(g.status==='pending') s+=' ?';
     return s;
   });
+  const друга=otherVenue(v.key);
   const дорослі=список.length+список.filter(g=>g.plus1==='confirmed').length;
   const діти=список.reduce((n,g)=>n+(Number(g.kids)||0),0);
   const підтв=список.filter(g=>g.status==='confirmed').length;
   const чекаємо=список.filter(g=>g.status==='pending').length;
   const хвіст=['Разом: '+(дорослі+діти)+' ('+дорослі+' доросл. + '+діти+' дит.)',
                'Підтвердили: '+підтв+' · чекаємо: '+чекаємо];
+  if(обидві.length) хвіст.push((v.ev==='ceremony'?'Лишаються на ':'Були на ')+друга+': '+обидві.length);
   if(відмовились) хвіст.push('Відмовились: '+відмовились+' — у списку немає');
-  return {head:v.head, sub:v.sub, lines:рядки.length?рядки:['(нікого)'], tail:хвіст};
+  const legend=обидві.length ? '★ — '+(v.ev==='ceremony'?'лишається на ':'була/був на ')+друга : '';
+  return {head:v.head, sub:v.sub, legend, lines:рядки.length?рядки:['(нікого)'], tail:хвіст};
 }
 
 /* Fun Print друкує КАРТИНКУ з галереї, а не текст — тож віддаємо готові PNG під
@@ -3946,6 +3953,7 @@ function makePrintCanvases(block){
   const рядки=[];
   рядки.push({t:block.head, size:26, bold:true});
   рядки.push({t:block.sub,  size:17, bold:false});
+  if(block.legend) рядки.push({t:block.legend, size:17, bold:false});
   рядки.push({t:'', size:22});
   block.lines.forEach(l=>{
     m.font='400 22px '+F;
@@ -6614,6 +6622,51 @@ function seedRealSchedule(){
   saveJSON('wed-scriptW',scriptWave);
   saveJSON('wed-real-schedule',true);
   renderScripts();
+}
+
+/* ── одноразово: доручення дружкам ──
+   Дев'ять персональних доручень лежали лише в Notion («🤝 Координація
+   весілля — ролі дружок»). Notion офлайн не працює, у Bluefy не
+   відкривається і в наклейки не потрапляє — тому переносимо їх СЮДИ, щоб
+   джерело правди було одне: планер.
+
+   Заповнюємо ТІЛЬКИ порожній note. Те, що Катя вписала руками, свіжіше за
+   будь-який мій знімок Notion, і затирати його не можна. */
+const PARTY_DUTIES=[
+  ['Марія',           'координаторка Софі · головна точка контакту на локації'],
+  ['Аліса',           'координаторка Хвильового · декор і розклад на місці'],
+  ['Аня Кімельфельд', 'розписи на Хвильовому: полотна, глиняні фігурки, раннер'],
+  ['Юля Приймак',     'декор Хвильового: нитяні китиці ~15–20 шт, білі банти'],
+  ['Луїза',           'одяг: спідниця Каті, можливо жилетка Дімі'],
+  ['Віка',            'зачіски дружкам у день Х + підготовка дівич-вечора'],
+  ['Настя',           'активності в день весілля + дівич-вечір у Києві'],
+  ['Аня Дідора',      'особиста підтримка Каті, дистанційно · без дедлайнів'],
+  ['Катя Большакова', 'логістика: список гостей на вході, «хто де» по обох локаціях'],
+];
+/* Кого саме шукаємо. НЕ можна брати findDuplicateGuest наосліп: він
+   зіставляє за ПЕРШИМ іменем (для дедуплікації гостей це правильно), а в
+   цьому списку дві Ані — Кімельфельд і Дідора. Нечіткий збіг віддав би
+   Кімельфельд доручення Дідори, і Катя дізналась би про це вже з наклейки.
+   Тому: точний збіг повного імені, а нечіткий — лише коли кандидат ОДИН.
+   Не знайшли однозначно — краще пропустити, ніж вписати чуже. */
+function findPartyPerson(імʼя){
+  const люди=partyHer.filter(p=>p && p.name);
+  const точні=люди.filter(p=>normName(p.name)===normName(імʼя));
+  if(точні.length) return точні.length===1 ? точні[0] : null;
+  const схожі=люди.filter(p=>findDuplicateGuest(імʼя, [p]));
+  return схожі.length===1 ? схожі[0] : null;
+}
+function seedPartyDuties(){
+  if(partyDutiesSeeded || IS_GUEST) return;
+  partyDutiesSeeded=true;
+  let змін=0;
+  PARTY_DUTIES.forEach(([імʼя, доручення])=>{
+    const p=findPartyPerson(імʼя);
+    if(!p || (p.note||'').trim()) return;   // немає такої, неоднозначно, або вже вписано руками
+    p.note=доручення; p.updatedAt=syncNow(); змін++;
+  });
+  if(змін){ saveJSON('wed-party-her',partyHer); renderParties(); }
+  saveJSON('wed-party-duties-seed',true);
 }
 
 // одноразовий seed: два термінові замовлення, щоб не загубились
@@ -9757,7 +9810,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!stickersCostDone && !IS_GUEST) seedStickersCost(); if(!vasesFixDone && !IS_GUEST) seedVasesFix(); if(!dressCostDone && !IS_GUEST) seedDressCost(); if(!temu2CostDone && !IS_GUEST) seedTemu2Cost(); if(!temu2SplitDone && !IS_GUEST) seedTemu2Split(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!stickersCostDone && !IS_GUEST) seedStickersCost(); if(!vasesFixDone && !IS_GUEST) seedVasesFix(); if(!dressCostDone && !IS_GUEST) seedDressCost(); if(!temu2CostDone && !IS_GUEST) seedTemu2Cost(); if(!temu2SplitDone && !IS_GUEST) seedTemu2Split(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!partyDutiesSeeded && !IS_GUEST) seedPartyDuties(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();
