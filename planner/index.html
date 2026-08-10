@@ -1085,6 +1085,15 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 .st-body strong{display:block;color:var(--text);font-weight:600;}
 .st-body span{color:var(--muted);font-size:13px;}
 .st-row.bad .st-body strong{color:var(--terra);}
+.st-devices{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;}
+.st-devices:empty{display:none;}
+.st-dev-h{font-weight:600;margin-bottom:6px;}
+.st-dev{display:flex;gap:8px;align-items:baseline;color:var(--muted);}
+.st-dev b{color:var(--text);font-weight:600;}
+.st-dev.stale b{color:var(--terra);}
+#localOnlyBar{position:sticky;top:0;z-index:60;background:var(--terra);color:#fff;font-size:13px;
+  line-height:1.4;padding:8px 14px;text-align:center;}
+body.guest #localOnlyBar{display:none !important;}
 .st-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--muted);}
 .st-note b{color:var(--text);}
 /* Запрошення з паролями. Паролі — чутливе: живуть лише у приватному стані планера,
@@ -1196,6 +1205,8 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
 </head>
 <body>
 
+<div id="localOnlyBar" style="display:none"></div>
+
 <div class="login-overlay" id="login">
   <div class="login-box">
     <div class="login-emoji">💍</div>
@@ -1245,6 +1256,7 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="modal-box st-box">
     <div class="st-title">Перевірка застосунку</div>
     <div class="st-list" id="stList"></div>
+    <div class="st-devices" id="stDevices"></div>
     <div class="st-note" id="stNote"></div>
     <div class="modal-actions">
       <button class="modal-btn ghost" id="stClose">Закрити</button>
@@ -2311,8 +2323,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.1';
-const APP_CACHE='wedding-planner-v11';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.2';
+const APP_CACHE='wedding-planner-v12';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -2489,6 +2501,80 @@ const DB = {
 let srvOffset=(()=>{ const v=Number(DB.get('wed-clock-offset')); return isFinite(v)?v:0; })();
 function syncNow(){ return Date.now()+srvOffset; }
 function clockSkewMs(){ return -srvOffset; }   // наскільки телефон випереджає сервер
+
+/* ── ХТО Й КОЛИ ОСТАННІЙ РАЗ ПИСАВ У ХМАРУ ──
+   Катя: «Діма щось в себе пише і в мене це взагалі не зʼявляється». Звідси причину
+   не видно, а розпитувати його — це знову перекладати діагностику на неї. Тому кожен
+   пристрій лишає слід у спільному документі, і вона бачить у себе: долетів Дімин
+   телефон чи ні, коли востаннє й на якій збірці.
+   Слід ставимо ЛИШЕ після вдалого запису — інакше він брехатиме так само, як усе інше.
+   merge:true не чіпає чужу відмітку: вкладена мапа зливається по ключу пристрою. */
+const DEVICE_ID=(()=>{
+  let v=DB.get('wed-device-id');
+  if(!v){ v='d'+Math.random().toString(36).slice(2,10); DB.set('wed-device-id', v); }
+  return v;
+})();
+let deviceName=DB.get('wed-device-name')||'';
+let devices={};                 // з хмари: id → {name, ts, build, skew}
+let _devStampAt=0;
+const DEV_STAMP_EVERY=60000;    // частіше немає сенсу, а запис коштує
+function stampDevice(){
+  if(!DOC || IS_GUEST) return;
+  const t=Date.now();
+  if(t-_devStampAt < DEV_STAMP_EVERY) return;
+  _devStampAt=t;                // ставимо ДО запису: сам запис теж викличе flashSync, і без
+                                // цього ми б зайшли в нескінченну рекурсію
+  DOC.set({_devices:{[DEVICE_ID]:{name:deviceName||'', ts:syncNow(), build:APP_BUILD, skew:clockSkewMs()}}}, {merge:true})
+     .catch(e=>{ console.warn('device stamp', e); _devStampAt=0; });
+}
+function коли(ts){
+  const d=syncNow()-ts;
+  if(!isFinite(d)) return 'невідомо коли';
+  if(d<0) return 'щойно';
+  const хв=Math.round(d/60000);
+  if(хв<1) return 'щойно';
+  if(хв<60) return хв+' хв тому';
+  const год=Math.round(хв/60);
+  if(год<24) return год+(год===1?' годину тому':' год тому');
+  const дн=Math.round(год/24);
+  return дн===1 ? 'вчора' : дн+' дн тому';
+}
+function otherDevices(){
+  return Object.keys(devices||{}).filter(id=>id!==DEVICE_ID)
+    .map(id=>({id, ...(devices[id]||{})}))
+    .sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+const DEV_STALE=24*3600000;     // доба без запису — привід показати це червоним
+function renderDevices(){
+  const box=document.getElementById('stDevices'); if(!box) return;
+  if(IS_GUEST){ box.innerHTML=''; return; }
+  const свої=devices[DEVICE_ID];
+  const інші=otherDevices();
+  const рядок=(d,це)=>{
+    const старий=!це && (syncNow()-(d.ts||0))>DEV_STALE;
+    return '<div class="st-dev'+(старий?' stale':'')+'"><b>'+esc(d.name||'без імені')+(це?' (цей пристрій)':'')+'</b>'
+      +'<span>'+(d.ts?коли(d.ts):'ще не писав')+(d.build?' · збірка '+esc(d.build):'')+(старий?' ⚠️':'')+'</span></div>';
+  };
+  const html=['<div class="st-dev-h">📡 Пристрої, що пишуть у хмару</div>'];
+  if(свої) html.push(рядок(свої,true));
+  if(інші.length) інші.forEach(d=>html.push(рядок(d,false)));
+  else html.push('<div class="st-dev stale"><b>Другий пристрій ще жодного разу не записав</b>'
+    +'<span>Схоже, правки з нього не долітають — нехай відкриє планер і щось змінить</span></div>');
+  box.innerHTML=html.join('');
+}
+/* Коли хмари немає, застосунок досі поводився так, ніби все гаразд: екран входу ховався
+   («працюємо локально»), усе клацалось і зберігалось — і мовчки нікуди не їхало. Саме
+   так і виглядає «Діма пише, а в мене не зʼявляється». Тост тут не годиться: він зникає,
+   а стан — ні, тому смужка. */
+let cloudEverOk=false;
+function renderLocalOnlyBanner(){
+  const bar=document.getElementById('localOnlyBar'); if(!bar || IS_GUEST) return;
+  const самі = !auth || (!cloudReady && !cloudEverOk);
+  bar.style.display = самі ? 'block' : 'none';
+  if(самі) bar.textContent = !auth
+    ? '⚠️ Хмара не підключилась — правки зберігаються ЛИШЕ на цьому пристрої і не дійдуть до пари'
+    : '⚠️ Ще немає звʼязку з хмарою — правки чекають тут і поїдуть, коли зʼявиться інтернет';
+}
 
 async function calibrateClock(){
   if(!DOC || IS_GUEST) return;
@@ -9710,6 +9796,10 @@ function flashSync(ok, err){
   txt.textContent=msg;
   pill.classList.add('show');
   clearTimeout(syncTimer); syncTimer=setTimeout(()=>pill.classList.remove('show'), ok?1800:6000);
+  // вдалий запис — єдиний момент, коли ми ТОЧНО знаємо, що цей пристрій долітає до хмари
+  if(ok) stampDevice();
+  cloudEverOk = cloudEverOk || ok;
+  renderLocalOnlyBanner();
 }
 // Видимий «чорний ящик»: будь-яка JS-помилка тепер показується тостом, а не ховається в
 // консоль. Без цього кожна поломка виглядає для Каті просто як «нічого не працює».
@@ -9792,7 +9882,7 @@ function startSync(){
   if(!DOC) return;
   calibrateClock();   // спершу домовляємось про час, інакше конфлікти вирішує кривий годинник
   DOC.onSnapshot(snap=>{
-    cloudReady=true;
+    cloudReady=true; renderLocalOnlyBanner();
     if(!snap.exists){
       if(!seeded){ seeded=true;
         const lightIdeas=splitIdeas(ideas);   // картинки ідей — в окремі документи
@@ -9805,6 +9895,7 @@ function startSync(){
       return;
     }
     const d=snap.data();
+    if(d._devices && typeof d._devices==='object'){ devices=d._devices; renderDevices(); }
     applyingSnapshot=true;
     // НАДГРОБКИ — ПЕРШИМИ, до масивів: саме вони вирішують, що з хмари не приймати.
     // Домішуємо (не заміщаємо), інакше пристрій стер би собі чужий слід видалення.
@@ -9975,6 +10066,7 @@ if(auth){
     if(user){
       document.getElementById('login').style.display='none';
       maybeSwipeHint();
+      renderLocalOnlyBanner();
       if(!cloudReady) startSync();
       if(!commentsBound) startCommentsSync();
       if(!votesBound) startVotesSync();
@@ -10003,9 +10095,11 @@ if(auth){
   document.getElementById('logBtn').onclick=doLogin;
   document.getElementById('logPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 }else{
-  // Firebase недоступний — працюємо локально, без екрана входу
+  // Firebase недоступний — працюємо локально, без екрана входу.
+  // Але мовчати про це не можна: саме так виглядало «пишу, а до пари не доходить».
   document.getElementById('login').style.display='none';
   maybeSwipeHint();
+  renderLocalOnlyBanner();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
 setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!stickersCostDone && !IS_GUEST) seedStickersCost(); if(!vasesFixDone && !IS_GUEST) seedVasesFix(); if(!dressCostDone && !IS_GUEST) seedDressCost(); if(!temu2CostDone && !IS_GUEST) seedTemu2Cost(); if(!temu2SplitDone && !IS_GUEST) seedTemu2Split(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
@@ -10211,17 +10305,37 @@ injectCmtButtons();
         тримається ? 'Видалене не повертається — навіть якщо в хмарі воно ще є'
                    : 'Видалене може повернутись. Скинь кеш у підвалі — схоже, версія стара');
 
-    // 4) чи є звʼязок із хмарою
+    // 3.5) ВХІД. Якщо Firebase не піднявся, застосунок ховає екран входу й мовчки
+    // працює сам із собою — ззовні не відрізнити від справної роботи.
+    const увійшов = !!(auth && auth.currentUser);
+    add(!!auth && (увійшов || IS_GUEST), 'Вхід у спільний акаунт',
+        !auth ? 'Хмара не підключилась — застосунок працює лише на цьому пристрої. Перевір інтернет і перезайди'
+        : IS_GUEST ? 'Гостьовий перегляд'
+        : увійшов ? 'Ти в акаунті, який спільний із парою'
+        : 'Не залогінений — правки лишаються тільки тут. Введи email і пароль');
+
+    // 4) чи є звʼязок із хмарою.
+    // Гостьовий режим НЕ зелений: з нього правки принципово не йдуть у хмару, і
+    // рапортувати про це галочкою — та сама мовчазна брехня, через яку все й почалось.
     let хмара='—';
     if(IS_GUEST) хмара='гостьовий режим';
     else if(!DOC) хмара='немає';
     else{
       try{ await DOC.get(); хмара='ok'; }catch(e){ хмара='помилка'; }
     }
-    add(хмара==='ok' || хмара==='гостьовий режим', 'Звʼязок із хмарою',
+    add(хмара==='ok', 'Звʼязок із хмарою',
         хмара==='ok' ? 'Дані синхронізуються між телефоном і компом'
-        : хмара==='гостьовий режим' ? 'Гостьовий перегляд — тільки читання'
+        : хмара==='гостьовий режим' ? 'Це режим перегляду — правки з нього НЕ потраплять до пари'
         : 'Немає звʼязку. Правки збережуться на цьому пристрої й доїдуть, коли зʼявиться інтернет');
+
+    // 4.5) ДРУГИЙ ПРИСТРІЙ — власне те, про що питала Катя
+    const інші=otherDevices();
+    const свіжий=інші.find(d=>(syncNow()-(d.ts||0))<DEV_STALE);
+    add(!IS_GUEST && !!свіжий, 'Другий пристрій',
+        свіжий ? (свіжий.name||'Другий пристрій')+' писав ' + коли(свіжий.ts) + (свіжий.build?' · збірка '+свіжий.build:'')
+        : інші.length ? (інші[0].name||'Другий пристрій')+' востаннє писав ' + коли(інші[0].ts)
+            + (інші[0].build?' · збірка '+інші[0].build:'') + '. Відтоді його правки до тебе не доходили'
+        : 'Другий пристрій жодного разу не записав у хмару. Нехай відкриє планер, увійде і щось змінить — тоді зʼявиться тут');
 
     // 5) годинник телефона — саме через нього зміни «не доходили» до другого пристрою
     const зсув=clockSkewMs();
@@ -10232,6 +10346,7 @@ injectCmtButtons();
         : 'Розходиться із сервером на ' + (хв||1) + ' хв (' + (зсув>0?'спішить':'відстає') + '). Я вже враховую це, але краще увімкнути автоматичний час у налаштуваннях телефона');
 
     document.getElementById('stList').innerHTML = rows.join('');
+    renderDevices();
     document.getElementById('stNote').innerHTML = bad===0
       ? '<b>Все гаразд.</b> Якщо щось усе одно поводиться дивно — просто напиши мені, що саме, і я подивлюсь.'
       : '<b>Знайшла ' + bad + ' ' + (bad===1?'проблему':'проблеми') + '.</b> Що робити — написано в рядку вище. Якщо не допоможе — напиши мені.';
@@ -10304,6 +10419,11 @@ injectCmtButtons();
   const stOv=document.getElementById('selfTest');
   const stb=document.getElementById('selfTestBtn');
   if(stb) stb.onclick=async()=>{
+    // без імені список пристроїв — набір випадкових рядків; питаємо один раз
+    if(!IS_GUEST && !deviceName){
+      const n=(prompt('Чий це пристрій? (Катя / Діма)')||'').trim().slice(0,20);
+      if(n){ deviceName=n; DB.set('wed-device-name', n); _devStampAt=0; stampDevice(); }
+    }
     document.getElementById('stList').innerHTML='<div class="st-row"><span class="st-ico">⏳</span><span class="st-body"><strong>Перевіряю…</strong></span></div>';
     document.getElementById('stNote').textContent='';
     stOv.style.display='flex';
