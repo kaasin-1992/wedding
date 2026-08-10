@@ -1484,7 +1484,8 @@ body.guest #localOnlyBar{display:none !important;}
     <summary id="rosSummary">📋 Список гостей — звірити й додати відсутніх</summary>
     <div class="add-form">
       <div class="section-hint" style="margin:0 0 8px;">Встав список виду <code>1. Імʼя — Каті · Софі + Хвильовий</code>. Наявних не чіпаю, додам лише тих, кого немає. Текст запамʼятається — вставляти вдруге не треба.</div>
-      <textarea id="rosPaste" class="game-concept" placeholder="1. Мама Леся Синявська — Каті · Софі (лише день)&#10;2. Віка Кукрицька — Каті · Софі + Хвильовий&#10;…"></textarea>
+      <!-- у підказках лише вигадані приклади: цей файл роздається публічно разом із сайтом -->
+      <textarea id="rosPaste" class="game-concept" placeholder="1. Імʼя Прізвище — Каті · Софі (лише день)&#10;2. Інше Імʼя — Діми · Софі + Хвильовий&#10;…"></textarea>
       <button class="submit-btn" id="rosParseBtn">Звірити зі списком у планері</button>
       <div id="rosLast"></div>
       <div id="rosReport"></div>
@@ -1494,7 +1495,8 @@ body.guest #localOnlyBar{display:none !important;}
     <summary>💌 Запрошення з паролями — звірити зі списком</summary>
     <div class="add-form">
       <div class="section-hint" style="margin:0 0 8px;">Встав сюди повний текст усіх запрошень. Паролі збережуться <b>тільки в планері</b> (їх бачите ви з Дімою), у сайт не потрапляють.</div>
-      <textarea id="invPaste" class="game-concept" placeholder="── Тітка Тома  (Софі) ──&#10;Тітка Тома! Запрошуємо тебе на наше весілля 🤍&#10;…&#10;Твій пароль: HALUSHK4&#10;…"></textarea>
+      <!-- приклад вигаданий: справжній пароль тут став би публічним разом із сайтом -->
+      <textarea id="invPaste" class="game-concept" placeholder="════ СОФІ ════&#10;── Імʼя Прізвище ──&#10;Імʼя! Запрошуємо тебе на наше весілля 🤍&#10;…&#10;Твій пароль: PRYKLAD1&#10;…"></textarea>
       <button class="submit-btn" id="invParseBtn">Розібрати й звірити</button>
       <div id="invReport"></div>
     </div>
@@ -2323,8 +2325,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.2';
-const APP_CACHE='wedding-planner-v12';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.3';
+const APP_CACHE='wedding-planner-v13';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4000,12 +4002,16 @@ function printVenueBlock(v){
   const відмовились=все.filter(g=>g.status==='declined').length;
   const список=все.filter(g=>g.status!=='declined')
     .sort((a,b)=>a.name.localeCompare(b.name,'uk'));
-  const рядки=список.map(g=>{
+  // пароль — ОКРЕМИМ рядком під імʼям. Стрічка 384 px вузька, і склеєне в один
+  // рядок поїде переносом посеред пароля, а недочитаний пароль гірший за жоден
+  const рядки=[];
+  список.forEach(g=>{
     let s='[ ] '+g.name;
     if(g.plus1==='confirmed') s+=' +1';
     const k=Number(g.kids)||0; if(k) s+=' · '+k+' дит.';
     if(g.status==='pending') s+=' ?';
-    return s;
+    рядки.push(s);
+    if(g.invitePass) рядки.push('    пароль: '+g.invitePass);
   });
   const дорослі=список.length+список.filter(g=>g.plus1==='confirmed').length;
   const діти=список.reduce((n,g)=>n+(Number(g.kids)||0),0);
@@ -4216,12 +4222,23 @@ const INV_VENUE_LINE={
   'Хвильовий':'(Хвильовий · збір 16:20, церемонія 18:00, «Хвильовий», Київ — усе це є і в грі в «Моє запрошення»)',
 };
 function parseInvites(text){
+  /* Два формати. У старому локація стояла в заголовку картки:
+       ── Тітка Тома  (Софі) ──
+     У новому заголовок голий, а локація винесена в секцію над групою карток:
+       ════ СОФІ (20) ════
+       ── Мама Світлана ──
+     і хвостовий рядок теж змінився: «(збір об 11:30, …, «Бути Софі», Київ)»
+     замість «(Софі · збір 11:30, …)». Тримаємо обидва: старі тексти в неї вже
+     розібрані, і ламати їх не можна. */
   const lines=String(text||'').split(/\r?\n/);
-  const blocks=[]; let cur={header:null, venue:'', lines:[]};
+  const blocks=[]; let cur={header:null, venue:'', lines:[]}; let секція='';
   const flush=()=>{ if(cur.header || cur.lines.some(l=>l.trim())) blocks.push(cur); };
   lines.forEach(ln=>{
-    const h=/^──\s*(.+?)\s*\((Софі|Хвильовий)\)\s*──\s*$/.exec(ln.trim());
-    if(h){ flush(); cur={header:h[1].trim(), venue:h[2], lines:[]}; return; }
+    const t=ln.trim();
+    const s=/^═+\s*(СОФІ|ХВИЛЬОВИЙ)\b/.exec(t);
+    if(s){ секція = s[1]==='СОФІ' ? 'Софі' : 'Хвильовий'; return; }
+    const h=/^──\s*(.+?)\s*(?:\((Софі|Хвильовий)\))?\s*──$/.exec(t);
+    if(h){ flush(); cur={header:h[1].trim(), venue:h[2]||секція, lines:[]}; return; }
     cur.lines.push(ln);
   });
   flush();
@@ -4231,6 +4248,8 @@ function parseInvites(text){
     let venue=b.venue;
     // у обрізаного блоку заголовка нема — локацію ще можна взяти з хвостового рядка
     if(!venue){ const m=/\((Софі|Хвильовий)\s*·/.exec(body); if(m) venue=m[1]; }
+    // новий хвіст локацію не називає прямо — впізнаємо за назвою місця
+    if(!venue){ if(/Бути\s+Софі/.test(body)) venue='Софі'; else if(/Хвильовий/.test(body)) venue='Хвильовий'; }
     const pairs=[...body.matchAll(/^Пароль\s+(.+?):\s*([A-Za-z0-9]+)\s*$/gm)];
     if(pairs.length){
       const names=pairs.map(p=>p[1].trim());
