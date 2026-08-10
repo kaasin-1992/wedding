@@ -2332,8 +2332,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.5';
-const APP_CACHE='wedding-planner-v15';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.6';
+const APP_CACHE='wedding-planner-v16';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -10319,12 +10319,35 @@ function markVotedLocally(id){ try{ localStorage.setItem('wed-voted-'+id,'1'); }
    бо ця колекція за задумом читається без автентифікації. Пише лише пара, за явним кліком кнопки
    "Список гостей для гри" (не автоматично при кожній зміні — щоб не плодити зайві записи Firestore
    на кожен дрібний правки картки гостя). */
-async function syncGuestsForGame(){
+/* Раніше синхронізація тільки ДОДАВАЛА й оновлювала: кого Катя прибрала з планера,
+   той лишався в колекції гри назавжди. Це і є відповідь на її двічі задане питання
+   «список гостей частково змінювався, чи тоді видно список гостей у грі?» — так,
+   видалені лишались видимими, і запрошення в них відкривалось далі.
+   Тепер зайве прибираємо. Але це дія НАЗОВНІ, тож із двома запобіжниками. */
+const GAME_BATCH=400;      // ліміт Firestore — 500 операцій на батч, лишаємо запас
+async function planGameSync(){
+  if(!GUESTSCOL || IS_GUEST) return null;
+  // Порожній список — майже напевно стан ще не приїхав із хмари. Стара логіка тут
+  // просто нічого не писала, нова ж СТЕРЛА Б увесь список гостей у грі.
+  if(!guests.length) return {порожньо:true, зайві:[], всього:0};
+  const snap=await GUESTSCOL.get();
+  const свої=new Set(guests.map(g=>g.id));
+  const зайві=snap.docs.filter(d=>!свої.has(d.id))
+    .map(d=>({id:d.id, name:(d.data()||{}).name||d.id}));
+  return {порожньо:false, зайві, всього:guests.length};
+}
+async function syncGuestsForGame(план){
   if(!GUESTSCOL || IS_GUEST) return false;
+  if(!план || план.порожньо) return false;
   try{
-    const batch=firebase.firestore().batch();
-    guests.forEach(g=>batch.set(GUESTSCOL.doc(g.id), {id:g.id, name:g.name}));
-    await batch.commit();
+    const дії=[];
+    guests.forEach(g=>дії.push(b=>b.set(GUESTSCOL.doc(g.id), {id:g.id, name:g.name})));
+    план.зайві.forEach(z=>дії.push(b=>b.delete(GUESTSCOL.doc(z.id))));
+    for(let i=0;i<дії.length;i+=GAME_BATCH){
+      const batch=firebase.firestore().batch();
+      дії.slice(i,i+GAME_BATCH).forEach(f=>f(batch));
+      await batch.commit();
+    }
     return true;
   }catch(e){ console.warn('sync guests for game', e); return false; }
 }
@@ -10704,13 +10727,25 @@ injectCmtButtons();
   const eb=document.getElementById('exportGuestsBtn');
   if(eb) eb.onclick=async()=>{
     const lines=guests.map(g=>`${g.id};${g.name}`).join('\n');
-    const synced=await syncGuestsForGame();
+    const план=await planGameSync();
+    if(план && план.порожньо){
+      showToast('Список гостей ще порожній — спочатку дочекайся синхронізації, інакше зітру список у грі');
+      return;
+    }
+    // Видалення з гри — дія назовні: у людини перестане відкриватись запрошення.
+    // Тому коли є кого прибирати, називаємо поіменно й питаємо. Коли нема — не турбуємо.
+    if(план && план.зайві.length){
+      const імена=план.зайві.map(z=>z.name).join(', ');
+      if(!confirm('У грі зникнуть '+план.зайві.length+': '+імена+'\n\nЗапрошення в них більше не відкриється. Прибрати?')) return;
+    }
+    const synced=await syncGuestsForGame(план);
+    const прибрано=(synced && план && план.зайві.length) ? ', прибрано '+план.зайві.length : '';
     try{
       await navigator.clipboard.writeText(lines);
-      showToast(synced?`✅ Список (${guests.length}) синхронізовано з грою і скопійовано 📋`:`Список (${guests.length}) скопійовано — синхронізація з грою не вдалась, встав вручну 📋`);
+      showToast(synced?`✅ Список (${guests.length}) синхронізовано з грою${прибрано} і скопійовано 📋`:`Список (${guests.length}) скопійовано — синхронізація з грою не вдалась, встав вручну 📋`);
     }catch(e){
       console.log(lines);
-      showToast(synced?'✅ Синхронізовано з грою (копіювання в буфер не вдалось)':'Не вдалося ні скопіювати, ні синхронізувати');
+      showToast(synced?`✅ Синхронізовано з грою${прибрано} (копіювання в буфер не вдалось)`:'Не вдалося ні скопіювати, ні синхронізувати');
     }
   };
 })();
