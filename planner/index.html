@@ -2332,8 +2332,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.4';
-const APP_CACHE='wedding-planner-v14';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.5';
+const APP_CACHE='wedding-planner-v15';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4259,11 +4259,21 @@ function parseInvites(text){
     if(!venue){ if(/Бути\s+Софі/.test(body)) venue='Софі'; else if(/Хвильовий/.test(body)) venue='Хвильовий'; }
     const pairs=[...body.matchAll(/^Пароль\s+(.+?):\s*([A-Za-z0-9]+)\s*$/gm)];
     if(pairs.length){
-      const names=pairs.map(p=>p[1].trim());
+      /* Повні імена стоять у ЗАГОЛОВКУ, а в рядках паролів вони обрізані. Буває, що
+         обидва рядки дають ОДНЕ Й ТЕ САМЕ слово (двоє братів → «Пароль Брат:» двічі)
+         — по них двох людей не розрізнити взагалі. Тому імена беремо із заголовка,
+         а паролі зіставляємо позиційно.
+         Приклади тут навмисно без справжніх паролів: цей файл роздається публічно.
+         Але тільки якщо заголовок ділиться рівно на стільки частин, скільки
+         паролів: у старому форматі заголовок односкладовий, а пари перелічені
+         повними іменами саме в рядках паролів — там усе навпаки. */
+      const зГоловка=(b.header||'').split(/\s+\+\s+/).map(s=>s.trim()).filter(Boolean);
+      const names=(зГоловка.length===pairs.length && зГоловка.length>1)
+        ? зГоловка : pairs.map(p=>p[1].trim());
       // мапа пароля БЕРЕТЬСЯ З ЦЬОГО Ж БЛОКУ: глобальна «імʼя→пароль» дала б чужий пароль
       // там, де двоє гостей звуться однаково (у Каті дві різні Марини)
-      const pp={}; pairs.forEach(p=>{ pp[p[1].trim()]=p[2].trim(); });
-      pairs.forEach(p=>out.push({name:p[1].trim(), pass:p[2].trim(), venue, partners:names, partnerPass:pp}));
+      const pp={}; names.forEach((n,i)=>{ pp[n]=pairs[i][2].trim(); });
+      names.forEach((n,i)=>out.push({name:n, pass:pairs[i][2].trim(), venue, partners:names, partnerPass:pp}));
       return;
     }
     const one=/^Твій пароль:\s*([A-Za-z0-9]+)\s*$/m.exec(body);
@@ -4329,6 +4339,116 @@ function matchInvites(entries){
   return res;
 }
 let _invLast=null;
+/* ── «+1» → ОКРЕМА КАРТКА З ІМЕНЕМ ──
+   Катя: «зазвичай в грі я просто окремо виносила імʼя всіх плюс один». У грі кожен
+   «+1» — своя людина зі своїм паролем, у планері та сама пара — одна картка з
+   галочкою plus1. Тому гра й каже «+1 немає»: людина є, просто під власним імʼям.
+   Це ніколи не було конфліктом.
+   Головне тут — НЕ порахувати нікого двічі. headCount = 1 + (plus1==='confirmed') + kids,
+   і саме він живить «Людей разом» і «На розписі», тобто ліміт Софі. Якщо завести
+   партнера карткою й лишити галочку, пара порахується тричі. Тож галочку знімаємо
+   тим самим рухом, яким створюємо картку. */
+function planSplitPairs(entries){
+  const пари=new Map();     // ключ — склад пари, щоб не обробити її двічі (по запису на людину)
+  entries.forEach(e=>{ if(e.partners && e.partners.length>1) пари.set(e.partners.join('|'), e.partners); });
+  const створити=[], вжеЄ=[], знятиГалочку=[], невідомі=[];
+  const зайняті=new Set();
+  пари.forEach(names=>{
+    /* Пара розділяється РІВНО ОДИН раз. Після першого проходу зʼявляються нові картки,
+       і збіги «пливуть»: на другому проході головним раптом стає щойно створений партнер,
+       а справжня головна лишається без пари — і людина додається вдруге. Тому позначаємо
+       створені картки самою парою й більше до неї не повертаємось. */
+    const ключ=names.join('|');
+    if(guests.some(g=>g && g.pairKey===ключ)) return;
+    // Спершу — надійні збіги: дослівний і за прізвищем. Вони не залежать від сторони,
+    // бо самі по собі однозначні.
+    const картки=names.map(n=>{
+      const точна=guests.find(g=>g.name && normName(g.name)===normName(n) && !зайняті.has(g.id));
+      if(точна){ зайняті.add(точна.id); return {name:n, guest:точна}; }
+      /* Неоднозначність міряємо по ВСІХ картках, а не лише по вільних. Інакше вона
+         «розсмоктується»: «Аліна Сміла» дісталась попередній парі, і для наступної
+         «Аліна» лишався єдиний варіант — чужа «Аліна (бікер)» з іншого боку. Так
+         Артем Скорозінський, гість Каті, створювався на боці Діми. */
+      const s=rosSurname(n);
+      const хвіст=s ? guests.filter(g=>g.name &&
+        normName(rosCleanName(g.name)).split(' ').filter(Boolean).some(t=>similarTok(s,t))) : [];
+      if(хвіст.length===1 && !зайняті.has(хвіст[0].id)){ зайняті.add(хвіст[0].id); return {name:n, guest:хвіст[0]}; }
+      return {name:n, guest:null};
+    });
+    /* Аж тепер — коротке імʼя, і ЛИШЕ в межах сторони, яку підказав надійний збіг.
+       У планері пара часто записана як «Ярік+1», без прізвища, і звʼязати її можна
+       тільки так. Але без обмеження стороною «Артем Скорозінський» з боку Каті
+       чіплявся за «Аліна (бікер)» з боку Діми — а це взагалі різні люди.
+       Беремо лише ОДНОЗНАЧНИЙ збіг: Владів і Марин по двоє, вгадувати не можна. */
+    const якір=(картки.find(x=>x.guest)||{}).guest;
+    const однослівний=(g,імʼя)=>{
+      const gі=normName(rosCleanName(g.name)).split(' ').filter(Boolean);
+      return gі.length===1 && (canon(gі[0])===canon(імʼя) || similarTok(gі[0], імʼя));
+    };
+    картки.forEach(x=>{
+      if(x.guest) return;
+      const імʼя=normName(x.name).split(' ')[0];
+      const короткі=guests.filter(g=>{
+        if(!g.name || зайняті.has(g.id) || !однослівний(g,імʼя)) return false;
+        if(якір) return g.side===якір.side;
+        /* Якщо надійного збігу в парі не було, сторону взяти нізвідки. Тоді шукаємо
+           лише серед карток, де супутник вписаний у САМУ НАЗВУ — «Ярік+1», «Мітіна+1»,
+           «Безвер+1». Інакше їх не знайти взагалі: прізвища в такій картці немає.
+           Галочки «+1 підтверджено» тут МАЛО: «Аліна (бікер)» з боку Діми теж її має,
+           і через неї «Артем Скорозінський» з боку Каті створювався на чужій стороні. */
+        return /\+\s*\d+/.test(g.name);
+      });
+      if(короткі.length===1){ зайняті.add(короткі[0].id); x.guest=короткі[0]; }
+    });
+    const головна=картки.find(x=>x.guest);
+    /* Партнера шукати можна не завжди. Якщо на головній картці стоїть «+1 підтверджено»,
+       планер прямо каже: цей супутник картки НЕ має. Тоді шукати його за імʼям — шкідливо:
+       партнерка Яріка «Марина» чіплялась за чужу картку «Марина (бікер)», а це різні люди
+       (одна на Софі + Хвильовий, друга лише на вечірці). Тож при підтвердженому «+1»
+       партнера просто створюємо. */
+    if(головна && головна.guest.plus1==='confirmed'){
+      картки.forEach(x=>{ if(x!==головна && x.guest){ зайняті.delete(x.guest.id); x.guest=null; } });
+    }
+    /* Якщо в планері не знайшлось ЖОДНОГО з пари — це склеєна картка на кшталт
+       «Брати» чи «Гулєнки», або пари немає взагалі. Створювати тут не можна з двох
+       причин: стороні й локації нізвідки взятись, а якщо «Брати» лишаться поруч із
+       двома новими картками, ту саму пару порахує тричі. Такі виносимо окремо —
+       їх або додасть звірка списку, або вона розділить картку сама. */
+    if(!головна){ невідомі.push(names); return; }
+    картки.forEach(x=>{
+      const пароль=(entries.find(e=>e.name===x.name)||{}).pass||'';
+      if(x.guest){ вжеЄ.push({name:x.name, guest:x.guest, pass:пароль}); return; }
+      /* Останній запобіжник від дубля й запорука повторюваності: якщо на цій стороні
+         вже є картка з таким імʼям — не створюємо, хай навіть звʼязати її з парою
+         однозначно не вийшло. Інакше друге натискання додавало б тих самих людей знову. */
+      if(x!==головна && головна.guest.plus1!=='confirmed'){
+        const тезка=guests.find(g=>g.name && g.side===головна.guest.side
+          && (normName(g.name)===normName(x.name)
+              || normName(rosCleanName(g.name)).split(' ')[0]===normName(x.name).split(' ')[0]));
+        if(тезка){ вжеЄ.push({name:x.name, guest:тезка, pass:пароль}); return; }
+      }
+      створити.push({name:x.name, pass:пароль, pairKey:ключ,
+        side: головна.guest.side,
+        event: головна.guest.event||'both',
+        status: головна.guest.plus1==='confirmed' ? 'confirmed' : 'pending',
+        через: головна.guest.name});
+    });
+    // галочку знімаємо лише там, де партнер СПРАВДІ стає карткою
+    if(головна && головна.guest.plus1==='confirmed' && картки.some(x=>!x.guest)){
+      знятиГалочку.push(головна.guest);
+    }
+  });
+  return {створити, вжеЄ, знятиГалочку, невідомі};
+}
+function applySplitPairs(план){
+  const ts=syncNow();
+  план.створити.forEach((c,i)=>guests.push({
+    id:'p'+ts+'_'+i, name:c.name, side:c.side, event:c.event, status:c.status,
+    group:'friends', plus1:'none', kids:0, invitePass:c.pass, pairKey:c.pairKey, updatedAt:ts,
+  }));
+  план.знятиГалочку.forEach(g=>{ g.plus1='none'; g.updatedAt=ts; });
+  saveJSON('wed-guests', guests); renderGuests();
+}
 function renderInviteReport(res, entries){
   const box=document.getElementById('invReport'); if(!box) return;
   const passOf={}; entries.forEach(e=>{ if(e.name) passOf[e.name]=e.pass; });
@@ -4357,9 +4477,41 @@ function renderInviteReport(res, entries){
   блок('⚠️ Є в списку, але запрошення не знайдено ('+res.noInvite.length+')', true,
     res.noInvite.map(g=>row('<span class="inv-name">'+esc(g.name)+'</span>')).join(''));
 
+  // пари: показуємо, ЩО зміниться в цифрах, ще до натискання — щоб ліміт Софі
+  // не виявився пробитим уже після
+  const план=planSplitPairs(entries);
+  if(план.створити.length){
+    const було=totalPeople(guests), софіБуло=peopleAt(guests,'ceremony');
+    const стане=було+план.створити.length-план.знятиГалочку.length;
+    const новіСофі=план.створити.filter(c=>c.event==='ceremony'||c.event==='both').length;
+    const софіСтане=софіБуло+новіСофі-план.знятиГалочку.filter(g=>g.event==='ceremony'||g.event==='both').length;
+    блок('➕ «+1» стануть окремими картками ('+план.створити.length+')', false,
+      план.створити.map(c=>row('<span class="inv-name">'+esc(c.name)+'</span>'
+        +'<span class="inv-pass">'+esc(c.pass||'—')+'</span>'
+        +'<span class="inv-ven">замість «+1» у '+esc(c.через||'?')+'</span>')).join('')
+      +row('<span style="color:var(--muted);font-size:12px;">Галочку «+1» знімемо з '
+        +план.знятиГалочку.length+' карток, інакше цих людей порахує двічі.<br>'
+        +'Людей разом: '+було+' → <b>'+стане+'</b> · на розписі: '+софіБуло+' → <b>'+софіСтане+'</b></span>'));
+    if(план.вжеЄ.length) блок('Партнери, що вже є в списку ('+план.вжеЄ.length+')', false,
+      row('<span style="color:var(--muted);font-size:12px;">'
+        +esc(план.вжеЄ.map(x=>x.name).join(', '))+' — цих не чіпаю</span>'));
+  }
+  if(план.невідомі.length) блок('⚠️ Пари, яких немає в списку ('+план.невідомі.length+')', true,
+    row('<span style="color:var(--muted);font-size:12px;">'
+      +esc(план.невідомі.map(n=>n.join(' + ')).join('; '))
+      +' — жодного з пари не знайшла. Або це склеєна картка («Брати», «Гулєнки») і її треба '
+      +'розділити руками, або їх ще немає — тоді додасть звірка списку гостей.</span>'));
+
   html.push('<div class="inv-sum">Знайдено паролів: <b>'+entries.length+'</b> · збіглося: <b>'+res.matched.length+'</b></div>');
   if(res.matched.length) html.push('<button class="submit-btn" id="invApply" style="margin-top:10px;">Записати паролі в картки гостей ('+res.matched.length+')</button>');
+  if(план.створити.length) html.push('<button class="submit-btn" id="invSplit" style="margin-top:8px;">➕ Розділити пари на окремі картки ('+план.створити.length+')</button>');
   box.innerHTML=html.join('');
+  const sp=document.getElementById('invSplit');
+  if(sp) sp.onclick=()=>{
+    applySplitPairs(план);
+    showToast('➕ Додано '+план.створити.length+' — тепер у планері '+guests.length);
+    renderInviteReport(res, entries);
+  };
 
   box.querySelectorAll('[data-invcopy]').forEach(b=>b.onclick=()=>{
     const m=res.matched[+b.dataset.invcopy];
