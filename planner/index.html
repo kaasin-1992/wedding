@@ -2376,7 +2376,7 @@ const IS_GUEST = (()=>{ try{ return new URLSearchParams(location.search).has('gu
 let comments=[], commentsBound=false, cmtTab=null;
 let dressVotes=[], votesBound=false;   // голоси дружок за сукні {_id, ideaId, name, ts} — окрема колекція, той самий патерн, що коментарі
 let guestName = (()=>{ try{ return localStorage.getItem('wed-guest-name')||''; }catch(e){ return ''; } })();
-const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-npshop-cost':'npshopCostDone','wed-stickers-cost':'stickersCostDone','wed-vases-fix':'vasesFixDone','wed-dress-cost':'dressCostDone','wed-temu2-cost':'temu2CostDone','wed-temu2-split':'temu2SplitDone','wed-party-duties-seed':'partyDutiesSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
+const FIELD = {'wed-tasks':'tasks','wed-guests':'guests','wed-budget':'budget','wed-contacts':'contacts','wed-notes':'notes','wed-cap':'cap','wed-ideas':'ideas','wed-scriptS':'scriptSofia','wed-scriptW':'scriptWave','wed-hotels':'hotels','wed-decor':'decor','wed-orders':'orders','wed-diy-materials':'diyMaterials','wed-helpers':'helpers','wed-music':'music','wed-inspo':'inspo','wed-photos':'photos','wed-photos-full':'photosFull','wed-party-her':'partyHer','wed-party-his':'partyHis','wed-party-notes':'partyNotes','wed-bar':'bar','wed-team':'team','wed-outfit':'outfit','wed-metrics':'bodyMetrics','wed-seating':'seating','wed-invites':'invites','wed-invite-game':'inviteGame','wed-trad-seed':'traditionsSeeded','wed-rozpys-seed':'rozpysTaskSeeded','wed-script-draft-seed':'scriptDraftSeeded','wed-sofia-fix-seed':'sofiaFixSeeded','wed-decor-diy-seed':'decorDiySeeded','wed-july-seed2-seed':'julySeed2Seeded','wed-july-seed3-seed':'julySeed3Seeded','wed-orphan-media-cleaned':'orphanMediaCleaned','wed-collage':'collage','wed-moodboard':'moodboard','wed-dresscode':'dresscode','wed-outfitLayers':'outfitLayers','wed-mbExtra':'moodboardExtra','wed-mustplay':'mustPlay','wed-driving-lessons':'drivingLessons','wed-selfcare-seed':'selfCareSeeded','wed-selfcare2-seed':'selfCare2Seeded','wed-budget-extra-seed':'budgetExtraSeeded','wed-temu-spent-seed':'temuSpentSeeded','wed-games-removed':'gamesRemoved','wed-driving-budget':'drivingBudgetDone','wed-real-schedule':'realScheduleDone','wed-npshop-cost':'npshopCostDone','wed-stickers-cost':'stickersCostDone','wed-vases-fix':'vasesFixDone','wed-dress-cost':'dressCostDone','wed-temu2-cost':'temu2CostDone','wed-temu2-split':'temu2SplitDone','wed-party-duties-seed':'partyDutiesSeeded','wed-wave-meeting-seed':'waveMeetingSeeded','wed-wishpicks-seed':'wishpicksSeeded','wed-planner-qa':'plannerQA','wed-organizer-chat':'organizerChat'};
 try{
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
@@ -3036,6 +3036,7 @@ let dressCostDone = loadJSON('wed-dress-cost', false); // чи вже внесе
 let temu2CostDone = loadJSON('wed-temu2-cost', false); // чи вже внесено два нові замовлення Temu (20 і 14 товарів) у декор (раз)
 let temu2SplitDone = loadJSON('wed-temu2-split', false); // чи вже розкладено ті два замовлення Temu по категоріях (декор/вбрання/техніка) (раз)
 let partyDutiesSeeded = loadJSON('wed-party-duties-seed', false); // чи вже вписано доручення дружкам із Notion (раз)
+let waveMeetingSeeded = loadJSON('wed-wave-meeting-seed', false); // чи вже внесено висновки зустрічі по Хвильовому (раз)
 let wishpicksSeeded = loadJSON('wed-wishpicks-seed', false); // чи вже додано 5 посилань Wishpicks в Одяг (раз) — фото підтягнуться через "Обробити все" (мій сервер не може достукатись до wishpicks.com, але microlink з ЇЇ сесії — може)
 let orphanMediaCleaned = loadJSON('wed-orphan-media-cleaned', false); // чи вже прибрано осиротілі m_idea_* документи давно видалених ідей (раз)
 let hotels      = loadJSON('wed-hotels', []);
@@ -6624,6 +6625,97 @@ function seedRealSchedule(){
   renderScripts();
 }
 
+/* ── одноразово: висновки зустрічі по Хвильовому ──
+   Катя надіслала їх одним списком. Розкладаємо за ПРИЗНАЧЕННЯМ, а не
+   одним стосом: декор — те, що фізично стоятиме в залі (їде на мудборд
+   Хвильового), завдання — те, що треба зробити, купити чи вирішити,
+   питання — те, на що відповідає бар.
+
+   Оригінал списку кладемо ще й нотаткою дослівно: розкладка нижче — це
+   вже моє тлумачення, і з чимось звіритись має бути можливість. */
+const WAVE_MEETING_DECOR=[
+  {t:'Декор на столах'},
+  {t:'Кольорові скатертини'},
+  {t:'Сіно', n:'Спершу спитати в бару, чи є їхнє (див. питання до Хвильового)'},
+  {t:'Столик для альбому та фотоапарата'},
+  {t:'Серветки для фуршетного столу'},
+  {t:'Декор столу молодят'},
+  {t:'Столик для дженги'},
+  {t:'Місце для гостьової книги'},
+  {t:'Квіти на підвіконні'},
+  {t:'Польові квіти'},
+  {t:'Декор з картоплі / яблук / винограду', idea:true},
+  {t:'Штора з квітами', n:'Катя сама поставила знак питання — під сумнівом', idea:true},
+  {t:'Банер на бар', n:'Може з коктейлями', idea:true},
+  {t:'Напис «люди будьте взаємно красивими»', n:'Фраза із зустрічі — читаю як напис/банер. Якщо це була просто назва зустрічі — видали цю картку', idea:true},
+];
+const WAVE_MEETING_TASKS=[
+  '🥂 Хвильовий: пошукати килими по знайомих',
+  '🥂 Хвильовий: вирішити, який буде екран для проєктора',
+  '🥂 Хвильовий: вирішити, де стіл молодят',
+  '🥂 Хвильовий: розібратись зі стрічками',
+  '🛒 Купити фарби: акрил червоний і білий (точно), чорний; можливо жовтий і зелений; плюс балончики',
+  '🛒 Купити проволоку',
+  '🛒 Купити атоксил',
+];
+// відповіді приходять по одній — тому окремими завданнями, а не однією нотаткою
+const WAVE_MEETING_ASKS=[
+  '❓ Хвлв: чи можна повісити полотна в арці і як',
+  '❓ Хвлв: яке освітлення',
+  '❓ Хвлв: чи є в них сіно',
+  '❓ Хвлв: чи можна малювати тантамареску',
+  '❓ Хвлв: який декор витримає',
+  '❓ Хвлв: чи можна замість напису «нотаріус» зробити інший',
+];
+const WAVE_MEETING_RAW=`люди будьте взаємно красивими
+
+1. декор на столах
+2. кольорві скатерини
+3. спробувати знайти килимів по знайомих
+4. сіно
+5. який буде екран для проектору
+6. де стіл молодят
+10. столичок для альбому та фотоапарату
+11. серветки для столу для фуршету
+12. декор столу для молодят
+13. столик для дженги
+14. місце для гостьової книги
+15. атоксил
+16. декор з картоплі / яблук / винограду
+17. розібратись зі стрічками
+18. купити фарби. точно червоний та білий акрил, чорний, може жовтий та зелений. балончики з фарбою
+19. квіти на підвіконні
+20. польові квіти
+21. (?) зробити штору з квітами
+22. баннер на бар може з коктейлями
+23. проволока
+
+питання для хвлв
+1. чи можна повісити полотна в арці і як
+2. запитати про освітлення
+3. чи є них сіно
+4. чи можна тантамареску малювати в хвлв
+5. запитати в хвлв який декор витримає
+6. чи можна замість напису нотаріус зробити якийсь інший`;
+function seedWaveMeeting(){
+  if(waveMeetingSeeded || IS_GUEST) return;
+  waveMeetingSeeded=true;
+  const base=Date.now();
+  WAVE_MEETING_DECOR.forEach((it,i)=>decor.push({
+    id:'wm'+base+'_'+i, title:it.t, url:'', img:'', desc:'', note:it.n||'',
+    price:'', place:'', who:'me', dtype:it.idea?'idea':'item', diy:true,
+    taken:false, bought:false, venue:'wave', ts:base-i,
+  }));
+  [...WAVE_MEETING_TASKS, ...WAVE_MEETING_ASKS].forEach((text,i)=>
+    tasks.push({id:'wmt'+base+'_'+i, text, deadline:null, done:false}));
+  notes.push({id:'wmn'+base, title:'🥂 Зустріч по Хвильовому — висновки', text:WAVE_MEETING_RAW});
+  saveJSON('wed-decor',decor);
+  saveJSON('wed-tasks',tasks);
+  saveJSON('wed-notes',notes);
+  saveJSON('wed-wave-meeting-seed',true);
+  renderDecor(); renderTasks(); renderNotes();
+}
+
 /* ── одноразово: доручення дружкам ──
    Дев'ять персональних доручень лежали лише в Notion («🤝 Координація
    весілля — ролі дружок»). Notion офлайн не працює, у Bluefy не
@@ -9810,7 +9902,7 @@ if(auth){
   maybeSwipeHint();
 }
 // якщо хмара не підключилась — все одно колись додамо традиції локально (прапорець не дасть подвоїти)
-setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!stickersCostDone && !IS_GUEST) seedStickersCost(); if(!vasesFixDone && !IS_GUEST) seedVasesFix(); if(!dressCostDone && !IS_GUEST) seedDressCost(); if(!temu2CostDone && !IS_GUEST) seedTemu2Cost(); if(!temu2SplitDone && !IS_GUEST) seedTemu2Split(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!partyDutiesSeeded && !IS_GUEST) seedPartyDuties(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
+setTimeout(()=>{ if(!traditionsSeeded && !IS_GUEST) seedTraditions(); if(!rozpysTaskSeeded && !IS_GUEST) seedRozpysTask(); if(!scriptDraftSeeded && !IS_GUEST) seedScriptDraft(); if(!sofiaFixSeeded && !IS_GUEST) seedSofiaScheduleFix(); if(!decorDiySeeded && !IS_GUEST) seedDecorDiy(); if(!julySeed2Seeded && !IS_GUEST) seedJuly2(); if(!julySeed3Seeded && !IS_GUEST) seedJuly3(); if(!selfCareSeeded && !IS_GUEST) seedSelfCare(); if(!selfCare2Seeded && !IS_GUEST) seedSelfCare2(); if(!budgetExtraSeeded && !IS_GUEST) seedBudgetExtra(); if(!temuSpentSeeded && !IS_GUEST) seedTemuSpent(); if(!gamesRemoved && !IS_GUEST) cleanupGamesTrad(); if(!drivingBudgetDone && !IS_GUEST) seedDrivingBudget(); if(!realScheduleDone && !IS_GUEST) seedRealSchedule(); if(!npshopCostDone && !IS_GUEST) seedNpshopCost(); if(!stickersCostDone && !IS_GUEST) seedStickersCost(); if(!vasesFixDone && !IS_GUEST) seedVasesFix(); if(!dressCostDone && !IS_GUEST) seedDressCost(); if(!temu2CostDone && !IS_GUEST) seedTemu2Cost(); if(!temu2SplitDone && !IS_GUEST) seedTemu2Split(); if(!wishpicksSeeded && !IS_GUEST) seedWishpicks(); if(!partyDutiesSeeded && !IS_GUEST) seedPartyDuties(); if(!waveMeetingSeeded && !IS_GUEST) seedWaveMeeting(); if(!orphanMediaCleaned && !IS_GUEST) cleanupOrphanedIdeaMedia(); }, 5000);
 
 /* ════ КОМЕНТАРІ (гості й пара) ════ */
 const TAB_LABELS=(()=>{ const m={}; document.querySelectorAll('.tab-btn').forEach(b=>{ m[b.dataset.tab]=b.textContent.trim(); }); return m; })();

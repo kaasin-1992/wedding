@@ -525,11 +525,11 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
 <!-- ?v= привʼязує код до версії HTML: свіжа сторінка ніколи не поєднається
      зі старим кодом із кешу. Бампати разом із VERSION і CACHE у sw.js. -->
-<script src="../lib/catprinter.js?v=14"></script>
-<script src="../lib/mxw01.js?v=14"></script>
-<script src="../lib/qr.js?v=14"></script>
-<script src="../lib/guest-utils.js?v=14"></script>
-<script src="blanks.js?v=14"></script>
+<script src="../lib/catprinter.js?v=15"></script>
+<script src="../lib/mxw01.js?v=15"></script>
+<script src="../lib/qr.js?v=15"></script>
+<script src="../lib/guest-utils.js?v=15"></script>
+<script src="blanks.js?v=15"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    ЗАСТОСУНОК ДЛЯ МІНІ-ПРИНТЕРА
@@ -543,7 +543,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v14 · локація гостей, коробки, дружки, розклад';
+const VERSION = 'v15 · локація гостей, коробки, дружки, розклад';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1294,7 +1294,10 @@ function drawRuler(){
 
 /* ── дані з планера ── */
 const planner = { state: null, picked: {} };
-const SIDE_UK = { her: 'її', his: 'його' };
+/* Локація декору зберігається КЛЮЧЕМ ('sofia'/'wave'), а не назвою — і
+   порожнє поле в планері означає Софі (див. venueKey у planner/index.html).
+   Друкувати це поле як є не можна: на наклейку вилізло б «WAVE». */
+const DECOR_VENUE = { sofia: 'СОФІ', wave: 'ХВИЛЬОВИЙ' };
 /* «по одній наклейці на позицію» — а не суцільний список */
 const PER_STICKER_KINDS = ['badges', 'boxes', 'bridesmaids'];
 
@@ -1326,15 +1329,17 @@ function plannerItems(){
        кого куди кличемо. Рахує її guestVenueLabel з lib/guest-utils.js —
        тим самим предикатом, що й розкладає гостей по локаційних списках у
        планері, тож розійтись вони не можуть.
-       Сторона (her/his) раніше друкувалась СИРИМ КЛЮЧЕМ — на стрічці
-       вилазило латинське «her». На бейджі її взагалі немає сенсу: на вході
-       вона ні про що не каже, а місце на наклейці коштує. */
+
+       Сторони (g.side) тут НЕМАЄ навмисно. Вона друкувалась сирим ключем —
+       на стрічку вилазило латинське «her» — і при перекладі це вийшло ще
+       гірше: «її» читається як твердження про стать гостя, хоча в планері
+       поле означає ЧИЙ це гість (L_SIDE = {her:'Гості Каті', his:'Гості
+       Діми'}). На вході воно нічого не вирішує, а місце на 384 точках
+       коштує; якщо колись знадобиться — це «від Каті» / «від Діми». */
     return (st.guests || []).map((g, i) => ({
       id: g.id || String(i),
       main: g.name || g.title || '—',
-      sub: [guestVenueLabel(g),
-            g.table ? 'стіл ' + g.table : '',
-            kind === 'badges' ? '' : SIDE_UK[g.side] || ''].filter(Boolean).join(' · '),
+      sub: [guestVenueLabel(g), g.table ? 'стіл ' + g.table : ''].filter(Boolean).join(' · '),
     }));
   }
   if (kind === 'schedS' || kind === 'schedW'){
@@ -1350,13 +1355,16 @@ function plannerItems(){
       }));
   }
   if (kind === 'boxes'){
-    return (st.decor || []).filter(d => d && d.title).map((d, i) => ({
-      id: d.id || String(i),
-      main: d.title,
-      sub: [d.venue || '', d.note || ''].filter(Boolean).join(' · '),
-      venue: d.venue || '',
-      note: d.note || '',
-    }));
+    return (st.decor || []).filter(d => d && d.title).map((d, i) => {
+      const venue = DECOR_VENUE[d.venue === 'wave' ? 'wave' : 'sofia'];
+      return {
+        id: d.id || String(i),
+        main: d.title,
+        sub: [venue, d.note || ''].filter(Boolean).join(' · '),
+        venue: venue,
+        note: d.note || '',
+      };
+    });
   }
   if (kind === 'bridesmaids'){
     return (st.partyHer || []).filter(p => p && p.name).map((p, i) => ({
@@ -1417,7 +1425,7 @@ function drawPlanner(measureOnly){
       }
       if (it.venue){
         ctx.font = '800 22px ' + FONTS.sans;
-        ctx.fillText(it.venue.toUpperCase(), s.x0 + pad, y + 4);
+        ctx.fillText(it.venue, s.x0 + pad, y + 4);   // DECOR_VENUE уже великими
       }
       // квадрат «хто робив» — під наклейку з обличчям
       const box = 54, bx = s.x0 + s.w - pad - box, by = y0 + one - pad - box;
