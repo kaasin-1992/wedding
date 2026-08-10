@@ -1469,11 +1469,12 @@ body.seat-dragging .seat-chip{cursor:grabbing;}
   <div class="stats-grid" id="guestStats"></div>
   <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">🎮 Оновити список гостей для гри</button>
   <details class="add-section inv-wrap" id="rosWrap">
-    <summary>📋 Список гостей — звірити й додати відсутніх</summary>
+    <summary id="rosSummary">📋 Список гостей — звірити й додати відсутніх</summary>
     <div class="add-form">
-      <div class="section-hint" style="margin:0 0 8px;">Встав список виду <code>1. Імʼя — Каті · Софі + Хвильовий</code>. Наявних не чіпаю, додам лише тих, кого немає.</div>
+      <div class="section-hint" style="margin:0 0 8px;">Встав список виду <code>1. Імʼя — Каті · Софі + Хвильовий</code>. Наявних не чіпаю, додам лише тих, кого немає. Текст запамʼятається — вставляти вдруге не треба.</div>
       <textarea id="rosPaste" class="game-concept" placeholder="1. Мама Леся Синявська — Каті · Софі (лише день)&#10;2. Віка Кукрицька — Каті · Софі + Хвильовий&#10;…"></textarea>
       <button class="submit-btn" id="rosParseBtn">Звірити зі списком у планері</button>
+      <div id="rosLast"></div>
       <div id="rosReport"></div>
     </div>
   </details>
@@ -2310,8 +2311,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-09.4';
-const APP_CACHE='wedding-planner-v10';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.1';
+const APP_CACHE='wedding-planner-v11';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4046,21 +4047,75 @@ function rosterDupes(записи){
   });
   return підозрілі;
 }
+/* ── ЗБІГ ЗА ПРІЗВИЩЕМ ──
+   Катя вивантажила справжній список із планера, і стало видно головне: гості Діми
+   записані там ПРІЗВИЩАМИ — «Бурий», «Сміря», «Мітіна+1», «Плахотній+1», «Тріфа»,
+   «Безвер+1», «Гулєнки», — а у її списку ті самі люди повними іменами: «Олег Бурий»,
+   «Настя Мітіна». За іменем вони не збігаються, тож кнопка «додати відсутніх» завела б
+   другу картку на ту саму людину. Тому окремим проходом звіряємо прізвища.
+
+   Прізвищем вважаємо лише останній токен, який НЕ є відомим імʼям (canon його не
+   згортає) і має щонайменше 4 літери. Без цієї умови «Брат Саша» чіплявся б за картку
+   «Дарина і Саша», а «Марина Х» — за «Марину (бікер)»: імена надто ходові.
+   similarTok доводить «Гулєнко» до «Гулєнки». Дужки й «+1» прибираємо: у картці
+   «Влад (бікер))» прізвища немає, а «Мітіна+1» — це Мітіна. */
+function rosCleanName(n){ return String(n||'').replace(/\([^)]*\)/g,' ').replace(/\+\s*\d+/g,' ').replace(/[()]/g,' '); }
+function rosSurname(n){
+  const toks=normName(rosCleanName(n)).split(' ').filter(Boolean);
+  const s=toks[toks.length-1];
+  return (s && s.length>=4 && canon(s)===s) ? s : null;
+}
+function rosBySurname(e){
+  const s=rosSurname(e.name);
+  if(!s) return [];
+  return guests.filter(g=>{
+    if(!g.name || g.side!==e.side) return false;
+    return normName(rosCleanName(g.name)).split(' ').filter(Boolean).some(t=>similarTok(s,t));
+  });
+}
 function matchRoster(записи){
-  const res={є:[], розбіжність:[], додати:[], неоднозначні:[], дублі:rosterDupes(записи)};
+  const res={є:[], розбіжність:[], додати:[], неоднозначні:[], склеєні:[], дублі:rosterDupes(записи)};
   const дубльовані=new Set();
   res.дублі.forEach(d=>d.рядки.forEach(r=>дубльовані.add(r)));
   const чисті=записи.filter(r=>!дубльовані.has(r));
-  const {prelim, claims}=matchNamesToGuests(чисті);
-  prelim.forEach(({e,pool})=>{
-    if(pool.length===1 && claims.get(pool[0].id)===1){
-      const g=pool[0];
-      if(g.side!==e.side || (g.event||'both')!==e.event) res.розбіжність.push({...e, guest:g});
-      else res.є.push({...e, guest:g});
-    }
-    else if(pool.length>=1) res.неоднозначні.push({...e, cands:pool});
-    else res.додати.push(e);
+  const сирий=matchNamesToGuests(чисті);
+  /* Нечіткий збіг МУСИТЬ лишатися в межах сторони. Дослівний — ні: однакове імʼя по
+     обидва боки означає, що сторону просто виправили, і це видно в «розбіжностях».
+     А от «Настя Гулєнко» з боку Діми чіплялася за «Настю Білоруску» з боку Каті — саме
+     той випадок, коли findDuplicateGuest навмисно нечіткий, а сторона це спростовує. */
+  const prelim=сирий.prelim.map(({e,pool,точний})=>
+    ({e, точний, pool: точний ? pool : pool.filter(g=>g.side===e.side)}));
+  const claims=new Map();
+  prelim.forEach(({pool})=>{ if(pool.length===1) claims.set(pool[0].id,(claims.get(pool[0].id)||0)+1); });
+  /* Прізвище б'є нечітке імʼя. «Влад Тріфа» має в планері картку «Тріфа», але через
+     спільне «Влад» чіплявся ще й за «Влад (бікер))» — і обидва ставали неоднозначними.
+     Спільне імʼя — слабкий доказ (Владів двоє), спільне прізвище — сильний. */
+  const зазіханняНаПрізвище=new Map();
+  const хвости=new Map();
+  prelim.forEach(({e,точний})=>{
+    if(точний) return;
+    const s=rosBySurname(e);
+    хвости.set(e,s);
+    if(s.length===1) зазіханняНаПрізвище.set(s[0].id,(зазіханняНаПрізвище.get(s[0].id)||0)+1);
   });
+  const покласти=(e,g)=>{
+    if(g.side!==e.side || (g.event||'both')!==e.event) res.розбіжність.push({...e, guest:g});
+    else res.є.push({...e, guest:g});
+  };
+  prelim.forEach(({e,pool,точний})=>{
+    if(точний && pool.length===1 && claims.get(pool[0].id)===1){ покласти(e,pool[0]); return; }
+    const s=хвости.get(e)||[];
+    // на одну картку претендують двоє («Настя Гулєнко» і «Саша Гулєнко» → «Гулєнки»)
+    // — це якраз склеєний запис, вирішувати має вона, а не я
+    if(s.length===1 && зазіханняНаПрізвище.get(s[0].id)===1){ покласти(e,s[0]); return; }
+    if(pool.length===1 && claims.get(pool[0].id)===1){ покласти(e,pool[0]); return; }
+    if(s.length>=1){ res.неоднозначні.push({...e, cands:s}); return; }
+    if(pool.length>=1){ res.неоднозначні.push({...e, cands:pool}); return; }
+    res.додати.push(e);
+  });
+  // картки, де в одному рядку двоє («Брати», «Дарина і Саша», «Тімур і Яна», «Ярік+1»):
+  // список рахує таких людей окремо, і поки картка склеєна, звірка їх не побачить
+  res.склеєні=guests.filter(g=>g.name && /(^|\s)і\s|\+\s*\d+|^брати$/i.test(g.name));
   return res;
 }
 
@@ -4137,12 +4192,13 @@ function matchNamesToGuests(записи){
   const claims=new Map();   // guestId → скільки записів на нього претендує
   const prelim=[];
   записи.forEach(e=>{
-    let pool=exact.get(e);
+    let pool=exact.get(e), точний=true;
     if(!pool){
+      точний=false;
       const hit=findDuplicateGuest(e.name, guests);
       pool=hit ? guests.filter(g=>g.name===hit && !зайняті.has(g.id)) : [];
     }
-    prelim.push({e, pool});
+    prelim.push({e, pool, точний});
     if(pool.length===1) claims.set(pool[0].id, (claims.get(pool[0].id)||0)+1);
   });
   return {prelim, claims};
@@ -4214,6 +4270,37 @@ function renderInviteReport(res, entries){
 }
 const ROS_VEN={ceremony:'Софі', both:'Софі + Хвильовий', party:'Хвильовий'};
 const ROS_SIDE_LBL={her:'Каті', his:'Діми'};
+
+/* ── СЛІД ВІД ЗВІРКИ ──
+   Катя питала прямо: «я не розумію чи ти вніс в список гостей невистачаючих людей».
+   Раніше результат жив у showToast — той зникав за пару секунд, і наступного дня
+   зрозуміти, чи звірка взагалі була, не було як. Тому пишемо підсумок у стан і
+   показуємо його в заголовку панелі: відкрив «Гості» — і одразу видно.
+   Сам вставлений текст теж памʼятаємо: у репо його класти НЕ можна (сайт роздається
+   звідти ж, 96 справжніх імен стали б публічними), а на її пристрої — саме місце. */
+const ROS_TEXT_KEY='wed-roster', ROS_LAST_KEY='wed-roster-last';
+const ROS_MONTHS=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+function rosLastGet(){
+  try{ const v=JSON.parse(DB.get(ROS_LAST_KEY)||'null'); return (v && typeof v==='object' && !Array.isArray(v)) ? v : null; }
+  catch(e){ return null; }
+}
+function rosLastSet(v){ try{ DB.set(ROS_LAST_KEY, JSON.stringify(v)); }catch(e){} }
+function rosLastLabel(l){
+  const d=new Date(l.дата);
+  const коли=isFinite(d.getTime()) ? d.getDate()+' '+ROS_MONTHS[d.getMonth()] : '—';
+  let s='звірено '+коли+', додано '+l.додано;
+  if(l.наВибір) s+=', на вибір '+l.наВибір;
+  return s;
+}
+function renderRosLast(){
+  const l=rosLastGet();
+  const sum=document.getElementById('rosSummary');
+  if(sum) sum.textContent='📋 Список гостей — '+(l ? rosLastLabel(l) : 'звірити й додати відсутніх');
+  const box=document.getElementById('rosLast');
+  if(box) box.innerHTML = l
+    ? '<div class="section-hint" style="margin:8px 0 0;">✅ Остання звірка: '+esc(rosLastLabel(l))+' (зі списку на '+l.звірено+').</div>'
+    : '';
+}
 function renderRosterReport(res){
   const box=document.getElementById('rosReport'); if(!box) return;
   const row=i=>'<div class="inv-row">'+i+'</div>';
@@ -4236,6 +4323,11 @@ function renderRosterReport(res){
 
   блок('⚠️ Треба обрати вручну ('+res.неоднозначні.length+')', true,
     res.неоднозначні.map(r=>row(мітка(r)+'<span class="inv-ven">'+r.cands.map(g=>esc(g.name)).join(', ')+'</span>')).join(''));
+
+  блок('⚠️ Картки на двох людей ('+res.склеєні.length+')', true,
+    res.склеєні.length ? row('<span style="color:var(--muted);font-size:12px;">'
+      +esc(res.склеєні.map(g=>g.name).join(', '))
+      +' — у списку це окремі люди. Якщо треба рахувати їх поштучно, розділи картки вручну.</span>') : '');
 
   блок('✅ Уже є ('+res.є.length+')', false,
     res.є.length ? row('<span style="color:var(--muted);font-size:12px;">'+res.є.length+' гостей уже в планері й збігаються</span>') : '');
@@ -4267,8 +4359,14 @@ function renderRosterReport(res){
       status:'pending', group:'friends', plus1:'none', kids:0, updatedAt:t,
     }));
     saveJSON('wed-guests', guests); renderGuests();
-    showToast('➕ Додано '+res.додати.length+' гостей');
-    renderRosterReport(matchRoster(parseGuestRoster((document.getElementById('rosPaste')||{}).value||'')));
+    const скільки=res.додати.length;
+    const текст=(document.getElementById('rosPaste')||{}).value||'';
+    const записи=parseGuestRoster(текст);
+    const свіжий=matchRoster(записи);
+    rosLastSet({дата:syncNow(), звірено:записи.length, додано:(rosLastGet()||{}).додано ? (rosLastGet().додано+скільки) : скільки, наВибір:свіжий.дублі.length+свіжий.неоднозначні.length});
+    renderRosLast();
+    showToast('➕ Додано '+скільки+' гостей — тепер у планері '+guests.length);
+    renderRosterReport(свіжий);
   };
   const fx=document.getElementById('rosFix');
   if(fx) fx.onclick=()=>{
@@ -4284,10 +4382,19 @@ function renderRosterReport(res){
     const t=(document.getElementById('rosPaste')||{}).value||'';
     const записи=parseGuestRoster(t);
     if(!записи.length){ showToast('Не впізнала жодного рядка — формат «1. Імʼя — Каті · Софі + Хвильовий»'); return; }
+    DB.set(ROS_TEXT_KEY, t);      // щоб не шукати те повідомлення вдруге
     renderRosterReport(matchRoster(записи));
   };
   const rw=document.getElementById('rosWrap');
   if(rw && IS_GUEST) rw.style.display='none';
+  if(!IS_GUEST){
+    const ta=document.getElementById('rosPaste');
+    const збережений=DB.get(ROS_TEXT_KEY)||'';
+    if(ta && !ta.value && збережений) ta.value=збережений;
+    // поки жодної звірки не було — панель відкрита, щоб її було видно, а не шукати
+    if(rw && !rosLastGet()) rw.open=true;
+    renderRosLast();
+  }
 }
 {
   const ip=document.getElementById('invParseBtn');
