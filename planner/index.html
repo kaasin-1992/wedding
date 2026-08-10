@@ -1480,6 +1480,13 @@ body.guest #localOnlyBar{display:none !important;}
   </div>
   <div class="stats-grid" id="guestStats"></div>
   <button class="submit-btn" id="exportGuestsBtn" style="margin:8px 0;">🎮 Оновити список гостей для гри</button>
+  <details class="add-section inv-wrap" id="gameWrap">
+    <summary id="gameSummary">🎮 Розбіжності з грою</summary>
+    <div class="add-form">
+      <div class="section-hint" style="margin:0 0 8px;">Тут те, де гра й планер кажуть різне. Сам нічого не переписую — вибирай, чому вірити.</div>
+      <div id="gameReport"></div>
+    </div>
+  </details>
   <details class="add-section inv-wrap" id="rosWrap">
     <summary id="rosSummary">📋 Список гостей — звірити й додати відсутніх</summary>
     <div class="add-form">
@@ -2325,8 +2332,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.3';
-const APP_CACHE='wedding-planner-v13';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-10.4';
+const APP_CACHE='wedding-planner-v14';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4492,6 +4499,10 @@ function renderRosterReport(res){
   };
   const rw=document.getElementById('rosWrap');
   if(rw && IS_GUEST) rw.style.display='none';
+  // панель розбіжностей ховаємо одразу: її рендер для гостя не викликається взагалі
+  // (startRsvpSync виходить на IS_GUEST), тож інакше вона лишилась би просто порожньою
+  const gw=document.getElementById('gameWrap');
+  if(gw && IS_GUEST) gw.style.display='none';
   if(!IS_GUEST){
     const ta=document.getElementById('rosPaste');
     const збережений=DB.get(ROS_TEXT_KEY)||'';
@@ -10171,18 +10182,98 @@ async function syncGuestsForGame(){
    Ми лише ЧИТАЄМО цю колекцію тут і переносимо відповідь у поля гостя
    (status/plus1/alco/veg) — гра ніколи не торкається основного документа
    стану напряму, тож не може нічого зіпсувати в застосунку. */
+/* ── ВІДПОВІДІ З ГРИ ──
+   Раніше тут кожне поле картки БЕЗУМОВНО перезаписувалось відповіддю з гри, на кожен
+   снапшот rsvps і без оновлення updatedAt. Тобто Катя ставила в планері «+1 підтверджено»,
+   а наступний снапшот тихо відкочував це назад — і до другого телефона правка теж їхала
+   криво. Це той самий сорт «внесла зміни, а їх нема», тільки з іншого боку. Половина ⚠ у
+   її зведенні «гра + планер» — саме такі місця, де дві сторони розійшлись, а застосунок
+   мовчки обрав одну.
+   Правило тепер те саме, що в mergeIncomingArray: тихо перемагає лише той, проти кого
+   немає свідомої правки. Якщо обидві сторони щось кажуть і кажуть різне — не чіпаємо
+   картку, а виносимо на вибір. */
+let rsvpConflicts=[], rsvpNoGame=[];
+const RSVP_FIELDS=[
+  {key:'status', label:'Статус', from:r=>r.response==='yes'?'confirmed':(r.response==='no'?'declined':null),
+   show:v=>({confirmed:'підтвердив(ла)', declined:'відмовив(ла)', pending:'очікує'}[v]||'—')},
+  {key:'plus1', label:'+1', from:r=>typeof r.plus1==='boolean'?(r.plus1?'confirmed':'none'):null,
+   show:v=>({confirmed:'підтверджено', none:'немає', pending:'не підтверджено'}[v]||'—')},
+  {key:'alco', label:'Алкоголь', from:r=>typeof r.alco==='boolean'?r.alco:null, show:v=>v?'так':'ні'},
+  {key:'veg',  label:'Вегетаріанець', from:r=>typeof r.veg==='boolean'?r.veg:null, show:v=>v?'так':'ні'},
+];
+// «незаймане» = картки ще не торкались руками (немає updatedAt) або поля просто немає.
+// Тоді гра дає перший факт і сперечатись нема з чим.
+function rsvpUntouched(g, key){
+  return g[key]===undefined || g[key]===null || g[key]==='' || !g.updatedAt;
+}
 function applyRsvpDocs(docs){
   let changed=false;
+  const конфлікти=[];
+  const бачилиВГрі=new Set();
   docs.forEach(r=>{
     const g=guests.find(x=>x.id===r.guestId);
-    if(!g) return;
-    const newStatus = r.response==='yes' ? 'confirmed' : (r.response==='no' ? 'declined' : null);
-    if(newStatus && g.status!==newStatus){ g.status=newStatus; changed=true; }
-    if(typeof r.plus1==='boolean'){ const p1=r.plus1?'confirmed':'none'; if(g.plus1!==p1){ g.plus1=p1; changed=true; } }
-    if(typeof r.alco==='boolean' && g.alco!==r.alco){ g.alco=r.alco; changed=true; }
-    if(typeof r.veg==='boolean' && g.veg!==r.veg){ g.veg=r.veg; changed=true; }
+    if(!g){ if(r.guestId) конфлікти.push({немаєКартки:true, guestId:r.guestId, name:r.name||''}); return; }
+    бачилиВГрі.add(g.id);
+    RSVP_FIELDS.forEach(f=>{
+      const гра=f.from(r);
+      if(гра===null || гра===undefined) return;      // гра про це поле нічого не каже
+      if(g[f.key]===гра) return;                     // збігається — нема про що говорити
+      if(rsvpUntouched(g,f.key)){ g[f.key]=гра; g.updatedAt=syncNow(); changed=true; return; }
+      конфлікти.push({guestId:g.id, name:g.name, field:f.key, label:f.label,
+                      гра, планер:g[f.key], show:f.show});
+    });
   });
+  rsvpConflicts=конфлікти;
+  rsvpNoGame=guests.filter(g=>g && g.name && !бачилиВГрі.has(g.id));
+  try{ renderRsvpConflicts(); }catch(e){ console.warn('rsvp render', e); }
   return changed;
+}
+function renderRsvpConflicts(){
+  const box=document.getElementById('gameReport'); if(!box) return;
+  const wrap=document.getElementById('gameWrap');
+  if(IS_GUEST){ if(wrap) wrap.style.display='none'; box.innerHTML=''; return; }
+  const поля=rsvpConflicts.filter(c=>!c.немаєКартки);
+  const безКартки=rsvpConflicts.filter(c=>c.немаєКартки);
+  const sum=document.getElementById('gameSummary');
+  if(sum) sum.textContent='🎮 Розбіжності з грою'+(поля.length?' ('+поля.length+')':'');
+
+  const html=[];
+  const блок=(t,warn,body)=>{ if(body) html.push('<div class="inv-block"><div class="inv-h'+(warn?' warn':'')+'">'+t+'</div>'+body+'</div>'); };
+
+  блок('⚠️ Гра й планер кажуть різне ('+поля.length+')', true, поля.map((c,i)=>
+    '<div class="inv-row"><span class="inv-name">'+esc(c.name)+' · '+esc(c.label)+'</span>'
+    +'<span class="inv-ven">у грі: '+esc(c.show(c.гра))+'  ·  у планері: '+esc(c.show(c.планер))+'</span>'
+    +'<button type="button" class="inv-copy" data-rsvpgame="'+i+'">як у грі</button>'
+    +'<button type="button" class="inv-copy" data-rsvpplan="'+i+'">як у планері</button></div>').join(''));
+
+  блок('⚠️ Відповіли в грі, а картки немає ('+безКартки.length+')', true,
+    безКартки.length ? '<div class="inv-row"><span style="color:var(--muted);font-size:12px;">'
+      +esc(безКартки.map(c=>c.name||c.guestId).join(', '))
+      +' — додай їх у список гостей, інакше відповідь нікуди не ляже</span></div>' : '');
+
+  блок('Не відкривали гру ('+rsvpNoGame.length+')', false,
+    rsvpNoGame.length ? '<div class="inv-row"><span style="color:var(--muted);font-size:12px;">'
+      +esc(rsvpNoGame.map(g=>g.name).join(', '))+'</span></div>' : '');
+
+  if(поля.length) html.push('<button class="submit-btn" id="rsvpAllGame" style="margin-top:10px;">Прийняти всі з гри ('+поля.length+')</button>');
+  box.innerHTML=html.join('');
+
+  const прийняти=(c,звідки)=>{
+    const g=guests.find(x=>x.id===c.guestId); if(!g) return;
+    g[c.field] = звідки==='game' ? c.гра : c.планер;
+    g.updatedAt=syncNow();
+    rsvpConflicts=rsvpConflicts.filter(x=>x!==c);
+    saveJSON('wed-guests', guests); renderGuests(); renderRsvpConflicts();
+  };
+  box.querySelectorAll('[data-rsvpgame]').forEach(btn=>btn.onclick=()=>прийняти(поля[+btn.dataset.rsvpgame],'game'));
+  box.querySelectorAll('[data-rsvpplan]').forEach(btn=>btn.onclick=()=>прийняти(поля[+btn.dataset.rsvpplan],'planner'));
+  const all=document.getElementById('rsvpAllGame');
+  if(all) all.onclick=()=>{
+    поля.forEach(c=>{ const g=guests.find(x=>x.id===c.guestId); if(g){ g[c.field]=c.гра; g.updatedAt=syncNow(); } });
+    rsvpConflicts=rsvpConflicts.filter(c=>c.немаєКартки);
+    saveJSON('wed-guests', guests); renderGuests(); renderRsvpConflicts();
+    showToast('🎮 Прийнято '+поля.length+' з гри');
+  };
 }
 function startRsvpSync(){
   if(!RSVPS || IS_GUEST || rsvpBound) return; rsvpBound=true;
