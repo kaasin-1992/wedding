@@ -313,6 +313,15 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <button class="btn primary wide" id="plBtn">Завантажити</button>
       <p class="note warn" id="plErr" style="margin-top:8px"></p>
     </div>
+    <div class="card" id="plSheet">
+      <h2>Або гості з Гугл-таблиці</h2>
+      <p class="note">У таблиці: <b>Файл → Поділитися → Опублікувати в інтернеті</b>, обрати лист із гостями і формат <b>CSV</b>. Скопійоване посилання — сюди. Воно запамʼятається, і далі список щоразу братиметься свіжий.</p>
+      <p class="note warn">Опублікована таблиця відкрита кожному, хто має це посилання. Публікуй лист із іменами — не той, де паролі.</p>
+      <label class="fld" style="margin-top:10px"><span>Посилання на CSV</span>
+        <input type="url" id="shUrl" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" autocomplete="off"></label>
+      <button class="btn wide" id="shBtn">Взяти список із таблиці</button>
+      <p class="note" id="shErr" style="margin-top:8px"></p>
+    </div>
     <div class="card" id="plPick" hidden>
       <h2>Що друкуємо <span class="pill ok" id="plLoaded"></span></h2>
       <label class="fld"><span>Розділ</span>
@@ -331,6 +340,31 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="all">Усі</option>
         </select>
       </label>
+      <!-- гостей фільтруємо так само, як у планері: сторона × локація × статус -->
+      <div id="plGuestFilters" hidden>
+        <label class="fld"><span>Чиї гості</span>
+          <select id="plSide">
+            <option value="all">Усі</option>
+            <option value="her">Тільки Каті</option>
+            <option value="his">Тільки Діми</option>
+          </select>
+        </label>
+        <label class="fld"><span>Де</span>
+          <select id="plWhere">
+            <option value="all">Скрізь</option>
+            <option value="ceremony">Софі (розпис)</option>
+            <option value="party">Хвильовий (вечірка)</option>
+          </select>
+        </label>
+        <label class="fld"><span>Статус</span>
+          <select id="plStatus">
+            <option value="live">Крім тих, хто відмовився</option>
+            <option value="confirmed">Тільки підтверджені</option>
+            <option value="pending">Тільки хто ще не відповів</option>
+            <option value="all">Геть усі</option>
+          </select>
+        </label>
+      </div>
       <div id="plList"></div>
       <div class="row" style="margin-top:10px">
         <button class="btn" id="plAll">Позначити все</button>
@@ -398,6 +432,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="4">×4 — найбільший файл</option>
         </select>
       </label>
+      <label class="chk"><input type="checkbox" id="exSharp" checked> Чіткий текст — перемалювати у більшій роздільності</label>
       <label class="chk"><input type="checkbox" id="exMargin" checked> Білі поля по краях</label>
       <p class="note">Fun Print може перемальовувати картинку під себе. Збільшена копія переживає це без розмиття, а поля не дають обрізати краї.</p>
       <button class="btn primary wide" id="exNow" style="margin-top:10px">📤 Зберегти картинку</button>
@@ -529,7 +564,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v13 · картинки для Fun Print';
+const VERSION = 'v14 · гості з таблиці, наклейки в рамках';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1055,13 +1090,24 @@ const sheet = document.createElement('canvas');
 sheet.width = PRINT_WIDTH;
 const sctx = sheet.getContext('2d', { willReadFrequently: true });
 
+/* Множник роздільності. На екрані й для самого принтера завжди 1: принтер
+   фізично має 384 точки. Але коли картинку друкує Fun Print із галереї,
+   384 точки — це мало, і збільшення готового растру дає сходинки на буквах.
+   Тому для експорту ми перемальовуємо все заново в більшому масштабі:
+   шрифти малюються вже великими, а не розтягуються. */
+let RENDER_SCALE = 1;
+
 function newSheet(heightPx){
   const L = layout();
+  const k = RENDER_SCALE;
   const h = Math.max(8, Math.round(heightPx));
-  sheet.height = L.continuous ? h : Math.max(h, L.heightPx);
+  const logicalH = L.continuous ? h : Math.max(h, L.heightPx);
+  sheet.width = PRINT_WIDTH * k;                    // зміна розміру скидає стан ctx…
+  sheet.height = logicalH * k;
+  sctx.setTransform(k, 0, 0, k, 0, 0);              // …тому масштаб ставимо після
   sctx.fillStyle = '#fff';
-  sctx.fillRect(0, 0, sheet.width, sheet.height);
-  return { ctx: sctx, x0: L.offsetPx, w: L.widthPx, h: sheet.height, layout: L };
+  sctx.fillRect(0, 0, PRINT_WIDTH, logicalH);
+  return { ctx: sctx, x0: L.offsetPx, w: L.widthPx, h: logicalH, layout: L };
 }
 
 const FONTS = {
@@ -1281,6 +1327,89 @@ function drawRuler(){
 /* ── дані з планера ── */
 const planner = { state: null, picked: {} };
 
+/* Планер зберігає сторону як her/his — на папері це має бути словами. */
+const guestSideLabel = g => g.side === 'her' ? 'сторона нареченої'
+                          : g.side === 'his' ? 'сторона нареченого' : '';
+const guestVenueLabel = g => g.event === 'both' ? 'Софі + Хвильовий'
+                           : g.event === 'ceremony' ? 'Софі'
+                           : g.event === 'party' ? 'Хвильовий' : '';
+/* ── гості з Гугл-таблиці ──
+   Опублікований CSV — єдиний спосіб прочитати таблицю зі статичної сторінки:
+   ключів і авторизації тут нема й бути не може. */
+function parseCSV(text){
+  const rows = [];
+  let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){
+      if (c === '"' && text[i + 1] === '"'){ cell += '"'; i++; }
+      else if (c === '"') q = false;
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ','){ row.push(cell); cell = ''; }
+    else if (c === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell !== '' || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => String(v).trim()));
+}
+
+/* Колонки шукаємо за змістом заголовка, а не за позицією: у таблиці їх
+   пересувають і перейменовують, і жорсткий порядок зламався б мовчки. */
+const SHEET_COLS = [
+  ['name',   ['імʼя', "ім'я", 'имя', 'гість', 'гост', 'name', 'хто']],
+  ['side',   ['сторон', 'чий', 'чия', 'side', 'катя', 'діма']],
+  ['venue',  ['локац', 'де ', 'місц', 'подія', 'venue', 'софі']],
+  ['status', ['статус', 'status', 'підтверд', 'відповід']],
+  ['kids',   ['діт', 'дет', 'kids']],
+];
+function mapSheetHeaders(header){
+  const norm = header.map(h => String(h).trim().toLowerCase());
+  const idx = {};
+  SHEET_COLS.forEach(([key, needles]) => {
+    const i = norm.findIndex(h => h && needles.some(n => h.includes(n)));
+    if (i >= 0) idx[key] = i;
+  });
+  return idx;
+}
+function sheetRowToGuest(row, idx, i){
+  const val = k => idx[k] === undefined ? '' : String(row[idx[k]] || '').trim();
+  const side = val('side').toLowerCase();
+  const venue = val('venue').toLowerCase();
+  const status = val('status').toLowerCase();
+  const hasSofia = venue.includes('софі') || venue.includes('розпис');
+  const hasWave = venue.includes('хвильов') || venue.includes('вечір');
+  return {
+    id: 'sheet:' + i,
+    name: val('name'),
+    side: /катя|катер|нареченої|her|її/.test(side) ? 'her'
+        : /діма|дмитр|нареченого|his|його/.test(side) ? 'his' : '',
+    event: hasSofia && hasWave ? 'both' : hasSofia ? 'ceremony' : hasWave ? 'party' : 'both',
+    status: /відмов|declined|ні$/.test(status) ? 'declined'
+          : /підтверд|так|confirmed|\+/.test(status) ? 'confirmed' : 'pending',
+    kids: parseInt(val('kids'), 10) || 0,
+  };
+}
+
+async function loadSheetGuests(url){
+  const res = await fetch(url, { credentials: 'omit' });
+  if (!res.ok) throw new Error('таблиця відповіла ' + res.status);
+  const rows = parseCSV(await res.text());
+  if (rows.length < 2) throw new Error('у таблиці нема рядків');
+  const idx = mapSheetHeaders(rows[0]);
+  if (idx.name === undefined) throw new Error('не знайшов колонку з іменами — перевір, що в першому рядку є заголовки');
+  const guests = rows.slice(1).map((r, i) => sheetRowToGuest(r, idx, i)).filter(g => g.name);
+  return { guests, found: Object.keys(idx) };
+}
+
+function guestSubtitle(g){
+  const bits = [guestVenueLabel(g), guestSideLabel(g)].filter(Boolean);
+  if (g.status === 'pending') bits.push('чекаємо відповідь');
+  if (g.status === 'declined') bits.push('відмовились');
+  if (+g.kids > 0) bits.push('+' + g.kids + ' дит.');
+  return bits.join(' · ');
+}
+
 function plannerItems(){
   if (!planner.state) return [];
   const kind = $('plKind').value;
@@ -1294,11 +1423,23 @@ function plannerItems(){
     }).map(t => ({ id: t.id || t.title, main: t.title || t.name || '—', sub: t.deadline || (t.asap ? 'терміново' : '') }));
   }
   if (kind === 'guests' || kind === 'badges'){
-    return (st.guests || []).map((g, i) => ({
-      id: g.id || String(i),
-      main: g.name || g.title || '—',
-      sub: (g.table ? 'стіл ' + g.table : '') + (g.side ? ' · ' + g.side : ''),
-    }));
+    const side = $('plSide').value, where = $('plWhere').value, status = $('plStatus').value;
+    return (st.guests || [])
+      .filter(g => {
+        if (side !== 'all' && g.side !== side) return false;
+        if (where !== 'all' && g.event !== where && g.event !== 'both') return false;
+        if (status === 'live' && g.status === 'declined') return false;
+        if (status === 'confirmed' && g.status !== 'confirmed') return false;
+        if (status === 'pending' && g.status !== 'pending') return false;
+        return true;
+      })
+      // на друк іде алфавіт, а не порядок за статусом: аркуш читають очима згори вниз
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'uk'))
+      .map((g, i) => ({
+        id: g.id || ('name:' + (g.name || i)),   // без id індекс поплив би при зміні фільтра
+        main: g.name || g.title || '—',
+        sub: kind === 'badges' ? guestSideLabel(g) : guestSubtitle(g),
+      }));
   }
   if (kind === 'seating'){
     const seats = st.seating || [];
@@ -1308,6 +1449,43 @@ function plannerItems(){
     return (st.contacts || []).map((c, i) => ({ id: c.id || String(i), main: c.name || '—', sub: c.phone || c.role || '' }));
   }
   return [];
+}
+
+/* Аркуш підписуємо тим самим фільтром, яким його зібрали, — інакше два
+   роздруки «Гості» лежать поруч і не відрізняються. */
+/* Підбір розміру для імені на наклейці. Переносити можна не лише по пробілах:
+   «Вишневецька-Дмитренко» — один токен, і без розриву по дефісу воно вилазить
+   за рамку хоч як зменшуй. */
+function fitBadgeName(ctx, name, maxW, maxLines){
+  const limit = maxLines || 2;
+  const parts = String(name).trim().split(/\s+/)
+    .flatMap(w => w.split(/(?<=-)/));   // дефіс лишається в кінці шматка
+  for (let size = 40; size >= 12; size -= 2){
+    ctx.font = '700 ' + size + 'px ' + FONTS.serif;
+    const lines = [];
+    let cur = '';
+    for (const part of parts){
+      const join = cur && !cur.endsWith('-') ? cur + ' ' + part : cur + part;
+      if (!cur || ctx.measureText(join).width <= maxW) cur = join;
+      else { lines.push(cur); cur = part; }
+    }
+    if (cur) lines.push(cur);
+    if (lines.length <= limit && lines.every(l => ctx.measureText(l).width <= maxW))
+      return { lines, size };
+  }
+  // не вміщається нічим — віддаємо найдрібніше, розбите як вийде
+  ctx.font = '700 12px ' + FONTS.serif;
+  return { lines: parts, size: 12 };
+}
+
+function guestListTitle(){
+  const side = $('plSide').value, where = $('plWhere').value;
+  const bits = ['Гості'];
+  if (side === 'her') bits.push('сторона нареченої');
+  if (side === 'his') bits.push('сторона нареченого');
+  if (where === 'ceremony') bits.push('Софі');
+  if (where === 'party') bits.push('Хвильовий');
+  return bits.join(' · ');
 }
 
 function drawPlanner(measureOnly){
@@ -1327,20 +1505,39 @@ function drawPlanner(measureOnly){
 
   // бейджі — це не список, а окрема наклейка на кожного гостя
   if (kind === 'badges'){
-    const one = L.continuous ? 150 : L.heightPx;
+    const one = L.continuous ? 180 : L.heightPx;
     if (measureOnly) return one * items.length;
     const s = newSheet(one * items.length);
     const ctx = s.ctx;
-    ctx.fillStyle = '#000';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const inset = 14;          // поле від краю наклейки до зовнішньої рамки
     items.forEach((it, i) => {
-      const cy = i * one + one / 2;
-      ctx.font = '700 34px ' + FONTS.serif;
-      ctx.fillText(it.main, s.x0 + s.w / 2, cy - 14);
-      if (it.sub){ ctx.font = '600 20px ' + FONTS.sans; ctx.fillText(it.sub, s.x0 + s.w / 2, cy + 22); }
-      if (i < items.length - 1 && L.continuous){
-        ctx.fillRect(s.x0 + 30, (i + 1) * one - 1, s.w - 60, 2);
+      const top = i * one, cy = top + one / 2;
+      ctx.fillStyle = '#000';
+      // подвійна рамка: товста зовнішня, тонка внутрішня — на термодруку
+      // одинарна лінія виглядає як випадковий обрис, подвійна читається як оздоба
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(s.x0 + inset, top + inset, s.w - inset * 2, one - inset * 2);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(s.x0 + inset + 7, top + inset + 7, s.w - (inset + 7) * 2, one - (inset + 7) * 2);
+
+      // імʼя вміщуємо в рамку
+      const maxW = s.w - (inset + 7) * 2 - 24;
+      const fit = fitBadgeName(ctx, it.main, maxW);
+      ctx.font = '700 ' + fit.size + 'px ' + FONTS.serif;
+      const lineH = fit.size * 1.1;
+      const block = fit.lines.length * lineH;
+      let ny = cy - (it.sub ? 16 : 0) - block / 2 + lineH / 2;
+      fit.lines.forEach(line => { ctx.fillText(line, s.x0 + s.w / 2, ny); ny += lineH; });
+
+      if (it.sub){
+        // коротка риска відділяє імʼя від підпису сторони
+        const under = cy - (it.sub ? 16 : 0) + block / 2 + 10;
+        ctx.fillRect(s.x0 + s.w / 2 - 26, under, 52, 1);
+        ctx.font = '500 17px ' + FONTS.sans;
+        ctx.fillText(it.sub, s.x0 + s.w / 2, under + 20);
       }
     });
     return s.h;
@@ -1361,7 +1558,7 @@ function drawPlanner(measureOnly){
   ctx.textAlign = 'left';
   ctx.font = '800 26px ' + FONTS.sans;
   const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', contacts: 'Контакти' };
-  ctx.fillText(titles[kind] || 'Список', s.x0 + pad, pad);
+  ctx.fillText(kind === 'guests' ? guestListTitle() : (titles[kind] || 'Список'), s.x0 + pad, pad);
   ctx.fillRect(s.x0 + pad, pad + 34, s.w - pad * 2, 2);
 
   let y = pad + titleH;
@@ -1398,16 +1595,18 @@ function drawListOrQR(measureOnly){
   // малюємо частинами в окремі полотна й склеюємо
   drawList(false);
   const top = document.createElement('canvas');
-  top.width = PRINT_WIDTH; top.height = sheet.height;
+  top.width = sheet.width; top.height = sheet.height;
   top.getContext('2d').drawImage(sheet, 0, 0);
   drawQR(false);
   const bottom = document.createElement('canvas');
-  bottom.width = PRINT_WIDTH; bottom.height = sheet.height;
+  bottom.width = sheet.width; bottom.height = sheet.height;
   bottom.getContext('2d').drawImage(sheet, 0, 0);
 
-  const s = newSheet(top.height + bottom.height);
-  s.ctx.drawImage(top, 0, 0);
-  s.ctx.drawImage(bottom, 0, top.height);
+  // склеюємо в «принтерних» точках — newSheet сам домножить на масштаб
+  const topH = top.height / RENDER_SCALE, bottomH = bottom.height / RENDER_SCALE;
+  const s = newSheet(topH + bottomH);
+  s.ctx.drawImage(top, 0, 0, PRINT_WIDTH, topH);
+  s.ctx.drawImage(bottom, 0, topH, PRINT_WIDTH, bottomH);
   return s.h;
 }
 
@@ -1554,19 +1753,39 @@ async function printCurrent(label){
    готовий файл. Джерело те саме, що в перегляді (processedCanvas), тож
    картинка гарантовано збігається з тим, що видно на екрані. */
 function exportCanvas(){
-  const src = processedCanvas();
   const scale = +$('exScale').value || 2;
   const pad = $('exMargin').checked ? 8 * scale : 0;
+  const sharp = $('exSharp').checked && scale > 1;
+
+  /* Чіткий режим: малюємо все заново в масштабі. Літери виходять гладкі,
+     бо це справжній текст у більшому кеглі, а не збільшені пікселі.
+     1-бітне перетворення тут навмисно пропускаємо — Fun Print розкладе
+     півтони сам, і зробить це краще, ніж ми на 384 точках. */
+  let src, drawnScale = 1;
+  if (sharp){
+    RENDER_SCALE = scale;
+    try{ (DRAWERS[drawTab] || drawText)(false); }
+    finally{ /* масштаб знімемо нижче, навіть якщо малювання впало */ }
+    src = sheet;
+    drawnScale = scale;
+  } else {
+    src = processedCanvas();
+  }
 
   const out = document.createElement('canvas');
-  out.width = src.width * scale + pad * 2;
-  out.height = src.height * scale + pad * 2;
+  out.width = Math.round(src.width / drawnScale * scale) + pad * 2;
+  out.height = Math.round(src.height / drawnScale * scale) + pad * 2;
   const ctx = out.getContext('2d');
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, out.width, out.height);
-  // без згладжування: інакше збільшення розмиває точки в сірий кисіль
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(src, 0, 0, src.width, src.height, pad, pad, src.width * scale, src.height * scale);
+  // при звичайному режимі без згладжування: інакше збільшення розмиває точки в сірий кисіль
+  ctx.imageSmoothingEnabled = sharp;
+  ctx.drawImage(src, 0, 0, src.width, src.height, pad, pad, out.width - pad * 2, out.height - pad * 2);
+
+  if (sharp){
+    RENDER_SCALE = 1;
+    render();          // повертаємо перегляд і буфер друку до 384 точок
+  }
   return out;
 }
 
@@ -2351,7 +2570,9 @@ $('plBtn').onclick = async () => {
 
 function renderPlannerList(){
   const items = plannerItems();
-  $('plFilterWrap').hidden = $('plKind').value !== 'tasks';
+  const kind = $('plKind').value;
+  $('plFilterWrap').hidden = kind !== 'tasks';
+  $('plGuestFilters').hidden = !(kind === 'guests' || kind === 'badges');
   const box = $('plList');
   box.innerHTML = '';
   if (!items.length){ box.innerHTML = '<p class="note">У цьому розділі порожньо.</p>'; render(); return; }
@@ -2373,6 +2594,30 @@ function renderPlannerList(){
 }
 $('plKind').addEventListener('change', () => { planner.picked = {}; renderPlannerList(); });
 $('plFilter').addEventListener('change', () => { planner.picked = {}; renderPlannerList(); });
+['plSide', 'plWhere', 'plStatus'].forEach(id =>
+  $(id).addEventListener('change', () => { planner.picked = {}; renderPlannerList(); }));
+
+/* Список із таблиці підміняє тільки гостей: завдання й контакти живуть у планері. */
+$('shBtn').onclick = async () => {
+  const url = $('shUrl').value.trim(), err = $('shErr');
+  if (!url){ err.textContent = 'Встав посилання на опублікований CSV.'; return; }
+  err.textContent = 'Читаю таблицю…';
+  try{
+    const { guests, found } = await loadSheetGuests(url);
+    planner.state = Object.assign({}, planner.state, { guests });
+    localStorage.setItem('pr-sheet-url', url);
+    err.textContent = 'Взято ' + guests.length + ' гостей. Розпізнані колонки: ' + found.join(', ') + '.';
+    $('plPick').hidden = false;
+    $('plLoaded').textContent = 'гості з таблиці';
+    $('plKind').value = 'guests';
+    planner.picked = {};
+    renderPlannerList();
+  } catch(e){
+    // найчастіша причина — таблицю не опублікували, а просто «поділились посиланням»
+    err.textContent = 'Не вийшло прочитати: ' + e.message + '. Найчастіше це означає, що таблицю ще не опубліковано через «Файл → Опублікувати в інтернеті».';
+  }
+};
+{ const saved = localStorage.getItem('pr-sheet-url'); if (saved) $('shUrl').value = saved; }
 $('plAll').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = true); renderPlannerList(); };
 $('plNone').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = false); renderPlannerList(); };
 
