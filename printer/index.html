@@ -319,7 +319,9 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <p class="note warn">Опублікована таблиця відкрита кожному, хто має це посилання. Публікуй лист із іменами — не той, де паролі.</p>
       <label class="fld" style="margin-top:10px"><span>Посилання на CSV</span>
         <input type="url" id="shUrl" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" autocomplete="off"></label>
-      <button class="btn wide" id="shBtn">Взяти список із таблиці</button>
+      <button class="btn wide" id="shBtn">Взяти список за посиланням</button>
+      <p class="note" style="margin-top:14px">Або без публікації взагалі: <b>Файл → Завантажити → CSV</b>, і файл сюди. Так нічого не стає відкритим — читаю просто в браузері.</p>
+      <input type="file" id="shFile" accept=".csv,text/csv,text/plain" style="margin-top:8px">
       <p class="note" id="shErr" style="margin-top:8px"></p>
     </div>
     <div class="card" id="plPick" hidden>
@@ -564,7 +566,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v14 · гості з таблиці, наклейки в рамках';
+const VERSION = 'v15 · список гостей із файлу CSV';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1356,18 +1358,24 @@ function parseCSV(text){
 
 /* Колонки шукаємо за змістом заголовка, а не за позицією: у таблиці їх
    пересувають і перейменовують, і жорсткий порядок зламався б мовчки. */
+/* Спершу точна назва, потім частина. Точний прохід тут не примха: «Де» і
+   «Локація в запрошенні» — РІЗНІ колонки (у запрошенні багатьом стоїть
+   «Софі», хоч людина йде лише на вечірку), і пошук по частині «локац»
+   мовчки хапав би не ту. Апостроф теж буває трьох різних видів —
+   «Ім’я», «Імʼя», «Ім'я», — тому в частинах лишаємо просто «ім». */
 const SHEET_COLS = [
-  ['name',   ['імʼя', "ім'я", 'имя', 'гість', 'гост', 'name', 'хто']],
-  ['side',   ['сторон', 'чий', 'чия', 'side', 'катя', 'діма']],
-  ['venue',  ['локац', 'де ', 'місц', 'подія', 'venue', 'софі']],
-  ['status', ['статус', 'status', 'підтверд', 'відповід']],
-  ['kids',   ['діт', 'дет', 'kids']],
+  ['name',   ['ім', 'имя', 'name', 'гост', 'хто'],   ['імʼя', "ім'я", 'ім’я', 'имя', 'name', 'гість']],
+  ['side',   ['сторон', 'чий', 'чия', 'side'],       ['сторона', 'side']],
+  ['venue',  ['локац', 'місц', 'подія', 'venue'],    ['де', 'локація', 'venue']],
+  ['status', ['статус', 'status', 'відповід'],       ['статус', 'status']],
+  ['kids',   ['діт', 'дет', 'kids'],                 ['діти', 'kids']],
 ];
 function mapSheetHeaders(header){
   const norm = header.map(h => String(h).trim().toLowerCase());
   const idx = {};
-  SHEET_COLS.forEach(([key, needles]) => {
-    const i = norm.findIndex(h => h && needles.some(n => h.includes(n)));
+  SHEET_COLS.forEach(([key, part, exact]) => {
+    let i = norm.findIndex(h => exact.includes(h));
+    if (i < 0) i = norm.findIndex(h => h && part.some(n => h.includes(n)));
     if (i >= 0) idx[key] = i;
   });
   return idx;
@@ -1382,8 +1390,9 @@ function sheetRowToGuest(row, idx, i){
   return {
     id: 'sheet:' + i,
     name: val('name'),
-    side: /катя|катер|нареченої|her|її/.test(side) ? 'her'
-        : /діма|дмитр|нареченого|his|його/.test(side) ? 'his' : '',
+    // «Каті» / «Діми» — родовий відмінок, тому по кореню, а не по цілому слову
+    side: /^кат|нареченої|^her$/.test(side) ? 'her'
+        : /^дім|^дим|дмитр|нареченого|^his$/.test(side) ? 'his' : '',
     event: hasSofia && hasWave ? 'both' : hasSofia ? 'ceremony' : hasWave ? 'party' : 'both',
     status: /відмов|declined|ні$/.test(status) ? 'declined'
           : /підтверд|так|confirmed|\+/.test(status) ? 'confirmed' : 'pending',
@@ -1391,15 +1400,19 @@ function sheetRowToGuest(row, idx, i){
   };
 }
 
-async function loadSheetGuests(url){
-  const res = await fetch(url, { credentials: 'omit' });
-  if (!res.ok) throw new Error('таблиця відповіла ' + res.status);
-  const rows = parseCSV(await res.text());
+function guestsFromCSV(text){
+  const rows = parseCSV(text);
   if (rows.length < 2) throw new Error('у таблиці нема рядків');
   const idx = mapSheetHeaders(rows[0]);
   if (idx.name === undefined) throw new Error('не знайшов колонку з іменами — перевір, що в першому рядку є заголовки');
   const guests = rows.slice(1).map((r, i) => sheetRowToGuest(r, idx, i)).filter(g => g.name);
   return { guests, found: Object.keys(idx) };
+}
+
+async function loadSheetGuests(url){
+  const res = await fetch(url, { credentials: 'omit' });
+  if (!res.ok) throw new Error('таблиця відповіла ' + res.status);
+  return guestsFromCSV(await res.text());
 }
 
 function guestSubtitle(g){
@@ -2603,19 +2616,33 @@ $('shBtn').onclick = async () => {
   if (!url){ err.textContent = 'Встав посилання на опублікований CSV.'; return; }
   err.textContent = 'Читаю таблицю…';
   try{
-    const { guests, found } = await loadSheetGuests(url);
-    planner.state = Object.assign({}, planner.state, { guests });
+    const дані = await loadSheetGuests(url);
     localStorage.setItem('pr-sheet-url', url);
-    err.textContent = 'Взято ' + guests.length + ' гостей. Розпізнані колонки: ' + found.join(', ') + '.';
-    $('plPick').hidden = false;
-    $('plLoaded').textContent = 'гості з таблиці';
-    $('plKind').value = 'guests';
-    planner.picked = {};
-    renderPlannerList();
+    applySheetGuests(дані, 'за посиланням');
   } catch(e){
     // найчастіша причина — таблицю не опублікували, а просто «поділились посиланням»
     err.textContent = 'Не вийшло прочитати: ' + e.message + '. Найчастіше це означає, що таблицю ще не опубліковано через «Файл → Опублікувати в інтернеті».';
   }
+};
+function applySheetGuests({ guests, found }, звідки){
+  planner.state = Object.assign({}, planner.state, { guests });
+  $('shErr').textContent = 'Взято ' + guests.length + ' гостей ' + звідки + '. Розпізнані колонки: ' + found.join(', ') + '.';
+  $('plPick').hidden = false;
+  $('plLoaded').textContent = 'гості з таблиці';
+  $('plKind').value = 'guests';
+  planner.picked = {};
+  renderPlannerList();
+}
+$('shFile').onchange = () => {
+  const f = $('shFile').files && $('shFile').files[0];
+  if (!f) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{ applySheetGuests(guestsFromCSV(String(fr.result || '')), 'з файлу'); }
+    catch(e){ $('shErr').textContent = 'Не вийшло прочитати файл: ' + e.message; }
+  };
+  fr.onerror = () => { $('shErr').textContent = 'Не вдалось відкрити файл.'; };
+  fr.readAsText(f, 'utf-8');
 };
 { const saved = localStorage.getItem('pr-sheet-url'); if (saved) $('shUrl').value = saved; }
 $('plAll').onclick = () => { plannerItems().forEach(it => planner.picked[it.id] = true); renderPlannerList(); };

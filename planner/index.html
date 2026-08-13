@@ -1498,6 +1498,16 @@ body.guest #localOnlyBar{display:none !important;}
       <div id="rosReport"></div>
     </div>
   </details>
+  <details class="add-section inv-wrap" id="csvWrap">
+    <summary>📊 Таблиця гостей (CSV) — перенести в планер</summary>
+    <div class="add-form">
+      <div class="section-hint" style="margin:0 0 8px;">У Гугл-таблиці: <b>Файл → Завантажити → CSV</b>, і сюди. Читаю прямо у твоєму браузері — файл нікуди не надсилається, паролі теж. Колонки шукаю за назвами в першому рядку, порядок неважливий.</div>
+      <input type="file" id="csvFile" accept=".csv,text/csv,text/plain" style="margin-bottom:8px;">
+      <textarea id="csvPaste" class="game-concept" placeholder="Імʼя,Прийде з (чий +1),Діти,Сторона,Де,Статус,Пароль до гри&#10;…"></textarea>
+      <button class="submit-btn" id="csvParseBtn">Розібрати й звірити</button>
+      <div id="csvReport"></div>
+    </div>
+  </details>
   <details class="add-section inv-wrap" id="invWrap">
     <summary>💌 Запрошення з паролями — звірити зі списком</summary>
     <div class="add-form">
@@ -2332,8 +2342,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-10.6';
-const APP_CACHE='wedding-planner-v16';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-13.1';
+const APP_CACHE='wedding-planner-v17';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4117,6 +4127,80 @@ async function exportPrintList(){
    Катя надсилає список виду «N. Імʼя — Каті|Діми · локації» і просить додати тих,
    кого в планері немає. Її списку я не бачу (Firestore), тож звіряє сам застосунок. */
 const ROSTER_SIDE={'Каті':'her','Діми':'his'};
+/* ══ ТАБЛИЦЯ ГОСТЕЙ (CSV) ══
+   Той самий список, що й у вставці роду «1. Імʼя — Каті · Софі», але з
+   таблиці: там ще є пароль, діти, статус і з ким людина йде. Формат
+   експорту Гугла — звичайний CSV із комами й лапками. */
+function parseCSVRows(text){
+  const rows=[]; let row=[], cell='', q=false;
+  const t=String(text||'').replace(/^﻿/,'');
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){
+      if(c==='"' && t[i+1]==='"'){ cell+='"'; i++; }
+      else if(c==='"') q=false;
+      else cell+=c;
+    }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c;
+  }
+  if(cell!=='' || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.some(v=>String(v).trim()));
+}
+/* Колонку шукаємо спершу за точною назвою, потім за частиною. Точний прохід
+   тут не примха: «Де» і «Локація в запрошенні» — РІЗНІ колонки (у запрошенні
+   в багатьох стоїть «Софі», хоч людина йде лише на вечірку), і пошук по
+   частині «локац» мовчки хапав би не ту. */
+const CSV_COLS=[
+  ['name',  ['ім','имя','name','гост','хто'],        ['імʼя',"ім'я",'ім’я','имя','name','гість']],
+  ['side',  ['сторон','чий','чия','side'],           ['сторона','side']],
+  ['event', ['локац','місц','подія','venue'],        ['де','локація','venue']],
+  ['status',['статус','status','відповід'],          ['статус','status']],
+  ['kids',  ['діт','дет','kids'],                    ['діти','kids']],
+  ['pass',  ['пароль','pass'],                       ['пароль до гри','пароль']],
+  ['with',  ['прийде з','разом з'],                  ['прийде з (чий +1)','пара']],
+];
+function csvHeaderIndex(header){
+  const norm=header.map(h=>String(h).trim().toLowerCase());
+  const idx={};
+  CSV_COLS.forEach(([key,part,exact])=>{
+    let i=norm.findIndex(h=>exact.includes(h));
+    if(i<0) i=norm.findIndex(h=>h && part.some(n=>h.includes(n)));
+    if(i>=0) idx[key]=i;
+  });
+  return idx;
+}
+const CSV_SIDE=s=>/^кат|нареченої|^her$/i.test(s) ? 'her' : /^дім|^дим|нареченого|^his$/i.test(s) ? 'his' : '';
+const CSV_STATUS=s=>/відмов|declined/i.test(s) ? 'declined'
+                  : /підтверд|confirmed/i.test(s) ? 'confirmed' : 'pending';
+function csvEvent(s){
+  const v=String(s||'').toLowerCase();
+  const sof=v.includes('софі')||v.includes('розпис'), hv=v.includes('хвильов')||v.includes('вечір');
+  return sof&&hv ? 'both' : sof ? 'ceremony' : hv ? 'party' : '';
+}
+function parseGuestCSV(text){
+  const rows=parseCSVRows(text);
+  if(rows.length<2) return {записи:[], колонки:{}, пропущено:0};
+  const idx=csvHeaderIndex(rows[0]);
+  if(idx.name===undefined) return {записи:[], колонки:idx, пропущено:0};
+  const записи=[]; let пропущено=0;
+  rows.slice(1).forEach(r=>{
+    const val=k=>idx[k]===undefined ? '' : String(r[idx[k]]||'').trim();
+    const name=val('name');
+    if(!name) return;
+    const side=CSV_SIDE(val('side')), event=csvEvent(val('event'));
+    // без сторони або локації картку не створити — така мовчки поїхала б у «всі»
+    if(!side || !event){ пропущено++; return; }
+    записи.push({name, side, event, venRaw:val('event'),
+      status:CSV_STATUS(val('status')),
+      kids:parseInt(val('kids'),10)||0,
+      pass:val('pass'), with:val('with')});
+  });
+  return {записи, колонки:idx, пропущено};
+}
+
 function parseGuestRoster(text){
   const out=[];
   String(text||'').split(/\r?\n/).forEach(ln=>{
@@ -4663,6 +4747,101 @@ function renderRosterReport(res){
     if(rw && !rosLastGet()) rw.open=true;
     renderRosLast();
   }
+}
+/* ── звіт по CSV ──
+   Свідомо роздільні дії: «додати відсутніх» і «оновити наявних». Один
+   гуртовий «імпортувати все» затер би її ручні правки в планері, а вона
+   правила там багато — і дізналась би про це вже після. */
+function renderCsvReport(res, meta){
+  const box=document.getElementById('csvReport'); if(!box) return;
+  const html=[];
+  const кол=Object.keys(meta.колонки||{});
+  html.push('<div class="section-hint" style="margin:10px 0 6px;">Розпізнано колонок: <b>'+кол.join(', ')+'</b>. Рядків із таблиці: <b>'+meta.всього+'</b>.'+
+    (meta.пропущено?' Пропущено без сторони або локації: <b>'+meta.пропущено+'</b>.':'')+'</div>');
+  html.push('<div class="inv-row">✅ Уже в планері й збігається: <b>'+res.є.length+'</b></div>');
+  if(res.розбіжність.length){
+    html.push('<div class="inv-row">✏️ Відрізняється сторона або локація: <b>'+res.розбіжність.length+'</b><br><small>'+
+      res.розбіжність.slice(0,12).map(r=>esc(r.name)).join(', ')+(res.розбіжність.length>12?' …':'')+'</small></div>');
+  }
+  if(res.додати.length){
+    html.push('<div class="inv-row">➕ Немає в планері: <b>'+res.додати.length+'</b><br><small>'+
+      res.додати.slice(0,12).map(r=>esc(r.name)).join(', ')+(res.додати.length>12?' …':'')+'</small></div>');
+  }
+  if(res.неоднозначні.length){
+    html.push('<div class="inv-row">🤔 Не змогла впевнено зіставити — не чіпаю: <b>'+res.неоднозначні.length+'</b><br><small>'+
+      res.неоднозначні.map(r=>esc(r.name)).join(', ')+'</small></div>');
+  }
+  if(res.дублі.length){
+    html.push('<div class="inv-row">👯 Однакові імена в самій таблиці — це різні люди чи один запис двічі?<br><small>'+
+      res.дублі.map(d=>esc(d.name)+' ×'+d.рядки.length).join(', ')+'</small></div>');
+    res.дублі.forEach((d,i)=>html.push('<button class="modal-btn" data-csvdiff="'+i+'" type="button">«'+esc(d.name)+'» — це '+d.рядки.length+' різні люди</button>'));
+  }
+  const безПароля=[...res.є,...res.розбіжність].filter(r=>r.pass && !r.guest.invitePass).length;
+  if(безПароля) html.push('<div class="inv-row">🔑 Проставлю пароль там, де його ще нема: <b>'+безПароля+'</b></div>');
+  if(res.додати.length) html.push('<button class="submit-btn" id="csvAdd" style="margin-top:8px;">Додати відсутніх ('+res.додати.length+')</button>');
+  const оновити=res.розбіжність.length+безПароля;
+  if(оновити) html.push('<button class="submit-btn" id="csvUpd" style="margin-top:8px;">Оновити наявних за таблицею ('+оновити+')</button>');
+  box.innerHTML=html.join('');
+
+  box.querySelectorAll('[data-csvdiff]').forEach(btn=>btn.onclick=()=>{
+    const d=res.дублі[+btn.dataset.csvdiff];
+    res.додати.push(...d.рядки);
+    res.дублі.splice(+btn.dataset.csvdiff,1);
+    renderCsvReport(res, meta);
+  });
+  const add=document.getElementById('csvAdd');
+  if(add) add.onclick=()=>{
+    const t=syncNow();
+    res.додати.forEach((r,i)=>guests.push({
+      id:'g'+t+'_c'+i, name:r.name, side:r.side, event:r.event, status:r.status,
+      group:'friends', plus1:'none', kids:r.kids||0,
+      invitePass:r.pass||'', updatedAt:t,
+    }));
+    const скільки=res.додати.length;
+    res.додати=[];
+    saveJSON('wed-guests', guests); renderGuests();
+    showToast('➕ Додано '+скільки+' — тепер у планері '+guests.length);
+    renderCsvReport(res, meta);
+  };
+  const upd=document.getElementById('csvUpd');
+  if(upd) upd.onclick=()=>{
+    const t=syncNow();
+    res.розбіжність.forEach(r=>{ r.guest.side=r.side; r.guest.event=r.event; r.guest.updatedAt=t; });
+    [...res.є,...res.розбіжність].forEach(r=>{
+      // пароль лише туди, де порожньо: у планері він міг бути виправлений вручну
+      if(r.pass && !r.guest.invitePass){ r.guest.invitePass=r.pass; r.guest.updatedAt=t; }
+      if(r.status && r.guest.status!==r.status){ r.guest.status=r.status; r.guest.updatedAt=t; }
+      if(r.kids && !r.guest.kids){ r.guest.kids=r.kids; r.guest.updatedAt=t; }
+    });
+    res.є=[...res.є,...res.розбіжність]; res.розбіжність=[];
+    saveJSON('wed-guests', guests); renderGuests();
+    showToast('✅ Оновлено картки за таблицею');
+    renderCsvReport(res, meta);
+  };
+}
+{
+  const розібрати=текст=>{
+    const {записи, колонки, пропущено}=parseGuestCSV(текст);
+    if(!записи.length){
+      showToast(колонки.name===undefined
+        ? 'Не знайшла колонку з іменами — перевір, що перший рядок це заголовки'
+        : 'Жодного придатного рядка: потрібні «Сторона» і «Де»');
+      return;
+    }
+    renderCsvReport(matchRoster(записи), {колонки, всього:записи.length, пропущено});
+  };
+  const cp=document.getElementById('csvParseBtn');
+  if(cp) cp.onclick=()=>розібрати((document.getElementById('csvPaste')||{}).value||'');
+  const cf=document.getElementById('csvFile');
+  if(cf) cf.onchange=()=>{
+    const f=cf.files && cf.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=()=>{ const ta=document.getElementById('csvPaste'); if(ta) ta.value=fr.result; розібрати(String(fr.result||'')); };
+    fr.onerror=()=>showToast('Не вдалось прочитати файл');
+    fr.readAsText(f, 'utf-8');
+  };
+  const cw=document.getElementById('csvWrap');
+  if(cw && IS_GUEST) cw.style.display='none';   // у файлі паролі — гостю не показуємо
 }
 {
   const ip=document.getElementById('invParseBtn');
