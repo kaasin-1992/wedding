@@ -1509,6 +1509,8 @@ body.guest #localOnlyBar{display:none !important;}
       <textarea id="csvPaste" class="game-concept" placeholder="Імʼя,Прийде з (чий +1),Діти,Сторона,Де,Статус,Пароль до гри&#10;…"></textarea>
       <button class="submit-btn" id="csvParseBtn">Розібрати й звірити</button>
       <div id="csvReport"></div>
+      <div class="section-hint" style="margin:14px 0 6px;border-top:1px solid var(--line);padding-top:12px;">Якщо в планері наплуталось і простіше почати з чистого аркуша: стерти всіх гостей і взяти список із таблиці заново. Таблиця — головна, у планері нічого унікального не лишиться.</div>
+      <button class="submit-btn" id="csvWipe" style="background:var(--danger);border-color:var(--danger);">Стерти всіх гостей і взяти з таблиці</button>
     </div>
   </details>
   <details class="add-section inv-wrap" id="invWrap">
@@ -2345,8 +2347,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-13.3';
-const APP_CACHE='wedding-planner-v19';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-13.4';
+const APP_CACHE='wedding-planner-v20';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4760,10 +4762,19 @@ function csvResolveDupes(res){
   res.розділені=[];
   res.дублі.forEach(d=>{
     const паролі=d.рядки.map(r=>String(r.pass||'').trim());
-    if(паролі.every(Boolean) && new Set(паролі).size===паролі.length){
-      res.додати.push(...d.рядки);
-      res.розділені.push(d.name+' ×'+d.рядки.length);
-    } else лишились.push(d);
+    if(!(паролі.every(Boolean) && new Set(паролі).size===паролі.length)){ лишились.push(d); return; }
+    /* Однойменних у таблиці розрізняє пароль, але в планері пароля нема —
+       там їх розрізняє «прийде з»: Марина Яріка й Марина сама по собі.
+       Спершу дивимось, чи вони вже не в планері: раніше я клав їх одразу
+       в «додати», не звіряючи, і кожен повторний імпорт додавав їх наново. */
+    d.рядки.forEach(r=>{
+      const ключ=normName(r.with||'');
+      const свій=guests.find(g=>g.name && normName(g.name)===normName(r.name)
+        && normName(g.withName||'')===ключ);
+      if(свій) res.є.push({...r, guest:свій});
+      else res.додати.push(r);
+    });
+    res.розділені.push(d.name+' ×'+d.рядки.length);
   });
   res.дублі=лишились;
   return res;
@@ -4831,10 +4842,13 @@ function renderCsvReport(res, meta){
     html.push('<div class="inv-row">⚠️ Подвійний облік: у <b>'+подвійні.length+'</b> карток стоїть «+1», хоча ця людина вже є окремою карткою. Через це в підрахунку зайвих <b>'+зайві+'</b> людей.</div>');
     html.push('<button class="submit-btn" id="csvPlus1" style="margin-top:8px;">Зняти зайві «+1» ('+подвійні.length+')</button>');
   }
-  const безПароля=[...res.є,...res.розбіжність].filter(r=>r.pass && !r.guest.invitePass).length;
-  if(безПароля) html.push('<div class="inv-row">🔑 Проставлю пароль там, де його ще нема: <b>'+безПароля+'</b></div>');
-  if(res.додати.length) html.push('<button class="submit-btn" id="csvAdd" style="margin-top:8px;">Додати відсутніх ('+res.додати.length+')</button>');
-  const оновити=res.розбіжність.length+безПароля;
+  // паролі в планер не переносимо: Катя попросила лишити їх тільки в таблиці
+  // одна кнопка на все: розділяти це на три було зайвою обережністю з мого боку
+  if(res.додати.length || res.розбіжність.length || подвійні.length)
+    html.push('<button class="submit-btn" id="csvAll" style="margin-top:10px;font-weight:700;">Перенести все з таблиці</button>'+
+      '<div class="section-hint" style="margin:4px 0 10px;">Додасть відсутніх, оновить наявних і прибере зайві «+1». Нікого не видаляє.</div>');
+  if(res.додати.length) html.push('<button class="modal-btn" id="csvAdd" type="button">Лише додати відсутніх ('+res.додати.length+')</button>');
+  const оновити=res.розбіжність.length;
   if(оновити) html.push('<button class="submit-btn" id="csvUpd" style="margin-top:8px;">Оновити наявних за таблицею ('+оновити+')</button>');
   box.innerHTML=html.join('');
 
@@ -4858,7 +4872,7 @@ function renderCsvReport(res, meta){
     res.додати.forEach((r,i)=>guests.push({
       id:'g'+t+'_c'+i, name:r.name, side:r.side, event:r.event, status:r.status,
       group:'friends', plus1:'none', kids:r.kids||0,
-      invitePass:r.pass||'', withName:r.with||'', updatedAt:t,
+      withName:r.with||'', updatedAt:t,
     }));
     const скільки=res.додати.length;
     res.є=[...res.є, ...res.додати.map(r=>({...r, guest:guests.find(g=>normName(g.name)===normName(r.name))}))]
@@ -4876,8 +4890,6 @@ function renderCsvReport(res, meta){
     const t=syncNow();
     res.розбіжність.forEach(r=>{ r.guest.side=r.side; r.guest.event=r.event; r.guest.updatedAt=t; });
     [...res.є,...res.розбіжність].forEach(r=>{
-      // пароль лише туди, де порожньо: у планері він міг бути виправлений вручну
-      if(r.pass && !r.guest.invitePass){ r.guest.invitePass=r.pass; r.guest.updatedAt=t; }
       if(r.status && r.guest.status!==r.status){ r.guest.status=r.status; r.guest.updatedAt=t; }
       if(r.kids && !r.guest.kids){ r.guest.kids=r.kids; r.guest.updatedAt=t; }
     });
@@ -4924,6 +4936,41 @@ function renderCsvReport(res, meta){
       // найчастіше — таблицю не опублікували, а просто «поділились посиланням»
       showToast('Не вийшло: '+e.message+'. Схоже, лист ще не опубліковано');
     }
+  };
+  /* Стерти всіх і взяти заново. Дія незворотна й іде назовні (гра теж
+     живиться цим списком), тому питаємо, і показуємо, скільки саме зникне.
+     Надгробки обовʼязкові: без них хмара поверне все на наступному
+     снапшоті, і виглядало б, наче кнопка не працює. */
+  const cwipe=document.getElementById('csvWipe');
+  if(cwipe) cwipe.onclick=async()=>{
+    const текст=((document.getElementById('csvPaste')||{}).value||'').trim();
+    const {записи}=parseGuestCSV(текст);
+    if(!записи.length){ showToast('Спершу дай таблицю — файлом або за посиланням'); return; }
+    // порожній планер стирати нема чого: просто беремо список, без зайвого питання
+    if(guests.length){
+      const ок=await askConfirm(
+        'Стерти всіх гостей у планері: '+guests.length+' карток.\n'+
+        'Потім додам '+записи.length+' із таблиці.\n\nЦе незворотно.', 'Стерти', 'Скасувати');
+      if(!ок) return;
+    }
+    const t=syncNow();
+    guests.forEach(g=>{ (deletedIds['guests']||={})[g.id]=t; });
+    saveTombstones({guests:Object.assign({}, deletedIds['guests'])});
+    guests.length=0;
+    saveJSON('wed-guests', guests);
+    if(записи.length){
+      записи.forEach((r,i)=>guests.push({
+        id:'g'+t+'_w'+i, name:r.name, side:r.side, event:r.event, status:r.status,
+        group:'friends', plus1:'none', kids:r.kids||0,
+        withName:r.with||'', updatedAt:t,
+      }));
+      saveJSON('wed-guests', guests);
+    }
+    renderGuests();
+    const box=document.getElementById('csvReport'); if(box) box.innerHTML='';
+    showToast(записи.length
+      ? '🧹 Стерто все й додано '+guests.length+' із таблиці — людей '+totalPeople(guests)
+      : '🧹 Список гостей порожній');
   };
   const cf=document.getElementById('csvFile');
   if(cf) cf.onchange=()=>{
