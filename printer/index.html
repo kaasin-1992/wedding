@@ -567,7 +567,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v17 · довга стрічка ріжеться на частини';
+const VERSION = 'v18 · пари на одній наклейці, локація на ній';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1378,6 +1378,7 @@ const SHEET_COLS = [
   ['venue',  ['локац', 'місц', 'подія', 'venue'],    ['де', 'локація', 'venue']],
   ['status', ['статус', 'status', 'відповід'],       ['статус', 'status']],
   ['kids',   ['діт', 'дет', 'kids'],                 ['діти', 'kids']],
+  ['pair',   ['пара', 'прийде з'],                   ['пара']],
 ];
 function mapSheetHeaders(header){
   const norm = header.map(h => String(h).trim().toLowerCase());
@@ -1406,6 +1407,7 @@ function sheetRowToGuest(row, idx, i){
     status: /відмов|declined|ні$/.test(status) ? 'declined'
           : /підтверд|так|confirmed|\+/.test(status) ? 'confirmed' : 'pending',
     kids: parseInt(val('kids'), 10) || 0,
+    pair: val('pair'),
   };
 }
 
@@ -1422,6 +1424,44 @@ async function loadSheetGuests(url){
   const res = await fetch(url, { credentials: 'omit' });
   if (!res.ok) throw new Error('таблиця відповіла ' + res.status);
   return guestsFromCSV(await res.text());
+}
+
+/* На наклейці потрібні локація і сторона: «Саша · сторона нареченої» на
+   вході нічого не пояснює тому, хто розсаджує. */
+function badgeSubtitle(g){
+  return [guestVenueLabel(g), guestSideLabel(g)].filter(Boolean).join(' · ');
+}
+
+/* Пара — одна наклейка, а не дві. Обʼєднуємо лише коли той самий підпис
+   пари стоїть щонайменше у двох рядків: у таблиці трапляється, що в графі
+   «Пара» написане одне імʼя (як у двох різних «Марин»), і такий рядок має
+   лишитись сам собою, а не склеїтись невідомо з ким.
+   Якщо когось із пари відсіяв фільтр — друкуємо тільки того, хто лишився. */
+function mergePairs(рядки){
+  const за = new Map();
+  рядки.forEach(r => {
+    const k = String(r.pair || '').trim();
+    if (!k) return;
+    (за.get(k) || за.set(k, []).get(k)).push(r);
+  });
+  const злиті = new Set();
+  const out = [];
+  рядки.forEach(r => {
+    if (злиті.has(r)) return;
+    const гр = за.get(String(r.pair || '').trim());
+    if (!гр || гр.length < 2){ out.push(r); return; }
+    гр.forEach(x => злиті.add(x));
+    // підпис пари з таблиці вже написаний як «Дарина + Саша» — беремо його
+    const імена = String(r.pair).includes('+') ? String(r.pair).trim()
+                : гр.map(x => x.main).join(' + ');
+    // локація ширша з двох: якщо хтось із пари ще й на розписі, це має бути видно
+    const події = гр.map(x => x.g && x.g.event);
+    const event = події.includes('both') || (події.includes('ceremony') && події.includes('party'))
+      ? 'both' : (події[0] || '');
+    out.push({ id: 'pair:' + r.pair, main: імена,
+      sub: badgeSubtitle({ event, side: r.g && r.g.side }) });
+  });
+  return out;
 }
 
 function guestSubtitle(g){
@@ -1446,7 +1486,7 @@ function plannerItems(){
   }
   if (kind === 'guests' || kind === 'badges'){
     const side = $('plSide').value, where = $('plWhere').value, status = $('plStatus').value;
-    return (st.guests || [])
+    const рядки = (st.guests || [])
       .filter(g => {
         if (side !== 'all' && g.side !== side) return false;
         if (where !== 'all' && g.event !== where && g.event !== 'both') return false;
@@ -1460,8 +1500,11 @@ function plannerItems(){
       .map((g, i) => ({
         id: g.id || ('name:' + (g.name || i)),   // без id індекс поплив би при зміні фільтра
         main: g.name || g.title || '—',
-        sub: kind === 'badges' ? guestSideLabel(g) : guestSubtitle(g),
+        sub: kind === 'badges' ? badgeSubtitle(g) : guestSubtitle(g),
+        pair: g.pair || g.pairKey || '',
+        g,
       }));
+    return kind === 'badges' ? mergePairs(рядки) : рядки;
   }
   if (kind === 'seating'){
     const seats = st.seating || [];
@@ -1559,7 +1602,11 @@ function drawPlanner(measureOnly){
         // коротка риска відділяє імʼя від підпису сторони
         const under = cy - (it.sub ? 16 : 0) + block / 2 + 10;
         ctx.fillRect(s.x0 + s.w / 2 - 26, under, 52, 1);
-        ctx.font = '500 17px ' + FONTS.sans;
+        // підпис теж підганяємо: «Софі + Хвильовий · сторона нареченого» на
+        // 384 точках уже впритул до рамки, а буває й довше
+        let sz = 17;
+        do { ctx.font = '500 ' + sz + 'px ' + FONTS.sans; sz--; }
+        while (sz > 10 && ctx.measureText(it.sub).width > maxW);
         ctx.fillText(it.sub, s.x0 + s.w / 2, under + 20);
       }
     });
