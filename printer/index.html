@@ -434,7 +434,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="4">×4 — найбільший файл</option>
         </select>
       </label>
-      <label class="chk"><input type="checkbox" id="exSharp" checked> Чіткий текст — перемалювати у більшій роздільності</label>
+      <label class="chk"><input type="checkbox" id="exSharp" checked> Чіткий текст — великий кегль, чисто чорний контур</label>
+      <p class="note">Fun Print у режимі «Фотодрук» розкладає півтони крапками, тому сірих країв у файлі бути не повинно. З цією галочкою їх і немає.</p>
       <label class="chk"><input type="checkbox" id="exMargin" checked> Білі поля по краях</label>
       <p class="note">Fun Print може перемальовувати картинку під себе. Збільшена копія переживає це без розмиття, а поля не дають обрізати краї.</p>
       <button class="btn primary wide" id="exNow" style="margin-top:10px">📤 Зберегти картинку</button>
@@ -566,7 +567,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v15 · список гостей із файлу CSV';
+const VERSION = 'v16 · чіткий друк без сірого';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1798,8 +1799,24 @@ function exportCanvas(){
   if (sharp){
     RENDER_SCALE = 1;
     render();          // повертаємо перегляд і буфер друку до 384 точок
+    /* І одразу прибираємо сірий. Fun Print у режимі «Фотодрук» вважає
+       картинку фотографією і розкладає півтони крапками — згладжені краї
+       букв перетворюються на кашу. Великий кегль дає рівний контур, а поріг
+       лишає його чисто чорним: молоти нема чого. */
+    threshold1bit(ctx, out.width, out.height);
   }
   return out;
+}
+
+function threshold1bit(ctx, w, h){
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4){
+    const v = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) < 150 ? 0 : 255;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 function exportName(){
