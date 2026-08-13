@@ -2342,8 +2342,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-13.1';
-const APP_CACHE='wedding-planner-v17';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-13.2';
+const APP_CACHE='wedding-planner-v18';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4748,6 +4748,24 @@ function renderRosterReport(res){
     renderRosLast();
   }
 }
+/* Однакове імʼя з одного боку машинно не розрізнити — але пароль до гри
+   розрізняє. Дві «Марини» з різними паролями це доказово дві людини, і
+   питати про це не треба. Питаємо лише там, де паролі однакові або їх
+   нема: тоді це справді може бути один запис, продубльований у таблиці. */
+function csvResolveDupes(res){
+  const лишились=[];
+  res.розділені=[];
+  res.дублі.forEach(d=>{
+    const паролі=d.рядки.map(r=>String(r.pass||'').trim());
+    if(паролі.every(Boolean) && new Set(паролі).size===паролі.length){
+      res.додати.push(...d.рядки);
+      res.розділені.push(d.name+' ×'+d.рядки.length);
+    } else лишились.push(d);
+  });
+  res.дублі=лишились;
+  return res;
+}
+
 /* ── звіт по CSV ──
    Свідомо роздільні дії: «додати відсутніх» і «оновити наявних». Один
    гуртовий «імпортувати все» затер би її ручні правки в планері, а вона
@@ -4766,6 +4784,10 @@ function renderCsvReport(res, meta){
   if(res.додати.length){
     html.push('<div class="inv-row">➕ Немає в планері: <b>'+res.додати.length+'</b><br><small>'+
       res.додати.slice(0,12).map(r=>esc(r.name)).join(', ')+(res.додати.length>12?' …':'')+'</small></div>');
+  }
+  if((res.розділені||[]).length){
+    html.push('<div class="inv-row">👥 Однакові імена, але різні паролі — отже різні люди, розділила сама: <b>'+
+      esc(res.розділені.join(', '))+'</b></div>');
   }
   if(res.неоднозначні.length){
     html.push('<div class="inv-row">🤔 Не змогла впевнено зіставити — не чіпаю: <b>'+res.неоднозначні.length+'</b><br><small>'+
@@ -4828,7 +4850,8 @@ function renderCsvReport(res, meta){
         : 'Жодного придатного рядка: потрібні «Сторона» і «Де»');
       return;
     }
-    renderCsvReport(matchRoster(записи), {колонки, всього:записи.length, пропущено});
+    const res=csvResolveDupes(matchRoster(записи));
+    renderCsvReport(res, {колонки, всього:записи.length, пропущено});
   };
   const cp=document.getElementById('csvParseBtn');
   if(cp) cp.onclick=()=>розібрати((document.getElementById('csvPaste')||{}).value||'');
