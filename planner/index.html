@@ -1503,6 +1503,9 @@ body.guest #localOnlyBar{display:none !important;}
     <div class="add-form">
       <div class="section-hint" style="margin:0 0 8px;">У Гугл-таблиці: <b>Файл → Завантажити → CSV</b>, і сюди. Читаю прямо у твоєму браузері — файл нікуди не надсилається, паролі теж. Колонки шукаю за назвами в першому рядку, порядок неважливий.</div>
       <input type="file" id="csvFile" accept=".csv,text/csv,text/plain" style="margin-bottom:8px;">
+      <div class="section-hint" style="margin:10px 0 6px;">Щоб не вивантажувати файл щоразу — зроби в таблиці окремий лист <b>без колонки з паролями</b> і опублікуй саме його: <b>Файл → Поділитися → Опублікувати в інтернеті → цей лист → CSV</b>. Посилання сюди, і список братиметься свіжий одним дотиком. Паролі лишаться неопублікованими: вони ставляться раз і далі не міняються.</div>
+      <input type="url" id="csvUrl" placeholder="https://docs.google.com/…/pub?output=csv" autocomplete="off" style="margin-bottom:8px;">
+      <button class="submit-btn" id="csvFetchBtn" style="margin-bottom:10px;">Оновити за посиланням</button>
       <textarea id="csvPaste" class="game-concept" placeholder="Імʼя,Прийде з (чий +1),Діти,Сторона,Де,Статус,Пароль до гри&#10;…"></textarea>
       <button class="submit-btn" id="csvParseBtn">Розібрати й звірити</button>
       <div id="csvReport"></div>
@@ -2342,8 +2345,8 @@ const WEDDING = new Date('2026-09-06');
    Тому перевірка йде найпершою — щоб кнопка ремонту зʼявилась навіть якщо весь
    код нижче впаде. Плюс видимий маркер збірки: інакше «в мене не працює»
    неможливо звести до конкретної версії, доводиться вгадувати. */
-const APP_BUILD='2026-08-13.2';
-const APP_CACHE='wedding-planner-v18';   // мусить збігатися з CACHE у sw.js
+const APP_BUILD='2026-08-13.3';
+const APP_CACHE='wedding-planner-v19';   // мусить збігатися з CACHE у sw.js
 // Пряме посилання (не рядок) — щоб не тягнути eval; const у класичному скрипті
 // живе в глобальній лексичній області, тож відсутнє імʼя кине ReferenceError.
 const LIB_NEEDS=[
@@ -4766,6 +4769,30 @@ function csvResolveDupes(res){
   return res;
 }
 
+/* ── ПОДВІЙНИЙ ОБЛІК ──
+   headCount рахує 1 + «плюс один» + діти. Коли партнер існує вже окремою
+   карткою, стара галочка «+1» на його половинці лічить ту саму людину
+   вдруге, і пара стає трьома. Саме це й сталось після першого імпорту:
+   картки я створив, а галочку зняти забув. */
+function csvPlus1Fixes(res){
+  const заІменем=new Map();
+  guests.forEach(g=>{ if(g.name) заІменем.set(normName(g.name), g); });
+  const треба=new Set();
+  const позначити=g=>{ if(g && g.plus1 && g.plus1!=='none') треба.add(g); };
+  [...res.є, ...res.розбіжність, ...res.додати].forEach(r=>{
+    if(!r.with) return;
+    const свій=заІменем.get(normName(r.name)), пара=заІменем.get(normName(r.with));
+    if(свій && пара && свій!==пара){ позначити(свій); позначити(пара); }
+  });
+  return [...треба];
+}
+function csvApplyPlus1Fixes(список){
+  const t=syncNow();
+  список.forEach(g=>{ g.plus1='none'; g.updatedAt=t; });
+  saveJSON('wed-guests', guests);
+  return список.length;
+}
+
 /* ── звіт по CSV ──
    Свідомо роздільні дії: «додати відсутніх» і «оновити наявних». Один
    гуртовий «імпортувати все» затер би її ручні правки в планері, а вона
@@ -4798,6 +4825,12 @@ function renderCsvReport(res, meta){
       res.дублі.map(d=>esc(d.name)+' ×'+d.рядки.length).join(', ')+'</small></div>');
     res.дублі.forEach((d,i)=>html.push('<button class="modal-btn" data-csvdiff="'+i+'" type="button">«'+esc(d.name)+'» — це '+d.рядки.length+' різні люди</button>'));
   }
+  const подвійні=csvPlus1Fixes(res);
+  if(подвійні.length){
+    const зайві=подвійні.filter(g=>g.status!=='declined').length;
+    html.push('<div class="inv-row">⚠️ Подвійний облік: у <b>'+подвійні.length+'</b> карток стоїть «+1», хоча ця людина вже є окремою карткою. Через це в підрахунку зайвих <b>'+зайві+'</b> людей.</div>');
+    html.push('<button class="submit-btn" id="csvPlus1" style="margin-top:8px;">Зняти зайві «+1» ('+подвійні.length+')</button>');
+  }
   const безПароля=[...res.є,...res.розбіжність].filter(r=>r.pass && !r.guest.invitePass).length;
   if(безПароля) html.push('<div class="inv-row">🔑 Проставлю пароль там, де його ще нема: <b>'+безПароля+'</b></div>');
   if(res.додати.length) html.push('<button class="submit-btn" id="csvAdd" style="margin-top:8px;">Додати відсутніх ('+res.додати.length+')</button>');
@@ -4805,6 +4838,14 @@ function renderCsvReport(res, meta){
   if(оновити) html.push('<button class="submit-btn" id="csvUpd" style="margin-top:8px;">Оновити наявних за таблицею ('+оновити+')</button>');
   box.innerHTML=html.join('');
 
+  const p1=document.getElementById('csvPlus1');
+  if(p1) p1.onclick=()=>{
+    const було=totalPeople(guests);
+    const скільки=csvApplyPlus1Fixes(подвійні);
+    renderGuests();
+    showToast('✅ Знято «+1» у '+скільки+' карток — людей стало '+totalPeople(guests)+' замість '+було);
+    renderCsvReport(res, meta);
+  };
   box.querySelectorAll('[data-csvdiff]').forEach(btn=>btn.onclick=()=>{
     const d=res.дублі[+btn.dataset.csvdiff];
     res.додати.push(...d.рядки);
@@ -4817,12 +4858,17 @@ function renderCsvReport(res, meta){
     res.додати.forEach((r,i)=>guests.push({
       id:'g'+t+'_c'+i, name:r.name, side:r.side, event:r.event, status:r.status,
       group:'friends', plus1:'none', kids:r.kids||0,
-      invitePass:r.pass||'', updatedAt:t,
+      invitePass:r.pass||'', withName:r.with||'', updatedAt:t,
     }));
     const скільки=res.додати.length;
+    res.є=[...res.є, ...res.додати.map(r=>({...r, guest:guests.find(g=>normName(g.name)===normName(r.name))}))]
+      .filter(r=>r.guest);
     res.додати=[];
-    saveJSON('wed-guests', guests); renderGuests();
-    showToast('➕ Додано '+скільки+' — тепер у планері '+guests.length);
+    saveJSON('wed-guests', guests);
+    // партнер тепер окрема картка — стара галочка «+1» лічила б його вдруге
+    const знято=csvApplyPlus1Fixes(csvPlus1Fixes(res));
+    renderGuests();
+    showToast('➕ Додано '+скільки+(знято?' · знято зайвих «+1»: '+знято:'')+' — людей у планері '+totalPeople(guests));
     renderCsvReport(res, meta);
   };
   const upd=document.getElementById('csvUpd');
@@ -4855,6 +4901,30 @@ function renderCsvReport(res, meta){
   };
   const cp=document.getElementById('csvParseBtn');
   if(cp) cp.onclick=()=>розібрати((document.getElementById('csvPaste')||{}).value||'');
+  /* Посилання на опублікований лист — щоб не вивантажувати файл щоразу.
+     Пароль при цьому в таблиці лишається неопублікованим: у планері він
+     ставиться лише туди, де порожньо, тож відсутність колонки нічого не
+     стирає. */
+  const CSV_URL_KEY='wed-csv-url';
+  const cu=document.getElementById('csvUrl');
+  if(cu){ const збережене=DB.get(CSV_URL_KEY)||''; if(збережене) cu.value=збережене; }
+  const cfb=document.getElementById('csvFetchBtn');
+  if(cfb) cfb.onclick=async()=>{
+    const url=((document.getElementById('csvUrl')||{}).value||'').trim();
+    if(!url){ showToast('Встав посилання на опублікований CSV'); return; }
+    showToast('Читаю таблицю…');
+    try{
+      const res=await fetch(url, {credentials:'omit'});
+      if(!res.ok) throw new Error('таблиця відповіла '+res.status);
+      const текст=await res.text();
+      DB.set(CSV_URL_KEY, url);
+      const ta=document.getElementById('csvPaste'); if(ta) ta.value=текст;
+      розібрати(текст);
+    }catch(e){
+      // найчастіше — таблицю не опублікували, а просто «поділились посиланням»
+      showToast('Не вийшло: '+e.message+'. Схоже, лист ще не опубліковано');
+    }
+  };
   const cf=document.getElementById('csvFile');
   if(cf) cf.onchange=()=>{
     const f=cf.files && cf.files[0]; if(!f) return;
