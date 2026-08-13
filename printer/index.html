@@ -567,7 +567,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v16 · чіткий друк без сірого';
+const VERSION = 'v17 · довга стрічка ріжеться на частини';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1100,6 +1100,14 @@ const sctx = sheet.getContext('2d', { willReadFrequently: true });
    шрифти малюються вже великими, а не розтягуються. */
 let RENDER_SCALE = 1;
 
+/* Скільки наклейок іде в один файл. Полотно має стелю, і на айфоні вона
+   низька: близько 16,7 млн пікселів площі й 4096 точок на сторону. Сто
+   наклейок однією стрічкою — це 120 млн пікселів; Safari таке або стискає,
+   або віддає порожнє, а Fun Print потім тулить 75 тисяч точок у ширину
+   друку. Тому довгу стрічку ріжемо на частини ще ДО малювання. */
+const MAX_SIDE = 8000, MAX_AREA = 16e6;
+let EXPORT_SLICE = null;                  // {from,to} — активний шматок
+
 function newSheet(heightPx){
   const L = layout();
   const k = RENDER_SCALE;
@@ -1503,7 +1511,7 @@ function guestListTitle(){
 }
 
 function drawPlanner(measureOnly){
-  const items = plannerItems().filter(it => planner.picked[it.id]);
+  let items = plannerItems().filter(it => planner.picked[it.id]);
   const kind = $('plKind').value;
   const L = layout();
 
@@ -1519,6 +1527,7 @@ function drawPlanner(measureOnly){
 
   // бейджі — це не список, а окрема наклейка на кожного гостя
   if (kind === 'badges'){
+    if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
     const one = L.continuous ? 180 : L.heightPx;
     if (measureOnly) return one * items.length;
     const s = newSheet(one * items.length);
@@ -1767,7 +1776,16 @@ async function printCurrent(label){
    готовий файл. Джерело те саме, що в перегляді (processedCanvas), тож
    картинка гарантовано збігається з тим, що видно на екрані. */
 function exportCanvas(){
-  const scale = +$('exScale').value || 2;
+  let scale = +$('exScale').value || 2;
+  /* Довгий список наклейками не ріжеться — там суцільний текст. Тому просто
+     не даємо збільшенню вилізти за стелю полотна: краще менший масштаб, ніж
+     порожня картинка з телефона. */
+  // висоту питаємо в самого малювальника (прохід «лише виміряти») — інакше
+  // при нарізці бралася б довжина ВСІЄЇ стрічки, і масштаб падав би дарма
+  const виміряна = (DRAWERS[drawTab] || drawText)(true);
+  const базоваВисота = (typeof виміряна === 'number' && виміряна > 0)
+    ? виміряна : sheet.height / RENDER_SCALE;
+  while (scale > 1 && (базоваВисота * scale > MAX_SIDE || PRINT_WIDTH * scale * базоваВисота * scale > MAX_AREA)) scale--;
   const pad = $('exMargin').checked ? 8 * scale : 0;
   const sharp = $('exSharp').checked && scale > 1;
 
@@ -1829,14 +1847,72 @@ function exportName(){
          '-' + two(d.getHours()) + two(d.getMinutes()) + '.png';
 }
 
-async function exportImage(){
-  const canvas = exportCanvas();
-  const name = exportName();
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-  if (!blob){ toast('Не вдалось зібрати картинку', 6000); return; }
+/* Скільки наклейок влізе в один файл, щоб не впертись у стелю полотна. */
+function badgesPerFile(scale){
+  const L = layout();
+  const one = (L.continuous ? 180 : L.heightPx) * scale;
+  const width = PRINT_WIDTH * scale;
+  const заВисотою = Math.floor(MAX_SIDE / one);
+  const заПлощею = Math.floor(MAX_AREA / (width * one));
+  return Math.max(1, Math.min(заВисотою, заПлощею));
+}
 
-  const mm = (sheet.height / DOTS_PER_MM).toFixed(0);
-  $('exNote').textContent = canvas.width + '×' + canvas.height + ' точок · ' + mm + ' мм стрічки · ' + Math.round(blob.size / 1024) + ' КБ';
+function exportPlan(){
+  const scale = +$('exScale').value || 2;
+  const badges = activeTab === 'planner' && $('plKind').value === 'badges';
+  if (!badges) return [null];
+  const всього = plannerItems().filter(it => planner.picked[it.id]).length;
+  const крок = badgesPerFile(scale);
+  if (всього <= крок) return [null];
+  const шматки = [];
+  for (let from = 0; from < всього; from += крок) шматки.push({ from, to: Math.min(from + крок, всього) });
+  return шматки;
+}
+
+async function exportImage(){
+  const шматки = exportPlan();
+  const базова = exportName();
+  const файли = [];
+  for (let i = 0; i < шматки.length; i++){
+    EXPORT_SLICE = шматки[i];
+    const canvas = exportCanvas();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    EXPORT_SLICE = null;
+    if (!blob){ toast('Не вдалось зібрати картинку', 6000); render(); return; }
+    файли.push({ blob,
+      name: шматки.length > 1 ? базова.replace(/\.png$/, '-' + (i + 1) + 'z' + шматки.length + '.png') : базова,
+      w: canvas.width, h: canvas.height });
+  }
+  render();                       // після нарізки повертаємо перегляд до повного вигляду
+
+  const перший = файли[0];
+  const вага = Math.round(файли.reduce((s, f) => s + f.blob.size, 0) / 1024);
+  $('exNote').textContent = файли.length > 1
+    ? файли.length + ' файли по ' + перший.w + '×' + перший.h + ' точок · разом ' + вага + ' КБ'
+      + ' · різано, бо однією стрічкою полотно не витягує'
+    : перший.w + '×' + перший.h + ' точок · ' + вага + ' КБ';
+
+  const blob = перший.blob, name = перший.name;
+  if (файли.length > 1){
+    const все = файли.map(f => new File([f.blob], f.name, { type: 'image/png' }));
+    if (navigator.canShare && navigator.canShare({ files: все })){
+      try{
+        await navigator.share({ files: все, title: 'Наклейки для друку' });
+        toast('Готово: ' + все.length + ' частин. У Fun Print друкуй їх по черзі', 9000);
+        log('віддано частинами: ' + все.length);
+        return;
+      }catch(e){ if (e && e.name === 'AbortError') return; log('поділитись пачкою не вдалось: ' + e.message); }
+    }
+    файли.forEach((f, i) => setTimeout(() => {
+      const u = URL.createObjectURL(f.blob);
+      const a = document.createElement('a');
+      a.href = u; a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => { try{ URL.revokeObjectURL(u); }catch(err){} }, 500);
+    }, i * 400));
+    toast('Збережено ' + файли.length + ' частин', 8000);
+    return;
+  }
 
   /* На iPhone системний аркуш — найкоротший шлях: там одразу і «Зберегти
      в Фото», і «Відкрити у Fun Print». Завантаження файлу лишається
