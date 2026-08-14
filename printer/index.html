@@ -571,7 +571,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v21 · діти окремо, пари за «прийде з»';
+const VERSION = 'v22 · пари в списку, квадратик на людину';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1515,18 +1515,28 @@ function mergePairs(рядки, kind){
     гр.forEach(x => злиті.add(x));
     // кожен своїм рядком, одне під одним — так видно, хто саме, і чий номер
     const імена = гр.map(x => x.main);
+    const людей = гр.length;
     // локація ширша з двох: якщо хтось із пари ще й на розписі, це має бути видно
     const події = гр.map(x => x.g && x.g.event);
     const event = події.includes('both') || (події.includes('ceremony') && події.includes('party'))
       ? 'both' : (події[0] || '');
-    out.push({ id: 'pair:' + r.pair, main: імена,
-      sub: badgeSubtitle({ event, side: r.g && r.g.side }, kind === 'seatcards') });
+    out.push({ id: 'pair:' + r.pair, main: імена, people: людей,
+      // у списку пара підписується за тим самим правилом, що й одинак,
+      // інакше локація зникає в одних рядках і лишається в інших
+      sub: kind === 'guests'
+        ? guestSubtitle({ event, side: r.g && r.g.side })
+        : badgeSubtitle({ event, side: r.g && r.g.side }, kind === 'seatcards') });
   });
   return out;
 }
 
 function guestSubtitle(g){
-  const bits = [guestVenueLabel(g), guestSideLabel(g)].filter(Boolean);
+  /* Коли список уже відфільтрований за локацією, вона стоїть у заголовку
+     аркуша — повторювати її в кожному рядку означає друкувати зайвий рядок
+     на кожного гостя. На стрічці це буквально зайві сантиметри. */
+  const фільтр = (document.getElementById('plWhere') || {}).value;
+  const своя = !фільтр || фільтр === 'all' ? guestVenueLabel(g) : '';
+  const bits = [своя, guestSideLabel(g)].filter(Boolean);
   if (g.status === 'pending') bits.push('чекаємо відповідь');
   if (g.status === 'declined') bits.push('відмовились');
   if (+g.kids > 0) bits.push('+' + g.kids + ' дит.');
@@ -1581,9 +1591,10 @@ function plannerItems(){
         pair: pairKeyOf(g),
         g,
       }));
-    // у списку теж по людині на рядок: він працює як перелік, де кожного
-    // треба відмітити (глиняні штучки у Хвильовому), а дитина — така сама людина
-    if (kind === 'guests') return withKids(рядки, рядки);
+    /* У списку пари теж пишемо разом. Але список — це перелік, де кожного
+       треба відмітити (глиняні штучки у Хвильовому), тому в рядку пари
+       лишається ДВА квадратики: одна лінія, дві людини, два подарунки. */
+    if (kind === 'guests') return withKids(mergePairs(рядки, kind), рядки);
     const злиті = withKids(mergePairs(рядки, kind), рядки);
     return kind === 'seatcards' ? withCouple(злиті, where) : злиті;
   }
@@ -1720,7 +1731,12 @@ function drawPlanner(measureOnly){
 
   const size = 24, pad = 12, lineH = 32;
   sctx.font = '600 ' + size + 'px ' + FONTS.sans;
-  const rows = items.map(it => wrapLines(sctx, it.main + (it.sub ? '  · ' + it.sub : ''), L.widthPx - pad * 2 - 30));
+  const людейУРядку = it => Math.max(1, +it.people || 1);
+  const текстРядка = it => (Array.isArray(it.main) ? it.main.join('  +  ') : it.main)
+    + (it.sub ? '  · ' + it.sub : '');
+  const боксів = items.reduce((n, it) => Math.max(n, людейУРядку(it)), 1);
+  const відступ = 30 + (боксів - 1) * 24;
+  const rows = items.map(it => wrapLines(sctx, текстРядка(it), L.widthPx - pad * 2 - відступ));
   const total = rows.reduce((n, r) => n + r.length, 0);
   const titleH = 46;
   const height = pad * 2 + titleH + total * lineH + items.length * 8;
@@ -1738,11 +1754,13 @@ function drawPlanner(measureOnly){
 
   let y = pad + titleH;
   ctx.font = '600 ' + size + 'px ' + FONTS.sans;
-  rows.forEach(lines => {
+  rows.forEach((lines, ідx) => {
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#000';
-    ctx.strokeRect(s.x0 + pad + 1, y + 5, 18, 18);
-    lines.forEach((line, k) => ctx.fillText(line, s.x0 + pad + 30, y + k * lineH));
+    const скільки = людейУРядку(items[ідx]);
+    for (let q = 0; q < скільки; q++)
+      ctx.strokeRect(s.x0 + pad + 1 + q * 24, y + 5, 18, 18);
+    lines.forEach((line, k) => ctx.fillText(line, s.x0 + pad + відступ, y + k * lineH));
     y += lines.length * lineH + 8;
   });
   return s.h;
