@@ -567,7 +567,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v18 · пари на одній наклейці, локація на ній';
+const VERSION = 'v19 · номери гостей, пара двома рядками';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1107,6 +1107,8 @@ let RENDER_SCALE = 1;
    друку. Тому довгу стрічку ріжемо на частини ще ДО малювання. */
 const MAX_SIDE = 8000, MAX_AREA = 16e6;
 let EXPORT_SLICE = null;                  // {from,to} — активний шматок
+// висота однієї наклейки — в одному місці, бо її знають і малювання, і нарізка
+const badgeHeight = L => L.continuous ? 200 : L.heightPx;
 
 function newSheet(heightPx){
   const L = layout();
@@ -1451,9 +1453,8 @@ function mergePairs(рядки){
     const гр = за.get(String(r.pair || '').trim());
     if (!гр || гр.length < 2){ out.push(r); return; }
     гр.forEach(x => злиті.add(x));
-    // підпис пари з таблиці вже написаний як «Дарина + Саша» — беремо його
-    const імена = String(r.pair).includes('+') ? String(r.pair).trim()
-                : гр.map(x => x.main).join(' + ');
+    // кожен своїм рядком, одне під одним — так видно, хто саме, і чий номер
+    const імена = гр.map(x => x.main);
     // локація ширша з двох: якщо хтось із пари ще й на розписі, це має бути видно
     const події = гр.map(x => x.g && x.g.event);
     const event = події.includes('both') || (події.includes('ceremony') && події.includes('party'))
@@ -1486,6 +1487,13 @@ function plannerItems(){
   }
   if (kind === 'guests' || kind === 'badges'){
     const side = $('plSide').value, where = $('plWhere').value, status = $('plStatus').value;
+    /* Номер у людини свій і НЕ залежить від фільтра: рахуємо його по всьому
+       списку за абеткою. Інакше «номер 12» означав би різних людей на
+       різних роздруках, і саме на це номер і не годився б. */
+    const всі = (st.guests || []).slice()
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'uk'));
+    const номер = new Map();
+    всі.forEach((g, n) => номер.set(g, n + 1));
     const рядки = (st.guests || [])
       .filter(g => {
         if (side !== 'all' && g.side !== side) return false;
@@ -1499,7 +1507,8 @@ function plannerItems(){
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'uk'))
       .map((g, i) => ({
         id: g.id || ('name:' + (g.name || i)),   // без id індекс поплив би при зміні фільтра
-        main: g.name || g.title || '—',
+        num: номер.get(g) || 0,
+        main: (номер.get(g) ? номер.get(g) + ' · ' : '') + (g.name || g.title || '—'),
         sub: kind === 'badges' ? badgeSubtitle(g) : guestSubtitle(g),
         pair: g.pair || g.pairKey || '',
         g,
@@ -1521,26 +1530,33 @@ function plannerItems(){
 /* Підбір розміру для імені на наклейці. Переносити можна не лише по пробілах:
    «Вишневецька-Дмитренко» — один токен, і без розриву по дефісу воно вилазить
    за рамку хоч як зменшуй. */
-function fitBadgeName(ctx, name, maxW, maxLines){
-  const limit = maxLines || 2;
+function wrapAtSize(ctx, name, maxW){
   const parts = String(name).trim().split(/\s+/)
     .flatMap(w => w.split(/(?<=-)/));   // дефіс лишається в кінці шматка
+  const lines = [];
+  let cur = '';
+  for (const part of parts){
+    const join = cur && !cur.endsWith('-') ? cur + ' ' + part : cur + part;
+    if (!cur || ctx.measureText(join).width <= maxW) cur = join;
+    else { lines.push(cur); cur = part; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/* Підбір кегля для однієї або кількох імен. У пари два рядки — по одному на
+   людину, одне під одним, щоб було видно, хто саме, а не злите «А + Б». */
+function fitBadgeName(ctx, names, maxW, maxLines){
+  const список = Array.isArray(names) ? names : [names];
+  const limit = maxLines || (список.length > 1 ? список.length : 2);
   for (let size = 40; size >= 12; size -= 2){
     ctx.font = '700 ' + size + 'px ' + FONTS.serif;
-    const lines = [];
-    let cur = '';
-    for (const part of parts){
-      const join = cur && !cur.endsWith('-') ? cur + ' ' + part : cur + part;
-      if (!cur || ctx.measureText(join).width <= maxW) cur = join;
-      else { lines.push(cur); cur = part; }
-    }
-    if (cur) lines.push(cur);
+    const lines = список.flatMap(n => wrapAtSize(ctx, n, maxW));
     if (lines.length <= limit && lines.every(l => ctx.measureText(l).width <= maxW))
       return { lines, size };
   }
-  // не вміщається нічим — віддаємо найдрібніше, розбите як вийде
   ctx.font = '700 12px ' + FONTS.serif;
-  return { lines: parts, size: 12 };
+  return { lines: список.flatMap(n => wrapAtSize(ctx, n, maxW)), size: 12 };
 }
 
 function guestListTitle(){
@@ -1571,7 +1587,7 @@ function drawPlanner(measureOnly){
   // бейджі — це не список, а окрема наклейка на кожного гостя
   if (kind === 'badges'){
     if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
-    const one = L.continuous ? 180 : L.heightPx;
+    const one = badgeHeight(L);
     if (measureOnly) return one * items.length;
     const s = newSheet(one * items.length);
     const ctx = s.ctx;
@@ -1897,7 +1913,7 @@ function exportName(){
 /* Скільки наклейок влізе в один файл, щоб не впертись у стелю полотна. */
 function badgesPerFile(scale){
   const L = layout();
-  const one = (L.continuous ? 180 : L.heightPx) * scale;
+  const one = badgeHeight(L) * scale;
   const width = PRINT_WIDTH * scale;
   const заВисотою = Math.floor(MAX_SIDE / one);
   const заПлощею = Math.floor(MAX_AREA / (width * one));
@@ -2737,7 +2753,8 @@ function renderPlannerList(){
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.checked = !!planner.picked[it.id];
     cb.onchange = () => { planner.picked[it.id] = cb.checked; render(); };
-    const sp = document.createElement('span'); sp.textContent = it.main;
+    const sp = document.createElement('span');
+    sp.textContent = Array.isArray(it.main) ? it.main.join('  +  ') : it.main;
     const em = document.createElement('em'); em.textContent = it.sub || '';
     li.appendChild(cb); li.appendChild(sp); li.appendChild(em);
     ul.appendChild(li);
