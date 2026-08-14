@@ -571,7 +571,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v20 · картки для розсадки, точні фільтри локації';
+const VERSION = 'v21 · діти окремо, пари за «прийде з»';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1386,7 +1386,8 @@ const SHEET_COLS = [
   ['venue',  ['локац', 'місц', 'подія', 'venue'],    ['де', 'локація', 'venue']],
   ['status', ['статус', 'status', 'відповід'],       ['статус', 'status']],
   ['kids',   ['діт', 'дет', 'kids'],                 ['діти', 'kids']],
-  ['pair',   ['пара', 'прийде з'],                   ['пара']],
+  ['pair',   ['пара'],                              ['пара']],
+  ['with',   ['прийде з', 'разом з'],               ['прийде з (чий +1)']],
 ];
 function mapSheetHeaders(header){
   const norm = header.map(h => String(h).trim().toLowerCase());
@@ -1415,7 +1416,9 @@ function sheetRowToGuest(row, idx, i){
     status: /відмов|declined|ні$/.test(status) ? 'declined'
           : /підтверд|так|confirmed|\+/.test(status) ? 'confirmed' : 'pending',
     kids: parseInt(val('kids'), 10) || 0,
+    kidsRaw: val('kids'),
     pair: val('pair'),
+    with: val('with'),
   };
 }
 
@@ -1436,12 +1439,12 @@ async function loadSheetGuests(url){
 
 /* На наклейці потрібні локація і сторона: «Саша · сторона нареченої» на
    вході нічого не пояснює тому, хто розсаджує. */
-function badgeSubtitle(g){
-  /* На наклейці «Софі + Хвильовий» ні про що не каже тому, хто зустрічає:
-     людина приходить на розпис, а ввечері просто лишається. Тому хто йде в
-     обидві, на наклейці значиться Софі. У списку — повна картина, там
-     місця вистачає. */
-  const де = g.event === 'both' ? 'Софі' : guestVenueLabel(g);
+/* У наклейки й картки різна робота, тому й підпис різний.
+   Наклейка на вході: людині треба знати, куди зараз, — «Софі».
+   Картка для розсадки: ти саджаєш цих людей двічі, і маєш це бачити, —
+   «Софі + Хвильовий». */
+function badgeSubtitle(g, повністю){
+  const де = (!повністю && g.event === 'both') ? 'Софі' : guestVenueLabel(g);
   return [де, guestSideLabel(g)].filter(Boolean).join(' · ');
 }
 
@@ -1450,6 +1453,44 @@ function badgeSubtitle(g){
    «Пара» написане одне імʼя (як у двох різних «Марин»), і такий рядок має
    лишитись сам собою, а не склеїтись невідомо з ким.
    Якщо когось із пари відсіяв фільтр — друкуємо тільки того, хто лишився. */
+/* Діти в таблиці — це лише число в колонці «Діти». У підрахунок людей воно
+   входить (Софі = 37 карток + 1 дитина = 38), а власної картки дитина не
+   отримувала — і на розсадці зникала, хоч місце займає.
+   Якщо в клітинці стоїть імʼя, а не число, беремо імʼя як є. */
+/* Ключ пари. У таблиці колонка «Пара» заповнена не в усіх — у мами Лесі й
+   папи Паші, наприклад, стоїть лише «Прийде з». Тоді ключ будуємо з двох
+   імен, відсортованих: у Лесі це «Леся|Паша», у Паші — так само, і рядки
+   сходяться. Без сортування вони дивились би одне на одного й не злилися. */
+function pairKeyOf(g){
+  const мітка = String((g && g.pair) || '').trim();
+  if (мітка) return мітка;
+  const хто = String((g && g.name) || '').trim();
+  const з = String((g && g.with) || '').trim();
+  if (!хто || !з) return String((g && g.pairKey) || '');
+  return [хто.toLowerCase(), з.toLowerCase()].sort().join('|');
+}
+
+function withKids(картки, рядки){
+  const діти = [];
+  рядки.forEach(r => {
+    const g = r.g || {};
+    const скільки = +g.kids || 0;
+    const сире = String(g.kidsRaw || '').trim();
+    const імʼям = сире && !/^\d+([.,]\d+)?$/.test(сире);
+    if (!скільки && !імʼям) return;
+    const хто = Array.isArray(r.main) ? r.main.join(' + ') : r.main;
+    const батьки = String(хто).replace(/^\d+\s*·\s*/, '');
+    if (імʼям){
+      діти.push({ id: 'kid:' + g.id + ':n', main: сире, sub: 'дитина · ' + батьки, kid: true });
+      return;
+    }
+    for (let i = 0; i < скільки; i++)
+      діти.push({ id: 'kid:' + g.id + ':' + i, main: 'Дитина',
+        sub: (скільки > 1 ? (i + 1) + ' з ' + скільки + ' · ' : '') + батьки, kid: true });
+  });
+  return картки.concat(діти);
+}
+
 /* Катя й Діма у списку гостей не значаться — і на розсадці їх щоразу
    забувають саме тому. Для карток додаємо їх окремою, першою: вони є і в
    Софі, і у Хвильовому, тож випадають лише з «лише Хвильовий». */
@@ -1458,7 +1499,7 @@ function withCouple(картки, where){
   return [{ id: 'couple', main: ['Катя', 'Діма'], sub: 'молодята', couple: true }].concat(картки);
 }
 
-function mergePairs(рядки){
+function mergePairs(рядки, kind){
   const за = new Map();
   рядки.forEach(r => {
     const k = String(r.pair || '').trim();
@@ -1479,7 +1520,7 @@ function mergePairs(рядки){
     const event = події.includes('both') || (події.includes('ceremony') && події.includes('party'))
       ? 'both' : (події[0] || '');
     out.push({ id: 'pair:' + r.pair, main: імена,
-      sub: badgeSubtitle({ event, side: r.g && r.g.side }) });
+      sub: badgeSubtitle({ event, side: r.g && r.g.side }, kind === 'seatcards') });
   });
   return out;
 }
@@ -1535,12 +1576,15 @@ function plannerItems(){
         id: g.id || ('name:' + (g.name || i)),   // без id індекс поплив би при зміні фільтра
         num: номер.get(g) || 0,
         main: (номер.get(g) ? номер.get(g) + ' · ' : '') + (g.name || g.title || '—'),
-        sub: (kind === 'badges' || kind === 'seatcards') ? badgeSubtitle(g) : guestSubtitle(g),
-        pair: g.pair || g.pairKey || '',
+        sub: (kind === 'badges' || kind === 'seatcards')
+          ? badgeSubtitle(g, kind === 'seatcards') : guestSubtitle(g),
+        pair: pairKeyOf(g),
         g,
       }));
-    if (kind === 'guests') return рядки;
-    const злиті = mergePairs(рядки);
+    // у списку теж по людині на рядок: він працює як перелік, де кожного
+    // треба відмітити (глиняні штучки у Хвильовому), а дитина — така сама людина
+    if (kind === 'guests') return withKids(рядки, рядки);
+    const злиті = withKids(mergePairs(рядки, kind), рядки);
     return kind === 'seatcards' ? withCouple(злиті, where) : злиті;
   }
   if (kind === 'seating'){
