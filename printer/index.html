@@ -165,6 +165,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 
   <div class="banner bt" id="btWarn" hidden></div>
 
+  <label class="chk" id="simpleWrap" style="margin:0 0 12px"><input type="checkbox" id="simpleMode"> Простий режим — тільки списки з таблиці та збереження картинки</label>
+
   <div class="conn" id="connBar">
     <span class="dot" id="connDot"></span>
     <span class="who"><b id="connName">Принтер не підключений</b><span id="connState">натисни «Підключити»</span></span>
@@ -189,7 +191,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
     <button role="tab" data-tab="text" aria-selected="true">📝 Текст</button>
     <button role="tab" data-tab="photo" aria-selected="false">🖼 Фото</button>
     <button role="tab" data-tab="list" aria-selected="false">✅ Списки та QR</button>
-    <button role="tab" data-tab="planner" aria-selected="false">💍 З планера</button>
+    <button role="tab" data-tab="planner" aria-selected="false">📋 Списки й наклейки</button>
     <button role="tab" data-tab="roll" aria-selected="false">🏷 Рулон</button>
     <button role="tab" data-tab="docs" aria-selected="false">💾 Бланки</button>
     <button role="tab" data-tab="dev" aria-selected="false">⚙️ Принтер</button>
@@ -306,7 +308,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
   <!-- ══════════ З ПЛАНЕРА ══════════ -->
   <section id="tab-planner" hidden>
     <div class="card" id="plLogin">
-      <h2>Дані з планера</h2>
+      <h2>Дані з планера (не обовʼязково)</h2>
       <p class="note">Той самий email і пароль, що й у планері. Читаємо тільки на перегляд — нічого не змінюємо.</p>
       <label class="fld" style="margin-top:10px"><span>Email</span><input type="email" id="plEmail" autocomplete="username"></label>
       <label class="fld"><span>Пароль</span><input type="password" id="plPass" autocomplete="current-password"></label>
@@ -324,7 +326,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
       <input type="file" id="shFile" accept=".csv,text/csv,text/plain" style="margin-top:8px">
       <p class="note" id="shErr" style="margin-top:8px"></p>
     </div>
-    <div class="card" id="plPick" hidden>
+    <div class="card" id="plPick">
       <h2>Що друкуємо <span class="pill ok" id="plLoaded"></span></h2>
       <label class="fld"><span>Розділ</span>
         <select id="plKind">
@@ -332,6 +334,8 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="guests">Список гостей</option>
           <option value="badges">Бейджі гостей — по одному на наклейку</option>
           <option value="seatcards">Розсадка — картки, щоб совати руками</option>
+          <option value="decor-sofia">Декор у Софі — наклейки на коробки</option>
+          <option value="decor-wave">Декор у Хвильовому — наклейки на коробки</option>
           <option value="seating">Розсадка по столах</option>
           <option value="contacts">Контакти</option>
         </select>
@@ -571,7 +575,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v22 · пари в списку, квадратик на людину';
+const VERSION = 'v23 · декор на коробки, простий режим';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1114,6 +1118,7 @@ let EXPORT_SLICE = null;                  // {from,to} — активний шм
 // висота однієї наклейки — в одному місці, бо її знають і малювання, і нарізка.
 // Картки для розсадки нижчі: їх ріжуть і совають по столу, великий шрифт там ні до чого.
 const isSeatCards = () => { const el = document.getElementById('plKind'); return !!el && el.value === 'seatcards'; };
+// коробкові наклейки — як бейджі, повний розмір
 const badgeHeight = L => L.continuous ? (isSeatCards() ? 120 : 200) : L.heightPx;
 
 function newSheet(heightPx){
@@ -1470,7 +1475,10 @@ function pairKeyOf(g){
   return [хто.toLowerCase(), з.toLowerCase()].sort().join('|');
 }
 
-function withKids(картки, рядки){
+function withKids(картки, рядки, where){
+  // у Хвильовому дітей не буде — там ввечері їх просто немає, тож і рядків
+  // на них друкувати не треба
+  if (where === 'party' || where === 'only-party') return картки;
   const діти = [];
   рядки.forEach(r => {
     const g = r.g || {};
@@ -1543,9 +1551,36 @@ function guestSubtitle(g){
   return bits.join(' · ');
 }
 
+/* Наклейки на коробки з декором. Список свій, не з таблиці й не з планера —
+   тому працює й тоді, коли нічого не завантажено. Зайве Катя просто зніме
+   галочкою, тому краще запропонувати більше, ніж забути потрібне. */
+const DECOR = {
+  'decor-sofia': { місце: 'Софі', речі: [
+    'Скатертини', 'Довга скатертина / тканина', 'Інша біла тканина', 'Білі стрічки',
+    'Квіти', 'Вази', 'Серветки', 'Таблички', 'Рушники',
+    'Обручки', 'Подушка для обручок', 'Букет нареченої', 'Бутоньєрка',
+    'Свічки', 'Пелюстки', 'Ручка для підпису', 'Документи (паспорти)',
+    'Ножиці, скотч, шпильки', 'Аптечка',
+  ]},
+  'decor-wave': { місце: 'Хвильовий', речі: [
+    'Стрічки', 'Скатертини', 'Інстакс', 'Фотоапарати одноразові', 'Таблички',
+    'Глиняні приколи для гостей', 'Доп. матеріали', 'Баннер', 'Фіранки',
+    'Рушники', 'Квіти',
+    'Картриджі до інстакса', 'Батарейки', 'Маркери / ручки', 'Гостьова книга',
+    'Подовжувач', 'Ножиці, скотч', 'Сміттєві пакети', 'Запальничка',
+  ]},
+};
+function decorItems(kind){
+  const d = DECOR[kind];
+  if (!d) return [];
+  return d.речі.map((річ, i) => ({ id: kind + ':' + i, main: річ, sub: d.місце, decor: true }));
+}
+
 function plannerItems(){
+  const kind0 = $('plKind').value;
+  if (DECOR[kind0]) return decorItems(kind0);   // декор не залежить від жодних даних
   if (!planner.state) return [];
-  const kind = $('plKind').value;
+  const kind = kind0;
   const st = planner.state;
   if (kind === 'tasks'){
     const filter = $('plFilter').value;
@@ -1594,8 +1629,8 @@ function plannerItems(){
     /* У списку пари теж пишемо разом. Але список — це перелік, де кожного
        треба відмітити (глиняні штучки у Хвильовому), тому в рядку пари
        лишається ДВА квадратики: одна лінія, дві людини, два подарунки. */
-    if (kind === 'guests') return withKids(mergePairs(рядки, kind), рядки);
-    const злиті = withKids(mergePairs(рядки, kind), рядки);
+    if (kind === 'guests') return withKids(mergePairs(рядки, kind), рядки, where);
+    const злиті = withKids(mergePairs(рядки, kind), рядки, where);
     return kind === 'seatcards' ? withCouple(злиті, where) : злиті;
   }
   if (kind === 'seating'){
@@ -1668,7 +1703,7 @@ function drawPlanner(measureOnly){
   }
 
   // бейджі — це не список, а окрема наклейка на кожного гостя
-  if (kind === 'badges' || kind === 'seatcards'){
+  if (kind === 'badges' || kind === 'seatcards' || DECOR[kind]){
     if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
     const one = badgeHeight(L);
     if (measureOnly) return one * items.length;
@@ -1855,7 +1890,7 @@ function render(){
 function checkOverflow(L){
   const box = $('pvOver');
   // бейджі — навмисно по наклейці на гостя, там «переповнення» нормальне
-  const perSticker = activeTab === 'planner' && /^(badges|seatcards)$/.test($('plKind').value);
+  const perSticker = activeTab === 'planner' && /^(badges|seatcards|decor-)/.test($('plKind').value);
   const over = !L.continuous && sheet.height > L.heightPx && !perSticker;
   box.hidden = !over;
   if (!over) return;
@@ -2029,7 +2064,7 @@ function badgesPerFile(scale){
 
 function exportPlan(){
   const scale = +$('exScale').value || 2;
-  const badges = activeTab === 'planner' && /^(badges|seatcards)$/.test($('plKind').value);
+  const badges = activeTab === 'planner' && /^(badges|seatcards|decor-)/.test($('plKind').value);
   if (!badges) return [null];
   const всього = plannerItems().filter(it => planner.picked[it.id]).length;
   const крок = badgesPerFile(scale);
@@ -2276,6 +2311,36 @@ $('tabs').addEventListener('click', e => {
   if (activeTab === 'planner') loadFirebase();
   render();
 });
+
+/* ── ПРОСТИЙ РЕЖИМ ──
+   Катя користується цим лише щоб зібрати список із таблиці й зберегти
+   картинку. Решта — текст, фото, QR, лінійка, бланки, саме Bluetooth-
+   зʼєднання — їй тільки заважає. Нічого не видаляємо: перемикач ховає, і
+   будь-коли можна повернути все назад. */
+const SIMPLE_TABS = ['planner', 'roll'];
+function applySimpleMode(){
+  const on = !!$('simpleMode').checked;
+  localStorage.setItem('pr-simple', on ? '1' : '0');
+  [...$('tabs').children].forEach(b => {
+    b.hidden = on && !SIMPLE_TABS.includes(b.dataset.tab);
+  });
+  // зʼєднання з принтером у цьому режимі ні до чого: друк іде через Fun Print
+  ['connBar', 'btnOnlyPrinters', 'notFound'].forEach(id => {
+    const el = $(id); if (!el) return;
+    if (id === 'btnOnlyPrinters' && el.parentElement) el.parentElement.hidden = on;
+    else el.hidden = on || (id === 'notFound');
+  });
+  // якщо відкрита вкладка щойно сховалась — переходимо на «З планера»
+  if (on && !SIMPLE_TABS.includes(activeTab)){
+    const b = document.querySelector('[data-tab="planner"]');
+    if (b) b.click();
+  }
+}
+$('simpleMode').addEventListener('change', applySimpleMode);
+{
+  const saved = localStorage.getItem('pr-simple');
+  $('simpleMode').checked = saved === null ? true : saved === '1';   // типово увімкнено
+}
 
 /* ── дрібні прив'язки ── */
 function bindSlider(id, fmt, onChange){
@@ -2849,6 +2914,8 @@ function renderPlannerList(){
   const kind = $('plKind').value;
   $('plFilterWrap').hidden = kind !== 'tasks';
   $('plGuestFilters').hidden = !/^(guests|badges|seatcards)$/.test(kind);
+  // декор не має ані сторони, ані статусу — фільтри там ні до чого
+
   const box = $('plList');
   box.innerHTML = '';
   if (!items.length){ box.innerHTML = '<p class="note">У цьому розділі порожньо.</p>'; render(); return; }
@@ -3024,6 +3091,7 @@ $('txtBody').addEventListener('input', () => DB.set('lastText', $('txtBody').val
 // шрифти вантажаться асинхронно; поки їх нема, canvas міряє текст іншим
 // шрифтом і перегляд бреше — тому перемальовуємо, щойно вони приїдуть
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+applySimpleMode();
 render();
 
 if ('serviceWorker' in navigator){
