@@ -331,6 +331,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="tasks">Завдання</option>
           <option value="guests">Список гостей</option>
           <option value="badges">Бейджі гостей — по одному на наклейку</option>
+          <option value="seatcards">Розсадка — картки, щоб совати руками</option>
           <option value="seating">Розсадка по столах</option>
           <option value="contacts">Контакти</option>
         </select>
@@ -354,8 +355,11 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
         <label class="fld"><span>Де</span>
           <select id="plWhere">
             <option value="all">Скрізь</option>
-            <option value="ceremony">Софі (розпис)</option>
-            <option value="party">Хвильовий (вечірка)</option>
+            <option value="ceremony">Софі — усі, хто там буде</option>
+            <option value="party">Хвильовий — усі, хто там буде</option>
+            <option value="only-ceremony">Лише Софі — і не на вечірку</option>
+            <option value="only-party">Лише Хвильовий — без розпису</option>
+            <option value="both">І Софі, і Хвильовий</option>
           </select>
         </label>
         <label class="fld"><span>Статус</span>
@@ -567,7 +571,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v19 · номери гостей, пара двома рядками';
+const VERSION = 'v20 · картки для розсадки, точні фільтри локації';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1107,8 +1111,10 @@ let RENDER_SCALE = 1;
    друку. Тому довгу стрічку ріжемо на частини ще ДО малювання. */
 const MAX_SIDE = 8000, MAX_AREA = 16e6;
 let EXPORT_SLICE = null;                  // {from,to} — активний шматок
-// висота однієї наклейки — в одному місці, бо її знають і малювання, і нарізка
-const badgeHeight = L => L.continuous ? 200 : L.heightPx;
+// висота однієї наклейки — в одному місці, бо її знають і малювання, і нарізка.
+// Картки для розсадки нижчі: їх ріжуть і совають по столу, великий шрифт там ні до чого.
+const isSeatCards = () => { const el = document.getElementById('plKind'); return !!el && el.value === 'seatcards'; };
+const badgeHeight = L => L.continuous ? (isSeatCards() ? 120 : 200) : L.heightPx;
 
 function newSheet(heightPx){
   const L = layout();
@@ -1431,7 +1437,12 @@ async function loadSheetGuests(url){
 /* На наклейці потрібні локація і сторона: «Саша · сторона нареченої» на
    вході нічого не пояснює тому, хто розсаджує. */
 function badgeSubtitle(g){
-  return [guestVenueLabel(g), guestSideLabel(g)].filter(Boolean).join(' · ');
+  /* На наклейці «Софі + Хвильовий» ні про що не каже тому, хто зустрічає:
+     людина приходить на розпис, а ввечері просто лишається. Тому хто йде в
+     обидві, на наклейці значиться Софі. У списку — повна картина, там
+     місця вистачає. */
+  const де = g.event === 'both' ? 'Софі' : guestVenueLabel(g);
+  return [де, guestSideLabel(g)].filter(Boolean).join(' · ');
 }
 
 /* Пара — одна наклейка, а не дві. Обʼєднуємо лише коли той самий підпис
@@ -1439,6 +1450,14 @@ function badgeSubtitle(g){
    «Пара» написане одне імʼя (як у двох різних «Марин»), і такий рядок має
    лишитись сам собою, а не склеїтись невідомо з ким.
    Якщо когось із пари відсіяв фільтр — друкуємо тільки того, хто лишився. */
+/* Катя й Діма у списку гостей не значаться — і на розсадці їх щоразу
+   забувають саме тому. Для карток додаємо їх окремою, першою: вони є і в
+   Софі, і у Хвильовому, тож випадають лише з «лише Хвильовий». */
+function withCouple(картки, where){
+  if (where === 'only-party') return картки;
+  return [{ id: 'couple', main: ['Катя', 'Діма'], sub: 'молодята', couple: true }].concat(картки);
+}
+
 function mergePairs(рядки){
   const за = new Map();
   рядки.forEach(r => {
@@ -1485,7 +1504,7 @@ function plannerItems(){
       return !t.done && (t.asap || (t.deadline && (new Date(t.deadline) - new Date()) < 7 * 86400000));
     }).map(t => ({ id: t.id || t.title, main: t.title || t.name || '—', sub: t.deadline || (t.asap ? 'терміново' : '') }));
   }
-  if (kind === 'guests' || kind === 'badges'){
+  if (kind === 'guests' || kind === 'badges' || kind === 'seatcards'){
     const side = $('plSide').value, where = $('plWhere').value, status = $('plStatus').value;
     /* Номер у людини свій і НЕ залежить від фільтра: рахуємо його по всьому
        списку за абеткою. Інакше «номер 12» означав би різних людей на
@@ -1497,7 +1516,14 @@ function plannerItems(){
     const рядки = (st.guests || [])
       .filter(g => {
         if (side !== 'all' && g.side !== side) return false;
-        if (where !== 'all' && g.event !== where && g.event !== 'both') return false;
+        /* «Софі» означає всіх, хто там буде, — разом із тими, хто йде і на
+           вечірку. Але для друку потрібно й точно: кому наклейка лише на
+           розпис, а кому лише на вечірку. */
+        if (where === 'only-ceremony' && g.event !== 'ceremony') return false;
+        else if (where === 'only-party' && g.event !== 'party') return false;
+        else if (where === 'both' && g.event !== 'both') return false;
+        else if ((where === 'ceremony' || where === 'party')
+                 && g.event !== where && g.event !== 'both') return false;
         if (status === 'live' && g.status === 'declined') return false;
         if (status === 'confirmed' && g.status !== 'confirmed') return false;
         if (status === 'pending' && g.status !== 'pending') return false;
@@ -1509,11 +1535,13 @@ function plannerItems(){
         id: g.id || ('name:' + (g.name || i)),   // без id індекс поплив би при зміні фільтра
         num: номер.get(g) || 0,
         main: (номер.get(g) ? номер.get(g) + ' · ' : '') + (g.name || g.title || '—'),
-        sub: kind === 'badges' ? badgeSubtitle(g) : guestSubtitle(g),
+        sub: (kind === 'badges' || kind === 'seatcards') ? badgeSubtitle(g) : guestSubtitle(g),
         pair: g.pair || g.pairKey || '',
         g,
       }));
-    return kind === 'badges' ? mergePairs(рядки) : рядки;
+    if (kind === 'guests') return рядки;
+    const злиті = mergePairs(рядки);
+    return kind === 'seatcards' ? withCouple(злиті, where) : злиті;
   }
   if (kind === 'seating'){
     const seats = st.seating || [];
@@ -1546,10 +1574,10 @@ function wrapAtSize(ctx, name, maxW){
 
 /* Підбір кегля для однієї або кількох імен. У пари два рядки — по одному на
    людину, одне під одним, щоб було видно, хто саме, а не злите «А + Б». */
-function fitBadgeName(ctx, names, maxW, maxLines){
+function fitBadgeName(ctx, names, maxW, maxLines, startSize){
   const список = Array.isArray(names) ? names : [names];
   const limit = maxLines || (список.length > 1 ? список.length : 2);
-  for (let size = 40; size >= 12; size -= 2){
+  for (let size = startSize || 40; size >= 12; size -= 2){
     ctx.font = '700 ' + size + 'px ' + FONTS.serif;
     const lines = список.flatMap(n => wrapAtSize(ctx, n, maxW));
     if (lines.length <= limit && lines.every(l => ctx.measureText(l).width <= maxW))
@@ -1585,7 +1613,7 @@ function drawPlanner(measureOnly){
   }
 
   // бейджі — це не список, а окрема наклейка на кожного гостя
-  if (kind === 'badges'){
+  if (kind === 'badges' || kind === 'seatcards'){
     if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
     const one = badgeHeight(L);
     if (measureOnly) return one * items.length;
@@ -1593,21 +1621,38 @@ function drawPlanner(measureOnly){
     const ctx = s.ctx;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const inset = 14;          // поле від краю наклейки до зовнішньої рамки
+    const картки = kind === 'seatcards';
+    const inset = картки ? 8 : 14;   // поле від краю наклейки до зовнішньої рамки
     items.forEach((it, i) => {
       const top = i * one, cy = top + one / 2;
       ctx.fillStyle = '#000';
-      // подвійна рамка: товста зовнішня, тонка внутрішня — на термодруку
-      // одинарна лінія виглядає як випадковий обрис, подвійна читається як оздоба
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#000';
-      ctx.strokeRect(s.x0 + inset, top + inset, s.w - inset * 2, one - inset * 2);
-      ctx.lineWidth = 1;
-      ctx.strokeRect(s.x0 + inset + 7, top + inset + 7, s.w - (inset + 7) * 2, one - (inset + 7) * 2);
+      if (картки){
+        // картку ріжуть ножицями — тому проста рамка й пунктир між сусідніми
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(s.x0 + inset, top + inset, s.w - inset * 2, one - inset * 2);
+        if (i < items.length - 1){
+          ctx.setLineDash([6, 5]);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(s.x0 + 4, top + one - 1);
+          ctx.lineTo(s.x0 + s.w - 4, top + one - 1);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      } else {
+        // подвійна рамка: товста зовнішня, тонка внутрішня — на термодруку
+        // одинарна лінія виглядає як випадковий обрис, подвійна читається як оздоба
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(s.x0 + inset, top + inset, s.w - inset * 2, one - inset * 2);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(s.x0 + inset + 7, top + inset + 7, s.w - (inset + 7) * 2, one - (inset + 7) * 2);
+      }
 
       // імʼя вміщуємо в рамку
-      const maxW = s.w - (inset + 7) * 2 - 24;
-      const fit = fitBadgeName(ctx, it.main, maxW);
+      const maxW = s.w - (inset + (картки ? 4 : 7)) * 2 - 20;
+      const fit = fitBadgeName(ctx, it.main, maxW, картки ? 2 : undefined, картки ? 26 : 40);
       ctx.font = '700 ' + fit.size + 'px ' + FONTS.serif;
       const lineH = fit.size * 1.1;
       const block = fit.lines.length * lineH;
@@ -1620,9 +1665,9 @@ function drawPlanner(measureOnly){
         ctx.fillRect(s.x0 + s.w / 2 - 26, under, 52, 1);
         // підпис теж підганяємо: «Софі + Хвильовий · сторона нареченого» на
         // 384 точках уже впритул до рамки, а буває й довше
-        let sz = 17;
+        let sz = картки ? 13 : 17;
         do { ctx.font = '500 ' + sz + 'px ' + FONTS.sans; sz--; }
-        while (sz > 10 && ctx.measureText(it.sub).width > maxW);
+        while (sz > 9 && ctx.measureText(it.sub).width > maxW);
         ctx.fillText(it.sub, s.x0 + s.w / 2, under + 20);
       }
     });
@@ -1643,7 +1688,7 @@ function drawPlanner(measureOnly){
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.font = '800 26px ' + FONTS.sans;
-  const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', contacts: 'Контакти' };
+  const titles = { tasks: 'Завдання', guests: 'Гості', seating: 'Розсадка', seatcards: 'Розсадка', contacts: 'Контакти' };
   ctx.fillText(kind === 'guests' ? guestListTitle() : (titles[kind] || 'Список'), s.x0 + pad, pad);
   ctx.fillRect(s.x0 + pad, pad + 34, s.w - pad * 2, 2);
 
@@ -1748,7 +1793,7 @@ function render(){
 function checkOverflow(L){
   const box = $('pvOver');
   // бейджі — навмисно по наклейці на гостя, там «переповнення» нормальне
-  const perSticker = activeTab === 'planner' && $('plKind').value === 'badges';
+  const perSticker = activeTab === 'planner' && /^(badges|seatcards)$/.test($('plKind').value);
   const over = !L.continuous && sheet.height > L.heightPx && !perSticker;
   box.hidden = !over;
   if (!over) return;
@@ -1922,7 +1967,7 @@ function badgesPerFile(scale){
 
 function exportPlan(){
   const scale = +$('exScale').value || 2;
-  const badges = activeTab === 'planner' && $('plKind').value === 'badges';
+  const badges = activeTab === 'planner' && /^(badges|seatcards)$/.test($('plKind').value);
   if (!badges) return [null];
   const всього = plannerItems().filter(it => planner.picked[it.id]).length;
   const крок = badgesPerFile(scale);
@@ -2741,7 +2786,7 @@ function renderPlannerList(){
   const items = plannerItems();
   const kind = $('plKind').value;
   $('plFilterWrap').hidden = kind !== 'tasks';
-  $('plGuestFilters').hidden = !(kind === 'guests' || kind === 'badges');
+  $('plGuestFilters').hidden = !/^(guests|badges|seatcards)$/.test(kind);
   const box = $('plList');
   box.innerHTML = '';
   if (!items.length){ box.innerHTML = '<p class="note">У цьому розділі порожньо.</p>'; render(); return; }
