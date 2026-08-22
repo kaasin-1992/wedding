@@ -575,7 +575,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v23 · декор на коробки, простий режим';
+const VERSION = 'v24 · компактний список';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1538,14 +1538,14 @@ function mergePairs(рядки, kind){
   return out;
 }
 
+/* Підпис у СПИСКУ. Список — це чек-лист: у ньому важливо, щоб один гість
+   займав один рядок. Сторона й локація тут не потрібні (вони є на бейджах і
+   картках, де справді щось вирішують), а «сторона нареченої» в кожному
+   рядку розганяла одного гостя на три рядки стрічки. Лишаємо тільки те,
+   чого з імені не видно: чи людина ще не відповіла, і чи є діти. */
 function guestSubtitle(g){
-  /* Коли список уже відфільтрований за локацією, вона стоїть у заголовку
-     аркуша — повторювати її в кожному рядку означає друкувати зайвий рядок
-     на кожного гостя. На стрічці це буквально зайві сантиметри. */
-  const фільтр = (document.getElementById('plWhere') || {}).value;
-  const своя = !фільтр || фільтр === 'all' ? guestVenueLabel(g) : '';
-  const bits = [своя, guestSideLabel(g)].filter(Boolean);
-  if (g.status === 'pending') bits.push('чекаємо відповідь');
+  const bits = [];
+  if (g.status === 'pending') bits.push('чекаємо');
   if (g.status === 'declined') bits.push('відмовились');
   if (+g.kids > 0) bits.push('+' + g.kids + ' дит.');
   return bits.join(' · ');
@@ -1764,7 +1764,7 @@ function drawPlanner(measureOnly){
     return s.h;
   }
 
-  const size = 24, pad = 12, lineH = 32;
+  const size = 20, pad = 10, lineH = 26;
   sctx.font = '600 ' + size + 'px ' + FONTS.sans;
   const людейУРядку = it => Math.max(1, +it.people || 1);
   const текстРядка = it => (Array.isArray(it.main) ? it.main.join('  +  ') : it.main)
