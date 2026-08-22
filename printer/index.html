@@ -575,7 +575,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v25 · довгий список ріжеться на частини';
+const VERSION = 'v26 · пари склеюються надійно';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1468,12 +1468,20 @@ function badgeSubtitle(g, повністю){
    імен, відсортованих: у Лесі це «Леся|Паша», у Паші — так само, і рядки
    сходяться. Без сортування вони дивились би одне на одного й не злилися. */
 function pairKeyOf(g){
-  const мітка = String((g && g.pair) || '').trim();
-  if (мітка) return мітка;
-  const хто = String((g && g.name) || '').trim();
-  const з = String((g && g.with) || '').trim();
-  if (!хто || !з) return String((g && g.pairKey) || '');
-  return [хто.toLowerCase(), з.toLowerCase()].sort().join('|');
+  if (!g) return '';
+  /* Колонка «Пара» заповнена по-різному у двох половинок однієї пари: у Дани
+     стоїть «Дзен + Дана», у Дзена порожньо; у Марини — саме її імʼя, у Яріка
+     — обидва. Тому ключем беремо НАБІР імен, зібраний звідусіль і
+     відсортований: у обох половинок він виходить однаковий, хай там що
+     написано в якій клітинці. */
+  const імена = new Set();
+  const додати = txt => String(txt || '').split('+')
+    .map(x => x.trim().toLowerCase()).filter(Boolean).forEach(x => імена.add(x));
+  додати(g.name);
+  додати(g.with);
+  додати(g.pair);
+  if (імена.size < 2) return String(g.pairKey || '');
+  return [...імена].sort().join('|');
 }
 
 function withKids(картки, рядки, where){
@@ -1490,7 +1498,8 @@ function withKids(картки, рядки, where){
     const хто = Array.isArray(r.main) ? r.main.join(' + ') : r.main;
     const батьки = String(хто).replace(/^\d+\s*·\s*/, '');
     if (імʼям){
-      діти.push({ id: 'kid:' + g.id + ':n', main: сире, sub: 'дитина · ' + батьки, kid: true });
+      // якщо імʼя відоме, підписувати її «дитиною» не треба — вона просто гість
+      діти.push({ id: 'kid:' + g.id + ':n', main: сире, sub: батьки, kid: true });
       return;
     }
     for (let i = 0; i < скільки; i++)
@@ -1509,6 +1518,19 @@ function withCouple(картки, where){
 }
 
 function mergePairs(рядки, kind){
+  /* Буває, що на пару вказує лише одна половинка: у Насті Мітіної обидві
+     клітинки порожні, а Олександр пише «Настя Мітіна». Тому спершу даємо
+     таким «німим» рядкам ключ того, хто їх назвав, — але лише коли претендент
+     рівно один, інакше спільне імʼя злило б чужих людей. */
+  const усіКлючі = [...new Set(рядки.map(r => String(r.pair || '').trim()).filter(Boolean))];
+  рядки.forEach(r => {
+    if (String(r.pair || '').trim()) return;
+    const своє = String((r.g && r.g.name) || '').trim().toLowerCase();
+    if (!своє) return;
+    const підходять = усіКлючі.filter(k => k.split('|').includes(своє));
+    if (підходять.length === 1) r.pair = підходять[0];
+  });
+
   const за = new Map();
   рядки.forEach(r => {
     const k = String(r.pair || '').trim();
