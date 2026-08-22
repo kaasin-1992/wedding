@@ -575,7 +575,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v24 · компактний список';
+const VERSION = 'v25 · довгий список ріжеться на частини';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1115,6 +1115,7 @@ let RENDER_SCALE = 1;
    друку. Тому довгу стрічку ріжемо на частини ще ДО малювання. */
 const MAX_SIDE = 8000, MAX_AREA = 16e6;
 let EXPORT_SLICE = null;                  // {from,to} — активний шматок
+let EXPORT_PART = '';                     // «2 з 3» для заголовка стрічки
 // висота однієї наклейки — в одному місці, бо її знають і малювання, і нарізка.
 // Картки для розсадки нижчі: їх ріжуть і совають по столу, великий шрифт там ні до чого.
 const isSeatCards = () => { const el = document.getElementById('plKind'); return !!el && el.value === 'seatcards'; };
@@ -1680,6 +1681,9 @@ function fitBadgeName(ctx, names, maxW, maxLines, startSize){
 function guestListTitle(){
   const side = $('plSide').value, where = $('plWhere').value;
   const bits = ['Гості'];
+  // номер частини просто в заголовку: три однакові стрічки без нього
+  // неможливо розкласти по порядку
+  if (EXPORT_SLICE && EXPORT_PART) bits.push(EXPORT_PART);
   if (side === 'her') bits.push('сторона нареченої');
   if (side === 'his') bits.push('сторона нареченого');
   if (where === 'ceremony') bits.push('Софі');
@@ -1702,9 +1706,12 @@ function drawPlanner(measureOnly){
     return s.h;
   }
 
+  // нарізка стосується і списку: Fun Print стискає надто довгу картинку,
+  // і в надрукованій стрічці нижня половина злипається в нечитабельну кашу
+  if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
+
   // бейджі — це не список, а окрема наклейка на кожного гостя
   if (kind === 'badges' || kind === 'seatcards' || DECOR[kind]){
-    if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
     const one = badgeHeight(L);
     if (measureOnly) return one * items.length;
     const s = newSheet(one * items.length);
@@ -2062,15 +2069,45 @@ function badgesPerFile(scale){
   return Math.max(1, Math.min(заВисотою, заПлощею));
 }
 
+/* Скільки точок стрічки Fun Print друкує без стискання. Значення з практики:
+   на довгій картинці нижня частина виходила дрібною й злиплою, а перші
+   приблизно 17 записів — чистими. Беремо із запасом. */
+const MAX_PRINT_ROWS = 1100;
+
 function exportPlan(){
   const scale = +$('exScale').value || 2;
-  const badges = activeTab === 'planner' && /^(badges|seatcards|decor-)/.test($('plKind').value);
-  if (!badges) return [null];
+  const kind = $('plKind').value;
+  if (activeTab !== 'planner') return [null];
   const всього = plannerItems().filter(it => planner.picked[it.id]).length;
-  const крок = badgesPerFile(scale);
-  if (всього <= крок) return [null];
+  if (!всього) return [null];
+
+  // наклейки ріжемо за стелею полотна — там вирішує розмір однієї наклейки
+  if (/^(badges|seatcards|decor-)/.test(kind)){
+    const крок = badgesPerFile(scale);
+    if (всього <= крок) return [null];
+    const шматки = [];
+    for (let from = 0; from < всього; from += крок) шматки.push({ from, to: Math.min(from + крок, всього) });
+    return шматки;
+  }
+
+  /* Список ріжемо за справжньою довжиною: рядки різної висоти (пара з довгим
+     імʼям переноситься), тому рахувати «стільки-то записів на файл» не можна —
+     питаємо малювальника, скільки точок вийде. */
+  const міряти = (from, to) => {
+    EXPORT_SLICE = { from, to };
+    const h = (DRAWERS[drawTab] || drawText)(true);
+    EXPORT_SLICE = null;
+    return h || 0;
+  };
+  if (міряти(0, всього) <= MAX_PRINT_ROWS) return [null];
   const шматки = [];
-  for (let from = 0; from < всього; from += крок) шматки.push({ from, to: Math.min(from + крок, всього) });
+  let from = 0;
+  while (from < всього){
+    let to = from + 1;
+    while (to < всього && міряти(from, to + 1) <= MAX_PRINT_ROWS) to++;
+    шматки.push({ from, to });
+    from = to;
+  }
   return шматки;
 }
 
@@ -2080,9 +2117,10 @@ async function exportImage(){
   const файли = [];
   for (let i = 0; i < шматки.length; i++){
     EXPORT_SLICE = шматки[i];
+    EXPORT_PART = шматки.length > 1 ? ((i + 1) + ' з ' + шматки.length) : '';
     const canvas = exportCanvas();
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    EXPORT_SLICE = null;
+    EXPORT_SLICE = null; EXPORT_PART = '';
     if (!blob){ toast('Не вдалось зібрати картинку', 6000); render(); return; }
     файли.push({ blob,
       name: шматки.length > 1 ? базова.replace(/\.png$/, '-' + (i + 1) + 'z' + шматки.length + '.png') : базова,
