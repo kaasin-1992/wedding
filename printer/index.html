@@ -336,6 +336,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
           <option value="seatcards">Розсадка — картки, щоб совати руками</option>
           <option value="decor-sofia">Декор у Софі — наклейки на коробки</option>
           <option value="decor-wave">Декор у Хвильовому — наклейки на коробки</option>
+          <option value="boxes-wave">Коробки у Хвильовому — з описом складу</option>
           <option value="seating">Розсадка по столах</option>
           <option value="contacts">Контакти</option>
         </select>
@@ -575,7 +576,7 @@ ul.picks li em{font-style:normal;font-size:12px;color:var(--muted);flex:0 0 auto
 /* Версія видима на екрані, а не лише в журналі: коли щось «не працює»,
    перше, що треба знати — яку саме збірку відкрито. Зі скріншота цього не
    було видно, і ми гадали. */
-const VERSION = 'v26 · пари склеюються надійно';
+const VERSION = 'v27 · наклейки на коробки з описом';
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1120,7 +1121,8 @@ let EXPORT_PART = '';                     // «2 з 3» для заголовк�
 // Картки для розсадки нижчі: їх ріжуть і совають по столу, великий шрифт там ні до чого.
 const isSeatCards = () => { const el = document.getElementById('plKind'); return !!el && el.value === 'seatcards'; };
 // коробкові наклейки — як бейджі, повний розмір
-const badgeHeight = L => L.continuous ? (isSeatCards() ? 120 : 200) : L.heightPx;
+const isBoxes = () => { const el = document.getElementById('plKind'); return !!el && /^boxes-/.test(el.value); };
+const badgeHeight = L => L.continuous ? (isSeatCards() ? 120 : isBoxes() ? 300 : 200) : L.heightPx;
 
 function newSheet(heightPx){
   const L = layout();
@@ -1523,10 +1525,19 @@ function mergePairs(рядки, kind){
      таким «німим» рядкам ключ того, хто їх назвав, — але лише коли претендент
      рівно один, інакше спільне імʼя злило б чужих людей. */
   const усіКлючі = [...new Set(рядки.map(r => String(r.pair || '').trim()).filter(Boolean))];
+  /* Скільки людей носять те саме імʼя. Якщо двоє — переймати чужий ключ не
+     можна: Тімур у графі «Прийде з» пише просто «Яна», а Ян у списку дві, і
+     друга прилипала до чужої пари. Однакове імʼя — це саме той випадок, коли
+     машина не має вирішувати. */
+  const скількиЗТаким = new Map();
+  рядки.forEach(r => {
+    const н = String((r.g && r.g.name) || '').trim().toLowerCase();
+    if (н) скількиЗТаким.set(н, (скількиЗТаким.get(н) || 0) + 1);
+  });
   рядки.forEach(r => {
     if (String(r.pair || '').trim()) return;
     const своє = String((r.g && r.g.name) || '').trim().toLowerCase();
-    if (!своє) return;
+    if (!своє || (скількиЗТаким.get(своє) || 0) > 1) return;
     const підходять = усіКлючі.filter(k => k.split('|').includes(своє));
     if (підходять.length === 1) r.pair = підходять[0];
   });
@@ -1593,6 +1604,24 @@ const DECOR = {
     'Подовжувач', 'Ножиці, скотч', 'Сміттєві пакети', 'Запальничка',
   ]},
 };
+/* Наклейки на цілі коробки: назва великим, склад дрібним. Це не те саме, що
+   перелік речей — тут одна наклейка описує весь ящик, щоб не відкривати. */
+const BOXES = {
+  'boxes-wave': { місце: 'Хвильовий', коробки: [
+    { назва: 'Стрічки', склад: 'Різнокольорові, довжина різна' },
+    { назва: 'Тканини', склад: 'Фіранки, рушники, вишиті полотна. Для прикрашання території',
+      увага: 'Вишивала бабуся — обережно!' },
+    { назва: 'На столи', склад: 'Скатертини, прибори для торту, одноразові серветки' },
+    { назва: 'Розваги', склад: 'Дженга, інстакс, одноразові фотіки, гостьова книга' },
+  ]},
+};
+function boxItems(kind){
+  const d = BOXES[kind];
+  if (!d) return [];
+  return d.коробки.map((к, i) => ({ id: kind + ':' + i, main: к.назва,
+    body: к.склад, увага: к.увага || '', sub: d.місце, box: true }));
+}
+
 function decorItems(kind){
   const d = DECOR[kind];
   if (!d) return [];
@@ -1601,6 +1630,7 @@ function decorItems(kind){
 
 function plannerItems(){
   const kind0 = $('plKind').value;
+  if (BOXES[kind0]) return boxItems(kind0);     // коробки теж самі по собі
   if (DECOR[kind0]) return decorItems(kind0);   // декор не залежить від жодних даних
   if (!planner.state) return [];
   const kind = kind0;
@@ -1733,7 +1763,7 @@ function drawPlanner(measureOnly){
   if (EXPORT_SLICE) items = items.slice(EXPORT_SLICE.from, EXPORT_SLICE.to);
 
   // бейджі — це не список, а окрема наклейка на кожного гостя
-  if (kind === 'badges' || kind === 'seatcards' || DECOR[kind]){
+  if (kind === 'badges' || kind === 'seatcards' || DECOR[kind] || BOXES[kind]){
     const one = badgeHeight(L);
     if (measureOnly) return one * items.length;
     const s = newSheet(one * items.length);
@@ -1769,8 +1799,38 @@ function drawPlanner(measureOnly){
         ctx.strokeRect(s.x0 + inset + 7, top + inset + 7, s.w - (inset + 7) * 2, one - (inset + 7) * 2);
       }
 
-      // імʼя вміщуємо в рамку
       const maxW = s.w - (inset + (картки ? 4 : 7)) * 2 - 20;
+
+      /* Коробка: назва великим, склад дрібним під рискою. Так видно, що
+         всередині, не відкриваючи ящик. */
+      if (it.box){
+        /* Спершу міряємо весь блок, потім ставимо його по центру: інакше
+           вміст тулиться вгору, а нижня третина наклейки лишається порожня. */
+        ctx.font = '500 17px ' + FONTS.sans;
+        const рядкиСкладу = wrapLines(ctx, it.body || '', maxW);
+        ctx.font = '700 18px ' + FONTS.sans;
+        const рядкиУваги = it.увага ? wrapLines(ctx, it.увага, maxW) : [];
+        const блок = 44 + 2 + 16 + рядкиСкладу.length * 23
+          + (рядкиУваги.length ? 6 + рядкиУваги.length * 23 : 0);
+        let y0 = top + (one - 24 - блок) / 2;
+        ctx.font = '700 34px ' + FONTS.serif;
+        ctx.fillText(it.main, s.x0 + s.w / 2, y0 + 18);
+        y0 += 44;
+        ctx.fillRect(s.x0 + s.w / 2 - 34, y0, 68, 2);
+        y0 += 16;
+        ctx.font = '500 17px ' + FONTS.sans;
+        рядкиСкладу.forEach(рядок => { ctx.fillText(рядок, s.x0 + s.w / 2, y0 + 10); y0 += 23; });
+        if (рядкиУваги.length){
+          y0 += 6;
+          ctx.font = '700 18px ' + FONTS.sans;
+          рядкиУваги.forEach(рядок => { ctx.fillText(рядок, s.x0 + s.w / 2, y0 + 10); y0 += 23; });
+        }
+        ctx.font = '500 15px ' + FONTS.sans;
+        ctx.fillText(it.sub || '', s.x0 + s.w / 2, top + one - inset - 18);
+        return;
+      }
+
+      // імʼя вміщуємо в рамку
       const fit = fitBadgeName(ctx, it.main, maxW, картки ? 2 : undefined, картки ? 26 : 40);
       ctx.font = '700 ' + fit.size + 'px ' + FONTS.serif;
       const lineH = fit.size * 1.1;
@@ -1919,7 +1979,7 @@ function render(){
 function checkOverflow(L){
   const box = $('pvOver');
   // бейджі — навмисно по наклейці на гостя, там «переповнення» нормальне
-  const perSticker = activeTab === 'planner' && /^(badges|seatcards|decor-)/.test($('plKind').value);
+  const perSticker = activeTab === 'planner' && /^(badges|seatcards|decor-|boxes-)/.test($('plKind').value);
   const over = !L.continuous && sheet.height > L.heightPx && !perSticker;
   box.hidden = !over;
   if (!over) return;
@@ -2104,7 +2164,7 @@ function exportPlan(){
   if (!всього) return [null];
 
   // наклейки ріжемо за стелею полотна — там вирішує розмір однієї наклейки
-  if (/^(badges|seatcards|decor-)/.test(kind)){
+  if (/^(badges|seatcards|decor-|boxes-)/.test(kind)){
     const крок = badgesPerFile(scale);
     if (всього <= крок) return [null];
     const шматки = [];
