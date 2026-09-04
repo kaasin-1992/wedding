@@ -82,6 +82,9 @@ button:active{transform:scale(.98)}
 .body{line-height:1.6;margin:7mm 0 0;color:var(--ink);font-family:var(--sans)}
 .body + .body{margin-top:3.5mm}
 .body b{font-weight:800;color:var(--red)}
+.navarrow{color:var(--red);margin:0 0 8mm;line-height:0}
+.sign.a5 .navarrow{margin-bottom:4mm}
+.body.addr{margin-top:6mm}
 .qrblock{display:flex;flex-direction:column;align-items:center;gap:2.5mm;margin:8mm 0 0}
 .qrblock canvas{image-rendering:pixelated}
 .qrcap{font-size:9.5pt;color:var(--grey);font-family:var(--sans);line-height:1.35}
@@ -123,13 +126,14 @@ button:active{transform:scale(.98)}
   justify-content:space-evenly;width:100%;font-family:var(--sans)}
 .sched li{display:flex;gap:8mm;align-items:baseline;padding:2mm 0;border-bottom:.6pt solid var(--hair)}
 .sched li:last-child{border-bottom:0}
-.sched .tm{font-weight:800;font-size:16pt;color:var(--red);flex:0 0 25mm;
-  font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em}
+.sched .tm{font-weight:800;font-size:16pt;color:var(--red);flex:0 0 34mm;
+  font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-.02em}
+.sched .tm.range{font-size:12.5pt}
 .sched .ev{flex:1;font-size:13pt;line-height:1.25}
 .sched li.mark .ev{font-weight:800}
 .blank{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;width:100%}
 .blank .bl{display:flex;gap:8mm;align-items:flex-end;height:11mm}
-.blank .bl .t{flex:0 0 25mm;border-bottom:.8pt solid var(--hair)}
+.blank .bl .t{flex:0 0 34mm;border-bottom:.8pt solid var(--hair)}
 .blank .bl .e{flex:1;border-bottom:.8pt solid var(--hair)}
 
 /* сітка турніру */
@@ -215,8 +219,15 @@ button:active{transform:scale(.98)}
   <div class="box">
     <h2>Загальне</h2>
     <div class="fields">
-      <div><label for="f_loc1">Назва першої локації (день)</label><input type="text" id="f_loc1" value="Софі"></div>
+      <div><label for="f_loc1">Назва першої локації (день)</label><input type="text" id="f_loc1" value="Ботсад Фоміна"></div>
+      <div><label for="f_addr1">Адреса першої локації</label><input type="text" id="f_addr1" value="вул. Симона Петлюри, 1 · метро «Університет»"></div>
       <div><label for="f_loc2">Назва другої локації (вечір)</label><input type="text" id="f_loc2" value="Хвильовий"></div>
+      <div><label for="f_arrow">Стрілка на навігаційній табличці</label><select id="f_arrow">
+        <option value="→">праворуч →</option>
+        <option value="←">ліворуч ←</option>
+        <option value="↑">прямо ↑</option>
+        <option value="↓">донизу ↓</option>
+      </select></div>
       <div><label for="f_jar">Посилання на банку (збір)</label><input type="url" id="f_jar" value="https://send.monobank.ua/jar/5TEeFknTmt"></div>
       <div><label for="f_goal">На що збір (один рядок)</label><input type="text" id="f_goal" value="на потреби ЗСУ"></div>
       <div><label for="f_kadr">Посилання «залий свої фото»</label><input type="text" id="f_kadr" value="лютевесілля.укр/kadr"></div>
@@ -304,35 +315,41 @@ const band = () => '<div class="bandrow">' + orn(bandSeq(21), null) + '</div>';
 
 /* ── стан ─────────────────────────────────────────────────────────── */
 const SCHED1 = [
-  '11:30 — Збір гостей, вітальний напій',
-  '*12:00 — Церемонія',
-  '12:30 — Вітання, спільні фото',
-  '13:00 — Обід',
-  '14:30 — Розіграш призів',
-  '15:00 — Торт',
-  '15:30 — Вільний час, фото, гостьова книга',
-  '*17:00 — Завершуємо й рушаємо далі',
+  '12:00 — Велкам-дрінк',
+  '12:30 — Гості розходяться по станціях',
+  '13:00 — Закуски, чекаємо на церемонію',
+  '13:00–13:30 — Активність',
+  '*13:30 — Вихід нареченої',
+  '*14:00–14:30 — Церемонія',
+  '14:45 — Усі до столу',
+  '14:45–16:30 — Стіл і активності',
+  '16:30 — Молодь їде в Хвильовий',
+  '16:30–17:30 — Фотосет молодят',
+  '17:30 — Молодята їдуть у Хвильовий',
 ].join('\n');
 
 const SCHED2 = [
-  '16:20 — Збір гостей, фуршет',
-  '17:00 — Вітальне слово',
-  '*17:30 — Перший танець',
-  '18:20 — Спільне фото всіх гостей',
-  '19:00 — Турнір з армреслінгу за букет',
-  '20:00 — Розіграш призів',
-  '21:00 — Дженга з побажаннями',
-  '*21:30 — Пісня від гурту',
-  '22:00 — Штольня — фінальна точка вечора',
+  '16:20 — Збір гостей',
+  '17:00 — Доїжджають гості з Ботсаду',
+  '18:00 — Зустріч молодят',
+  '*18:20 — Церемонія',
+  '18:40 — Вітання',
+  '19:00 — Армреслінг за букет',
+  '19:20 — Кидання підвʼязки',
+  '19:30 — Викрадення нареченої',
+  '*20:00 — Виступ Хамермана, перший танець',
+  '20:30 — Дискотека',
+  '*21:30 — Торт',
 ].join('\n');
 
 const DEFAULTS = {
-  f_size:'a4', f_font:'sans', f_loc1:'Софі', f_loc2:'Хвильовий',
+  f_size:'a4', f_font:'sans', f_loc1:'Ботсад Фоміна', f_loc2:'Хвильовий',
+  f_addr1:'вул. Симона Петлюри, 1 · метро «Університет»', f_arrow:'→',
   f_jar:'https://send.monobank.ua/jar/5TEeFknTmt',
   f_goal:'на потреби ЗСУ', f_kadr:'лютевесілля.укр/kadr', f_prizes:'10',
   f_s1:SCHED1, f_s2:SCHED2,
 };
-const KEY = 'tablychky-v3';
+const KEY = 'tablychky-v5';
 
 function loadState(){
   let saved = {};
@@ -359,10 +376,14 @@ const isA4 = () => V('f_size') !== 'a5';
 /* loc: 1 = перша локація (день), 2 = друга (вечір), 0 = обидві */
 const CARDS = [
   /* ══ ПЕРША ЛОКАЦІЯ ══ */
-  { id:'welcome1', loc:1, on:false, kind:'sign',
-    name:'Вітальна табличка на вхід', note:'необовʼязково',
+  { id:'welcome1', loc:1, on:true, kind:'sign',
+    name:'Вітальна табличка на вхід', note:'з адресою — локація змінилась, тож варто',
     head:'6 вересня 2026', title:'К + Д', sub:'проходьте',
-    body:['Ви саме там, де треба.'] },
+    body:['Ви саме там, де треба.'], addr:true },
+
+  { id:'nav1', loc:1, on:true, kind:'nav',
+    name:'Навігація — стрілка «сюди»', note:'у ботсаду без неї загубляться; друкуй кілька',
+    title:'Сюди' },
 
   { id:'book1', loc:1, on:true, kind:'sign',
     name:'Гостьова книга + інстакс', note:'спершу пишемо, фото вклеюємо потім',
@@ -539,8 +560,28 @@ function signHTML(c){
     + (a4 ? ttl : wings(ttl))
     + '<p class="sub"' + ED + '>' + esc(c.sub) + '</p>'
     + c.body.map(b => '<p class="body"' + ED + '>' + b + '</p>').join('')
+    + (c.addr && V('f_addr1') ? '<p class="body addr"' + ED + '><b>' + esc(V('f_addr1')) + '</b></p>' : '')
     + qrBlock(c)
     + '</div>'
+    + (a4 ? band() : '') + '</div>';
+}
+
+/* стрілка малюється, а не набирається: гліф «→» у серифі надто тонкий для друку */
+function arrowSVG(dir, mm){
+  const rot = { '→':0, '←':180, '↑':-90, '↓':90 }[dir] || 0;
+  return '<svg viewBox="0 0 100 40" width="' + mm + 'mm"'
+    + ' style="transform:rotate(' + rot + 'deg)" fill="none" stroke="currentColor"'
+    + ' stroke-width="6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">'
+    + '<path d="M5 20 H86"/><path d="M68 5 L91 20 L68 35"/></svg>';
+}
+
+function navHTML(c){
+  const a4 = isA4();
+  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
+    + '<p class="head">' + esc(LOCNAME(1)) + ' · 6 вересня 2026</p>'
+    + '<div class="mid"><p class="navarrow">' + arrowSVG(V('f_arrow'), a4 ? 95 : 48) + '</p>'
+    + '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>'
+    + '<p class="sub"' + ED + '>Катя &amp; Діма</p></div>'
     + (a4 ? band() : '') + '</div>';
 }
 
@@ -559,9 +600,11 @@ function schedHTML(c){
   const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l){
     const mark = l.charAt(0) === '*';
     const t = mark ? l.slice(1).trim() : l;
-    const m = t.match(/^(\d{1,2}[:.]\d{2})\s*[—–-]?\s*(.*)$/);
-    return '<li' + (mark ? ' class="mark"' : '') + '><span class="tm">'
-      + esc(m ? m[1].replace('.', ':') : '') + '</span><span class="ev"' + ED + '>'
+    const m = t.match(/^(\d{1,2}[:.]\d{2}(?:\s*[—–-]\s*\d{1,2}[:.]\d{2})?)\s*[—–-]\s*(.*)$/);
+    const tm = m ? m[1].replace(/\./g, ':').replace(/\s*[—–-]\s*/, '–') : '';
+    const cls = ['tm'].concat(tm.indexOf('–') >= 0 ? ['range'] : []).join(' ');
+    return '<li' + (mark ? ' class="mark"' : '') + '><span class="' + cls + '">'
+      + esc(tm) + '</span><span class="ev"' + ED + '>'
       + esc(m ? m[2] : t) + '</span></li>';
   }).join('');
   return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul></div>';
@@ -657,6 +700,7 @@ function render(){
   picked.forEach(function(c){
     const tag = c.loc === 1 ? V('f_loc1') : c.loc === 2 ? V('f_loc2') : 'обидві';
     if (c.kind === 'sign')         (a4 ? addFull : addHalf)(signHTML(c), tag);
+    else if (c.kind === 'nav')     (a4 ? addFull : addHalf)(navHTML(c), tag);
     else if (c.kind === 'sched')   addFull(schedHTML(c), tag);
     else if (c.kind === 'signup')  addFull(signupHTML(), tag);
     else if (c.kind === 'rules')   addFull(rulesHTML(), tag);
