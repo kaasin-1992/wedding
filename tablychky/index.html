@@ -122,13 +122,14 @@ button:active{transform:scale(.98)}
 .page .bandrow{margin:5mm 0 7mm}
 
 /* розклад */
-.sched{list-style:none;margin:0;padding:0;flex:1;display:flex;flex-direction:column;
-  justify-content:space-evenly;width:100%;font-family:var(--sans)}
-.sched li{display:flex;gap:8mm;align-items:baseline;padding:2mm 0;border-bottom:.6pt solid var(--hair)}
+.sched{list-style:none;margin:0 0 auto;padding:0;display:flex;flex-direction:column;
+  width:100%;font-family:var(--sans)}
+.sched li{display:flex;gap:8mm;align-items:baseline;padding:3.4mm 0;border-bottom:.6pt solid var(--hair)}
 .sched li:last-child{border-bottom:0}
 .sched .tm{font-weight:800;font-size:16pt;color:var(--red);flex:0 0 34mm;
   font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-.02em}
 .sched .tm.range{font-size:12.5pt}
+.sched .tm.empty{border-bottom:.9pt solid var(--hair);align-self:stretch;min-height:7mm}
 .sched .ev{flex:1;font-size:13pt;line-height:1.25}
 .sched li.mark .ev{font-weight:800}
 .blank{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;width:100%}
@@ -149,10 +150,13 @@ button:active{transform:scale(.98)}
 .bcol:last-child .bslot .ln{border-bottom-width:2pt;border-color:var(--red)}
 
 /* список запису */
-.signup{flex:1;display:grid;grid-template-columns:1fr 1fr;column-gap:14mm;align-content:start;
-  width:100%;font-family:var(--sans)}
-.sline{display:flex;gap:4mm;align-items:baseline;border-bottom:.8pt solid var(--hair);padding:3.6mm 0}
-.sline .n{font-weight:800;font-size:12pt;color:var(--red);flex:0 0 8mm;font-variant-numeric:tabular-nums}
+.signup{margin:0 0 auto;display:flex;flex-direction:column;width:100%;font-family:var(--sans)}
+.sline{display:flex;gap:6mm;align-items:baseline;border-bottom:1pt solid var(--hair);padding:7mm 0 2mm}
+.sline .n{font-weight:800;font-size:14pt;color:var(--red);flex:0 0 14mm;font-variant-numeric:tabular-nums}
+.sline.spare .n{font-size:10pt;color:var(--grey);letter-spacing:.08em;text-transform:uppercase}
+.lead{text-align:center;font-size:11.5pt;line-height:1.5;color:var(--grey);
+  font-family:var(--sans);margin:0 0 4mm}
+.lead br + *{display:inline}
 
 /* правила */
 .rules{list-style:none;margin:0;padding:0;counter-reset:r;width:100%;flex:1;font-family:var(--sans)}
@@ -162,6 +166,36 @@ button:active{transform:scale(.98)}
 .note{width:100%;margin-top:auto;border-top:1pt solid var(--red);padding-top:4mm;
   font-size:10.5pt;color:var(--grey);font-family:var(--sans)}
 .note b{color:var(--ink);font-weight:800}
+
+/* схема розсадки — план */
+.plan{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;
+  font-family:var(--sans);margin-bottom:6mm}
+.plan:last-child{margin-bottom:0}
+.plan.head-table{flex:0 0 auto;margin-bottom:8mm}
+.plan .board.wide{flex:0 0 auto;height:7mm;width:100%}
+.plan .pair{display:flex;gap:14mm;padding:0 12mm;margin-top:2mm}
+.plan .pair .seat{flex:1;height:13mm}
+.plan-h{font-weight:800;font-size:10.5pt;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--red);display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:1.2pt solid var(--red);padding-bottom:1.5mm;margin-bottom:3mm}
+.plan-h span{font-size:8.5pt;font-weight:700;color:var(--grey);letter-spacing:.1em}
+.plan-body{flex:1;display:flex;align-items:stretch;gap:5mm;min-height:0}
+.plan .side{flex:1;display:flex;flex-direction:column;min-height:0}
+.plan .board{flex:0 0 12mm;border:1pt solid var(--red);border-radius:1.5mm;
+  background:rgba(200,67,31,.06)}
+.seat{flex:1;display:flex;align-items:flex-end;gap:3mm;min-height:9mm;padding-bottom:1mm}
+.seat .sn{font-size:9pt;font-weight:700;color:var(--grey);white-space:nowrap;
+  min-width:12mm;text-align:right}
+.seat .sl{flex:1;border-bottom:.8pt solid var(--hair)}
+
+/* схема розсадки — списки */
+.stoly{flex:1;display:grid;grid-template-columns:1fr 1fr;column-gap:14mm;align-content:start;
+  width:100%;font-family:var(--sans)}
+.stol{break-inside:avoid;margin-bottom:7mm}
+.stolh{font-weight:800;font-size:11pt;letter-spacing:.14em;text-transform:uppercase;color:var(--red);
+  border-bottom:1.2pt solid var(--red);padding-bottom:1.5mm;margin-bottom:2mm}
+.seatline{border-bottom:.7pt solid var(--hair);height:7.2mm}
+.seatfree{flex:1;width:100%;border:1.2pt dashed var(--hair);border-radius:2mm;margin-top:2mm}
 
 /* дрібні картки банки */
 .qrmini{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:minmax(0,1fr);
@@ -232,12 +266,22 @@ button:active{transform:scale(.98)}
       <div><label for="f_goal">На що збір (один рядок)</label><input type="text" id="f_goal" value="на потреби ЗСУ"></div>
       <div><label for="f_kadr">Посилання «залий свої фото»</label><input type="text" id="f_kadr" value="лютевесілля.укр/kadr"></div>
       <div><label for="f_prizes">Скільки призів у розіграші</label><input type="number" id="f_prizes" value="10" min="1" max="30"></div>
+      <div><label for="f_seatmode">Схема розсадки</label><select id="f_seatmode">
+        <option value="a">Два столи + стіл молодят</option>
+        <option value="b">Один стіл, молодята за ним</option>
+        <option value="lists">Просто списки по столах</option>
+        <option value="free">Порожній аркуш — намалюю сама</option>
+      </select></div>
+      <div><label for="f_guests">Людей усього, з молодятами</label><input type="number" id="f_guests" value="37" min="2" max="120"></div>
+      <div><label for="f_tables">Для «списків»: скільки столів</label><input type="number" id="f_tables" value="6" min="1" max="24"></div>
+      <div><label for="f_seats">Для «списків»: місць за столом</label><input type="number" id="f_seats" value="8" min="1" max="20"></div>
     </div>
     <p class="hint">Усе зберігається в цьому браузері — можна закрити й повернутись.</p>
   </div>
 
   <div class="box">
     <h2>Розклад</h2>
+    <label class="chk"><input type="checkbox" id="f_notime"><span class="t">Час не друкувати — впишу від руки<small>події лишаються, замість часу порожнє місце</small></span></label>
     <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="f_blank"><span class="t">Порожній бланк — намалюю від руки вибійкою<small>друкуються тільки шапка й лінійки</small></span></label>
     <div class="fields">
       <div><label for="f_s1">Розклад дня · перша локація</label><textarea id="f_s1"></textarea></div>
@@ -258,9 +302,15 @@ button:active{transform:scale(.98)}
       <button id="btnSofi">Тільки перша локація</button>
       <button id="btnHvlv">Тільки друга локація</button>
       <button id="btnNone">Зняти все</button>
+      <button id="btnReset" hidden>Скинути мої правки</button>
       <span class="count" id="count"></span>
     </div>
     <p class="hint">У вікні друку: A4, <b>«Фон і зображення»</b> увімкнено, поля <b>«Немає»</b>. Інакше червоне не надрукується.</p>
+    <p class="hint">Усе, що виправляєш просто на аркуші, <b>зберігається автоматично</b> в цьому браузері
+    й переживає перезавантаження. Правки з іншого пристрою сюди не потраплять.</p>
+    <p class="hint"><b>Щоб зберегти файлом:</b> у тому самому вікні друку замість принтера обери
+    <b>«Зберегти як PDF»</b>. На айфоні: кнопка → «Друк» → розтягни прев'ю двома пальцями →
+    «Поділитися» → «Зберегти у файли».</p>
   </div>
 </div>
 
@@ -316,28 +366,26 @@ const band = () => '<div class="bandrow">' + orn(bandSeq(21), null) + '</div>';
 /* ── стан ─────────────────────────────────────────────────────────── */
 const SCHED1 = [
   '12:00 — Велкам-дрінк',
-  '12:30 — Гості розходяться по станціях',
-  '13:00 — Закуски, чекаємо на церемонію',
+  '12:30 — Станції',
+  '13:00 — Закуски',
   '13:00–13:30 — Активність',
   '*13:30 — Вихід нареченої',
   '*14:00–14:30 — Церемонія',
   '14:45 — Усі до столу',
   '14:45–16:30 — Стіл і активності',
-  '16:30 — Молодь їде в Хвильовий',
   '16:30–17:30 — Фотосет молодят',
-  '17:30 — Молодята їдуть у Хвильовий',
+  '17:30 — Виїзд у Хвильовий',
 ].join('\n');
 
 const SCHED2 = [
   '16:20 — Збір гостей',
-  '17:00 — Доїжджають гості з Ботсаду',
   '18:00 — Зустріч молодят',
   '*18:20 — Церемонія',
   '18:40 — Вітання',
   '19:00 — Армреслінг за букет',
   '19:20 — Кидання підвʼязки',
   '19:30 — Викрадення нареченої',
-  '*20:00 — Виступ Хамермана, перший танець',
+  '*20:00 — Хамерман і перший танець',
   '20:30 — Дискотека',
   '*21:30 — Торт',
 ].join('\n');
@@ -347,9 +395,9 @@ const DEFAULTS = {
   f_addr1:'вул. Симона Петлюри, 1 · метро «Університет»', f_arrow:'→',
   f_jar:'https://send.monobank.ua/jar/5TEeFknTmt',
   f_goal:'на потреби ЗСУ', f_kadr:'лютевесілля.укр/kadr', f_prizes:'10',
-  f_s1:SCHED1, f_s2:SCHED2,
+  f_seatmode:'a', f_guests:'37', f_tables:'6', f_seats:'8', f_s1:SCHED1, f_s2:SCHED2,
 };
-const KEY = 'tablychky-v5';
+const KEY = 'tablychky-v7';
 
 function loadState(){
   let saved = {};
@@ -359,17 +407,20 @@ function loadState(){
     if (el) el.value = (saved[k] != null && saved[k] !== '') ? saved[k] : DEFAULTS[k];
   });
   if ($('f_blank')) $('f_blank').checked = !!saved.blank;
+  if ($('f_notime')) $('f_notime').checked = !!saved.notime;
   return saved;
 }
 function saveState(){
   const out = {};
   Object.keys(DEFAULTS).forEach(function(k){ const el = $(k); if (el) out[k] = el.value; });
   out.blank = !!($('f_blank') && $('f_blank').checked);
+  out.notime = !!($('f_notime') && $('f_notime').checked);
   out.picked = CARDS.filter(c => c.on).map(c => c.id);
   try { localStorage.setItem(KEY, JSON.stringify(out)); } catch(e){}
 }
 const V = k => ($(k) ? $(k).value.trim() : DEFAULTS[k]);
 const isBlank = () => !!($('f_blank') && $('f_blank').checked);
+const noTime = () => !!($('f_notime') && $('f_notime').checked);
 const isA4 = () => V('f_size') !== 'a5';
 
 /* ── картки ───────────────────────────────────────────────────────── */
@@ -431,6 +482,10 @@ const CARDS = [
     body:['Одягнувся в нео-етно — ти в грі. Вишиванка, прикраси, орнамент — усе, що робить нас родом.',
           'Білу сукню лишаємо нареченій. За найкращий образ — приз.'] },
 
+  { id:'seatplan', loc:1, on:true, kind:'seats',
+    name:'Схема розсадки — самі столи (A4)',
+    note:'бланк зі столами й порожніми рядками під імена' },
+
   { id:'sched1', loc:1, on:true, kind:'sched', src:'f_s1',
     name:'Розклад дня (A4)', note:'з панелі «Розклад»' },
 
@@ -443,17 +498,18 @@ const CARDS = [
   { id:'arm_teaser', loc:2, on:true, kind:'sign',
     name:'Тизер на стіл армреслінгу', note:'«тут скоро щось буде»',
     title:'Армреслінг', sub:'тут скоро буде бійка',
-    body:['<b>Букет дістанеться тому, хто покладе всіх.</b>',
+    body:['<b>Букет дістанеться тій, хто покладе всіх.</b>',
+          'Вісім дівчат, пʼятнадцять хвилин. Замість кидання букета.',
           'Цей стіл готується до турніру. Запис — у ведучої.'] },
 
   { id:'arm_signup', loc:2, on:true, kind:'signup',
-    name:'Запис учасників турніру (A4)', note:'20 рядків, вішається біля столу' },
+    name:'Запис учасниць турніру (A4)', note:'8 місць і дві запасні, вішається біля столу' },
 
   { id:'arm_rules', loc:2, on:true, kind:'rules',
     name:'Правила армреслінгу (A4)', note:'щоб не сперечались' },
 
   { id:'arm_grid', loc:2, on:true, kind:'bracket',
-    name:'Турнірна таблиця — сітка (A4)', note:'8 учасників: чвертьфінали → фінал' },
+    name:'Турнірна таблиця — сітка (A4)', note:'8 дівчат: чвертьфінали → фінал' },
 
   { id:'instax2', loc:2, on:true, kind:'sign',
     name:'Інстакс + фотоальбом', note:'',
@@ -483,9 +539,9 @@ const CARDS = [
     qr:'f_kadr', qrcap:'залий і свої фото з телефона' },
 
   { id:'clay', loc:2, on:true, kind:'sign',
-    name:'Глиняні пряники', note:'кожному свій, іменний',
-    title:'Пряники', sub:'знайди свій',
-    body:['Кожен пряник підписаний імʼям — знайдіть свій і заберіть додому.',
+    name:'Глиняні гостинці', note:'іменні, кожному свій · назву можна змінити прямо на аркуші',
+    title:'Гостинці', sub:'знайди свій',
+    body:['Кожен гостинець із глини підписаний імʼям — знайдіть свій і заберіть додому.',
           'Катя ліпила їх руками, по одному на кожного з вас.'] },
 
   { id:'lottery2', loc:2, on:true, kind:'sign',
@@ -522,7 +578,27 @@ const CARDS = [
 const LOCNAME = n => n === 1 ? V('f_loc1') : n === 2 ? V('f_loc2') : '';
 const CROPS = '<span class="crop tl"></span><span class="crop tr"></span>'
             + '<span class="crop bl"></span><span class="crop br"></span>';
+/* Правки, що їх вписують просто на аркуші, зберігаються за стабільним
+   ключем — інакше вони зникають при кожному перемальовуванні й на
+   перезавантаженні сторінки. */
+const EKEY = 'tablychky-edits';
+let EDITS = {};
+try { EDITS = JSON.parse(localStorage.getItem(EKEY) || '{}') || {}; } catch(e){ EDITS = {}; }
+const ed = k => ' contenteditable="true" spellcheck="false" data-k="' + k + '"';
 const ED = ' contenteditable="true" spellcheck="false"';
+
+function applyEdits(){
+  document.getElementById('sheets').querySelectorAll('[data-k]').forEach(function(el){
+    const v = EDITS[el.getAttribute('data-k')];
+    if (v != null) el.innerHTML = v;
+  });
+  const n = Object.keys(EDITS).length;
+  const b = document.getElementById('btnReset');
+  if (b) { b.hidden = !n; b.textContent = 'Скинути мої правки (' + n + ')'; }
+}
+function saveEdits(){
+  try { localStorage.setItem(EKEY, JSON.stringify(EDITS)); } catch(e){}
+}
 
 function qrCanvas(text, px){
   const cv = document.createElement('canvas');
@@ -553,13 +629,13 @@ function qrBlock(c){
 function signHTML(c){
   const a4 = isA4();
   const head = c.head || (LOCNAME(c.loc) ? LOCNAME(c.loc) + ' · 6 вересня 2026' : 'Катя &amp; Діма · 6.09.2026');
-  const ttl = '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>';
+  const ttl = '<h1 class="ttl"' + ed(c.id + '.ttl') + '>' + esc(c.title) + '</h1>';
   return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
     + '<p class="head">' + head + '</p>'
     + '<div class="mid">'
     + (a4 ? ttl : wings(ttl))
-    + '<p class="sub"' + ED + '>' + esc(c.sub) + '</p>'
-    + c.body.map(b => '<p class="body"' + ED + '>' + b + '</p>').join('')
+    + '<p class="sub"' + ed(c.id + '.sub') + '>' + esc(c.sub) + '</p>'
+    + c.body.map((b, i) => '<p class="body"' + ed(c.id + '.b' + i) + '>' + b + '</p>').join('')
     + (c.addr && V('f_addr1') ? '<p class="body addr"' + ED + '><b>' + esc(V('f_addr1')) + '</b></p>' : '')
     + qrBlock(c)
     + '</div>'
@@ -580,13 +656,86 @@ function navHTML(c){
   return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
     + '<p class="head">' + esc(LOCNAME(1)) + ' · 6 вересня 2026</p>'
     + '<div class="mid"><p class="navarrow">' + arrowSVG(V('f_arrow'), a4 ? 95 : 48) + '</p>'
-    + '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>'
-    + '<p class="sub"' + ED + '>Катя &amp; Діма</p></div>'
+    + '<h1 class="ttl"' + ed('nav.ttl') + '>' + esc(c.title) + '</h1>'
+    + '<p class="sub"' + ed('nav.sub') + '>Катя &amp; Діма</p></div>'
     + (a4 ? band() : '') + '</div>';
 }
 
+function seatRow(mark){
+  return '<div class="seat"><span class="sn">' + esc(mark == null ? '' : mark) + '</span><span class="sl"></span></div>';
+}
+
+/* стіл молодят: смуга згори, двоє поруч під нею, обличчям до зали */
+function planHead(title, names){
+  return '<div class="plan head-table"><div class="plan-h">' + esc(title)
+    + ' <span>' + names.length + ' місця</span></div>'
+    + '<div class="board wide"></div><div class="pair">'
+    + names.map(n => '<div class="seat"><span class="sn">' + esc(n) + '</span><span class="sl"></span></div>').join('')
+    + '</div></div>';
+}
+
+/* стіл у плані: смуга посередині, місця обабіч */
+function planTable(title, n, opts){
+  const o = opts || {};
+  const left = o.left != null ? o.left : Math.ceil(n / 2);
+  const right = n - left;
+  const nameAt = o.names || {};
+  let l = '', r = '';
+  for (let i = 0; i < left; i++)  l += seatRow(nameAt[i + 1] || (i + 1));
+  for (let i = 0; i < right; i++) r += seatRow(nameAt[left + i + 1] || (left + i + 1));
+  return '<div class="plan' + (o.small ? ' small' : '') + '">'
+    + '<div class="plan-h">' + esc(title) + ' <span>' + n + ' місць</span></div>'
+    + '<div class="plan-body"><div class="side">' + l + '</div>'
+    + '<div class="board"></div><div class="side">' + r + '</div></div></div>';
+}
+
+function seatsHTML(){
+  const mode = V('f_seatmode');
+  const head = pageHead(LOCNAME(1) + ' · 6 вересня 2026', 'Схема розсадки');
+  const total = Math.max(2, Math.min(120, parseInt(V('f_guests'), 10) || 37));
+
+  if (mode === 'free')
+    return ['<div class="page">' + head + '<div class="seatfree"></div></div>'];
+
+  if (mode === 'a'){
+    const guests = total - 2;
+    const t1 = Math.ceil(guests / 2), t2 = guests - t1;
+    return [
+      '<div class="page">' + head
+        + planHead('Стіл молодят', ['Катя', 'Діма'])
+        + planTable('Стіл 1', t1) + '</div>',
+      '<div class="page">' + pageHead(LOCNAME(1) + ' · продовження', 'Схема розсадки')
+        + planTable('Стіл 2', t2) + band() + '</div>',
+    ];
+  }
+
+  if (mode === 'b'){
+    const left = Math.ceil(total / 2);
+    return ['<div class="page">' + head
+      + planTable('Спільний стіл', total, { left:left, names:{ 1:'Катя', 2:'Діма' } })
+      + '</div>'];
+  }
+
+  /* списки по столах */
+  const nT = Math.max(1, Math.min(24, parseInt(V('f_tables'), 10) || 6));
+  const nS = Math.max(1, Math.min(20, parseInt(V('f_seats'), 10) || 8));
+  const blocks = [];
+  for (let t = 1; t <= nT; t++){
+    let lines = '';
+    for (let i = 0; i < nS; i++) lines += '<div class="seatline"></div>';
+    blocks.push('<div class="stol"><div class="stolh">Стіл ' + t + '</div>' + lines + '</div>');
+  }
+  const blockMm = 7 + nS * 7.2 + 7;
+  const perSheet = Math.max(2, 2 * Math.floor(215 / blockMm));
+  const out = [];
+  for (let i = 0; i < blocks.length; i += perSheet)
+    out.push('<div class="page">' + (i === 0 ? head : pageHead(LOCNAME(1) + ' · продовження', 'Схема розсадки'))
+      + '<div class="stoly">' + blocks.slice(i, i + perSheet).join('') + '</div></div>');
+  return out;
+}
+
 function pageHead(head, h2){
-  return '<p class="head">' + esc(head) + '</p><h2' + ED + '>' + esc(h2) + '</h2>' + band();
+  return '<p class="head">' + esc(head) + '</p><h2' + ed('h2.' + h2) + '>' + esc(h2) + '</h2>' + band();
 }
 
 function schedHTML(c){
@@ -597,46 +746,50 @@ function schedHTML(c){
     for (let i = 0; i < 12; i++) l += '<div class="bl"><span class="t"></span><span class="e"></span></div>';
     return '<div class="page">' + head + '<div class="blank">' + l + '</div></div>';
   }
-  const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l){
+  const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l, idx){
     const mark = l.charAt(0) === '*';
     const t = mark ? l.slice(1).trim() : l;
     const m = t.match(/^(\d{1,2}[:.]\d{2}(?:\s*[—–-]\s*\d{1,2}[:.]\d{2})?)\s*[—–-]\s*(.*)$/);
     const tm = m ? m[1].replace(/\./g, ':').replace(/\s*[—–-]\s*/, '–') : '';
-    const cls = ['tm'].concat(tm.indexOf('–') >= 0 ? ['range'] : []).join(' ');
+    const cls = noTime() ? 'tm empty'
+      : ['tm'].concat(tm.indexOf('–') >= 0 ? ['range'] : []).join(' ');
     return '<li' + (mark ? ' class="mark"' : '') + '><span class="' + cls + '">'
-      + esc(tm) + '</span><span class="ev"' + ED + '>'
+      + (noTime() ? '' : esc(tm)) + '</span><span class="ev"' + ed(c.src + '.ev' + idx) + '>'
       + esc(m ? m[2] : t) + '</span></li>';
   }).join('');
-  return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul></div>';
+  return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul>' + band() + '</div>';
 }
 
 function signupHTML(){
   let l = '';
-  for (let i = 1; i <= 20; i++) l += '<div class="sline"><span class="n">' + i + '</span><span></span></div>';
+  for (let i = 1; i <= 8; i++) l += '<div class="sline"><span class="n">' + i + '</span><span></span></div>';
+  for (let i = 1; i <= 2; i++) l += '<div class="sline spare"><span class="n">зап.</span><span></span></div>';
   return '<div class="page">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Хто бʼється')
-    + '<div class="signup">' + l + '</div></div>';
+    + '<p class="lead">Вісім дівчат, пʼятнадцять хвилин, букет переможниці.<br>'
+    + 'Впишіть себе — і чекайте, поки ведуча назве вашу пару.</p>'
+    + '<div class="signup">' + l + '</div>' + band() + '</div>';
 }
 
 const RULES = [
-  'Лікоть на столі й не відривається до кінця сутички. Відірвав — програв.',
-  'Вільна рука тримається за край столу або за ручку. Не за суперника.',
+  'Грають вісім дівчат — ті, що за традицією ловили б букет. Місця в сітці — за записом.',
+  'Увесь турнір триває пʼятнадцять хвилин: сім сутичок, приблизно по дві на кожну.',
+  'Лікоть на столі й не відривається до кінця сутички. Відірвала — програла.',
+  'Вільна рука тримається за край столу або за ручку. Не за суперницю.',
   'Старт тільки по команді ведучої: «Готові — руш».',
-  'Перемога зараховується, коли тильна сторона долоні суперника торкнулась столу.',
-  'Фальстарт — перегравання. Другий фальстарт від того самого гравця — поразка.',
-  'Категорій немає. Чоловіки, жінки, свідки, теща — усі в одній сітці.',
-  'Рука одна на весь турнір: з якої почав, тією і йдеш до фіналу.',
-  'Ведуча — суддя. Її рішення остаточне й оскарженню не підлягає.',
+  'Перемога зараховується, коли тильна сторона долоні суперниці торкнулась столу.',
+  'Фальстарт — перегравання. Другий фальстарт від тієї самої гравчині — поразка.',
+  'Рука одна на весь турнір. Судить ведуча, її рішення остаточне й оскарженню не підлягає.',
 ];
 
 function rulesHTML(){
   return '<div class="page">' + pageHead(LOCNAME(2) + ' · замість кидання букета', 'Армреслінг за букет')
-    + '<ol class="rules">' + RULES.map(r => '<li' + ED + '>' + r + '</li>').join('') + '</ol>'
-    + '<p class="note"><b>Переможець забирає букет.</b> Не ловить і не вихоплює — чесно виборює. '
-    + 'Наступне весілля тепер повністю на його совісті.</p></div>';
+    + '<ol class="rules">' + RULES.map((r, i) => '<li' + ed('rules.' + i) + '>' + r + '</li>').join('') + '</ol>'
+    + '<p class="note"><b>Переможниця забирає букет.</b> Не ловить і не вихоплює — чесно виборює. '
+    + 'Наступне весілля тепер повністю на її совісті.</p></div>';
 }
 
 function bracketHTML(){
-  const cols = [[8,'Чвертьфінали'], [4,'Півфінали'], [2,'Фінал'], [1,'Переможець']];
+  const cols = [[8,'Чвертьфінали'], [4,'Півфінали'], [2,'Фінал'], [1,'Переможниця']];
   const heads = cols.map(c => '<div class="blbl">' + c[1] + '</div>').join('');
   const bodies = cols.map(function(c){
     let s = '<div class="bcol">';
@@ -645,8 +798,8 @@ function bracketHTML(){
   }).join('');
   return '<div class="page">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Турнірна сітка')
     + '<div class="bracket">' + heads + bodies + '</div>'
-    + '<p class="note"><b>Переможець забирає букет.</b> Якщо охочих більше восьми — '
-    + 'перший раунд грайте просто в парах, а сюди вписуйте вже тих, хто пройшов.</p></div>';
+    + '<p class="note"><b>Вісім дівчат, пʼятнадцять хвилин, сім сутичок.</b> '
+    + 'Переможниця забирає букет.</p></div>';
 }
 
 function jarMiniHTML(){
@@ -701,6 +854,7 @@ function render(){
     const tag = c.loc === 1 ? V('f_loc1') : c.loc === 2 ? V('f_loc2') : 'обидві';
     if (c.kind === 'sign')         (a4 ? addFull : addHalf)(signHTML(c), tag);
     else if (c.kind === 'nav')     (a4 ? addFull : addHalf)(navHTML(c), tag);
+    else if (c.kind === 'seats'){ flush(); seatsHTML().forEach(h => addFull(h, tag)); }
     else if (c.kind === 'sched')   addFull(schedHTML(c), tag);
     else if (c.kind === 'signup')  addFull(signupHTML(), tag);
     else if (c.kind === 'rules')   addFull(rulesHTML(), tag);
@@ -715,6 +869,7 @@ function render(){
     slot.appendChild(qrCanvas(slot.getAttribute('data-url'),
       parseInt(slot.getAttribute('data-px'), 10) || 220));
   });
+  applyEdits();
   $('count').textContent = picked.length + ' поз. · ' + sheets.length + ' аркушів A4';
   fitSheets();
   saveState();
@@ -768,7 +923,7 @@ const saved = loadState();
 if (saved && Array.isArray(saved.picked)) CARDS.forEach(c => { c.on = saved.picked.indexOf(c.id) >= 0; });
 buildList();
 
-Object.keys(DEFAULTS).concat(['f_blank']).forEach(function(k){
+Object.keys(DEFAULTS).concat(['f_blank', 'f_notime']).forEach(function(k){
   const el = $(k);
   if (!el) return;
   const ev = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
@@ -778,6 +933,20 @@ Object.keys(DEFAULTS).concat(['f_blank']).forEach(function(k){
     });
     render();
   });
+});
+
+$('sheets').addEventListener('input', function(e){
+  const el = e.target.closest && e.target.closest('[data-k]');
+  if (!el) return;
+  EDITS[el.getAttribute('data-k')] = el.innerHTML;
+  saveEdits();
+  const b = $('btnReset');
+  if (b){ b.hidden = false; b.textContent = 'Скинути мої правки (' + Object.keys(EDITS).length + ')'; }
+});
+
+$('btnReset').addEventListener('click', function(){
+  if (!confirm('Прибрати всі правки, вписані просто на аркушах?')) return;
+  EDITS = {}; saveEdits(); render();
 });
 
 $('btnPrint').addEventListener('click', () => window.print());
