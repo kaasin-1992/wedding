@@ -65,6 +65,13 @@ button:active{transform:scale(.98)}
 .sheet-tag{position:absolute;top:4mm;right:6mm;font-size:7pt;font-weight:700;letter-spacing:.14em;
   text-transform:uppercase;color:#D8CCC6;font-family:var(--sans)}
 [contenteditable]:focus{outline:1.5px dashed var(--red);outline-offset:3px}
+/* порожні рядки, куди вписують від руки, мають бути ще й клікабельні */
+.sl[contenteditable],.seatline[contenteditable],.bslot .ln[contenteditable],
+.tm.empty[contenteditable],.sline span[contenteditable]{
+  min-height:6mm;padding:0 2mm 1mm;text-align:left;font-size:11pt;
+  font-weight:500;color:var(--ink);letter-spacing:0}
+.sl[contenteditable]{align-self:stretch;display:flex;align-items:flex-end}
+.seatfree[contenteditable]{padding:5mm;text-align:left;font-size:11pt}
 
 /* вибійка */
 .orn{color:var(--red);display:block}
@@ -627,6 +634,28 @@ try { EDITS = JSON.parse(localStorage.getItem(EKEY) || '{}') || {}; } catch(e){ 
 const ed = k => ' contenteditable="true" spellcheck="false" data-k="' + k + '"';
 const ED = ' contenteditable="true" spellcheck="false"';
 
+/* Усе, що не має власного ключа — шапки, підписи під QR, колонка
+   часу, заголовки столів, порожні рядки схеми — теж має редагуватись.
+   Ключ будується з блоку, класу й порядкового номера серед свого
+   класу, тож переживає зміну набору табличок і розміру аркуша. */
+const AUTO_SEL = ['.head', '.qrcap', '.tm', '.blbl', '.note', '.plan-h', '.stolh',
+  '.lead', '.cap', '.mt', '.ms', '.yn', '.yc', '.sn', '.sl', '.seatline',
+  '.bslot .ln', '.sline span:last-child', '.seatfree'].join(',');
+
+function autoEditable(){
+  document.getElementById('sheets').querySelectorAll('[data-sid]').forEach(function(box){
+    const sid = box.getAttribute('data-sid'), seen = {};
+    box.querySelectorAll(AUTO_SEL).forEach(function(el){
+      const cls = String(el.getAttribute('class') || el.tagName).split(' ')[0];
+      seen[cls] = (seen[cls] || 0) + 1;
+      if (el.hasAttribute('data-k')) return;
+      el.setAttribute('data-k', 'a:' + sid + ':' + cls + ':' + seen[cls]);
+      el.setAttribute('contenteditable', 'true');
+      el.setAttribute('spellcheck', 'false');
+    });
+  });
+}
+
 function applyEdits(){
   document.getElementById('sheets').querySelectorAll('[data-k]').forEach(function(el){
     const v = EDITS[el.getAttribute('data-k')];
@@ -670,7 +699,7 @@ function signHTML(c){
   const a4 = isA4();
   const head = c.head || (LOCNAME(c.loc) ? LOCNAME(c.loc) + ' · 6 вересня 2026' : 'Катя &amp; Діма · 6.09.2026');
   const ttl = '<h1 class="ttl"' + ed(c.id + '.ttl') + '>' + esc(c.title) + '</h1>';
-  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
+  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '" data-sid="' + c.id + '">' + (a4 ? band() : CROPS)
     + '<p class="head">' + head + '</p>'
     + '<div class="mid">'
     + (a4 ? ttl : wings(ttl))
@@ -698,7 +727,7 @@ function arrowSVG(dir, mm){
 
 function navHTML(c){
   const a4 = isA4();
-  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
+  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '" data-sid="nav">' + (a4 ? band() : CROPS)
     + '<p class="head">' + esc(LOCNAME(1)) + ' · 6 вересня 2026</p>'
     + '<div class="mid"><p class="navarrow">' + arrowSVG(V('f_arrow'), a4 ? 95 : 48) + '</p>'
     + '<h1 class="ttl"' + ed('nav.ttl') + '>' + esc(c.title) + '</h1>'
@@ -740,16 +769,16 @@ function seatsHTML(){
   const total = Math.max(2, Math.min(120, parseInt(V('f_guests'), 10) || 37));
 
   if (mode === 'free')
-    return ['<div class="page">' + head + '<div class="seatfree"></div></div>'];
+    return ['<div class="page" data-sid="seatfree">' + head + '<div class="seatfree"></div></div>'];
 
   const variantA = () => {
     const guests = total - 2;
     const t1 = Math.ceil(guests / 2), t2 = guests - t1;
     return [
-      '<div class="page">' + pageHead(LOCNAME(1) + ' · варіант 1 з 2', 'Схема розсадки')
+      '<div class="page" data-sid="seatA1">' + pageHead(LOCNAME(1) + ' · варіант 1 з 2', 'Схема розсадки')
         + planHead('Стіл молодят', ['Катя', 'Діма'])
         + planTable('Стіл 1', t1) + '</div>',
-      '<div class="page">' + pageHead(LOCNAME(1) + ' · варіант 1, продовження', 'Схема розсадки')
+      '<div class="page" data-sid="seatA2">' + pageHead(LOCNAME(1) + ' · варіант 1, продовження', 'Схема розсадки')
         + planTable('Стіл 2', t2) + band() + '</div>',
     ];
   };
@@ -760,7 +789,7 @@ function seatsHTML(){
     const names = {};
     names[mid] = 'Катя';
     names[Math.min(left, mid + 1)] = 'Діма';
-    return ['<div class="page">'
+    return ['<div class="page" data-sid="seatB">'
       + pageHead(LOCNAME(1) + ' · ' + lbl, 'Схема розсадки')
       + planTable('Спільний стіл', total, { left:left, names:names })
       + '</div>'];
@@ -783,7 +812,7 @@ function seatsHTML(){
   const perSheet = Math.max(2, 2 * Math.floor(215 / blockMm));
   const out = [];
   for (let i = 0; i < blocks.length; i += perSheet)
-    out.push('<div class="page">' + (i === 0 ? head : pageHead(LOCNAME(1) + ' · продовження', 'Схема розсадки'))
+    out.push('<div class="page" data-sid="seatL' + i + '">' + (i === 0 ? head : pageHead(LOCNAME(1) + ' · продовження', 'Схема розсадки'))
       + '<div class="stoly">' + blocks.slice(i, i + perSheet).join('') + '</div></div>');
   return out;
 }
@@ -798,7 +827,7 @@ function schedHTML(c){
   if (isBlank()){
     let l = '';
     for (let i = 0; i < 12; i++) l += '<div class="bl"><span class="t"></span><span class="e"></span></div>';
-    return '<div class="page">' + head + '<div class="blank">' + l + '</div></div>';
+    return '<div class="page" data-sid="' + c.id + '">' + head + '<div class="blank">' + l + '</div></div>';
   }
   const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l, idx){
     const mark = l.charAt(0) === '*';
@@ -811,14 +840,14 @@ function schedHTML(c){
       + (noTime() ? '' : esc(tm)) + '</span><span class="ev"' + ed(c.src + '.ev' + idx) + '>'
       + esc(m ? m[2] : t) + '</span></li>';
   }).join('');
-  return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul>' + band() + '</div>';
+  return '<div class="page" data-sid="' + c.id + '">' + head + '<ul class="sched">' + rows + '</ul>' + band() + '</div>';
 }
 
 function signupHTML(){
   let l = '';
   for (let i = 1; i <= 8; i++) l += '<div class="sline"><span class="n">' + i + '</span><span></span></div>';
   for (let i = 1; i <= 2; i++) l += '<div class="sline spare"><span class="n">зап.</span><span></span></div>';
-  return '<div class="page">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Хто бʼється')
+  return '<div class="page" data-sid="signup">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Хто бʼється')
     + '<p class="lead">Вісім дівчат, пʼятнадцять хвилин, букет переможниці.<br>'
     + 'Впишіть себе — і чекайте, поки ведуча назве вашу пару.</p>'
     + '<div class="signup">' + l + '</div>' + band() + '</div>';
@@ -836,7 +865,7 @@ const RULES = [
 ];
 
 function rulesHTML(){
-  return '<div class="page">' + pageHead(LOCNAME(2) + ' · замість кидання букета', 'Армреслінг за букет')
+  return '<div class="page" data-sid="rules">' + pageHead(LOCNAME(2) + ' · замість кидання букета', 'Армреслінг за букет')
     + '<ol class="rules">' + RULES.map((r, i) => '<li' + ed('rules.' + i) + '>' + r + '</li>').join('') + '</ol>'
     + '<p class="note"><b>Переможниця забирає букет.</b> Не ловить і не вихоплює — чесно виборює. '
     + 'Наступне весілля тепер повністю на її совісті.</p></div>';
@@ -850,7 +879,7 @@ function bracketHTML(){
     for (let i = 0; i < c[0]; i++) s += '<div class="bslot"><span class="ln"></span></div>';
     return s + '</div>';
   }).join('');
-  return '<div class="page">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Турнірна сітка')
+  return '<div class="page" data-sid="bracket">' + pageHead(LOCNAME(2) + ' · турнір за букет', 'Турнірна сітка')
     + '<div class="bracket">' + heads + bodies + '</div>'
     + '<p class="note"><b>Вісім дівчат, пʼятнадцять хвилин, сім сутичок.</b> '
     + 'Переможниця забирає букет.</p></div>';
@@ -868,7 +897,7 @@ function jarMiniHTML(){
       + '<div class="ms">Замість зайвого дарунка — ' + esc(goal)
       + (url ? '<br>' + esc(url.replace(/^https?:\/\//i, '')) : '') + '</div></div>';
   }
-  return '<div class="page" style="padding:10mm"><div class="qrmini">' + cells + '</div></div>';
+  return '<div class="page" data-sid="mini" style="padding:10mm"><div class="qrmini">' + cells + '</div></div>';
 }
 
 function numbersHTML(){
@@ -880,7 +909,7 @@ function numbersHTML(){
     + '<div class="big">' + i + '</div><div class="cap">на приз</div></div>');
   const out = [];
   for (let i = 0; i < cells.length; i += 20)
-    out.push('<div class="sheet"><span class="sheet-tag">номерки</span><div class="nums">'
+    out.push('<div class="sheet" data-sid="nums"><span class="sheet-tag">номерки</span><div class="nums">'
       + cells.slice(i, i + 20).join('') + '</div></div>');
   return out;
 }
@@ -923,6 +952,7 @@ function render(){
     slot.appendChild(qrCanvas(slot.getAttribute('data-url'),
       parseInt(slot.getAttribute('data-px'), 10) || 220));
   });
+  autoEditable();
   applyEdits();
   $('count').textContent = picked.length + ' поз. · ' + sheets.length + ' аркушів A4';
   fitSheets();
