@@ -85,6 +85,20 @@ button:active{transform:scale(.98)}
 .navarrow{color:var(--red);margin:0 0 8mm;line-height:0}
 .sign.a5 .navarrow{margin-bottom:4mm}
 .body.addr{margin-top:6mm}
+.years{display:flex;align-items:flex-start;justify-content:center;gap:7mm;margin:9mm 0 0;color:var(--red)}
+.yr{display:flex;flex-direction:column;align-items:center;gap:1mm}
+.ysep{display:flex;align-items:center;color:var(--red)}
+.yn{font-weight:var(--w-ttl);color:var(--red);line-height:.9;letter-spacing:var(--track)}
+.yc{font-size:8pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--grey);
+  font-family:var(--sans)}
+.sign.a4 .years{gap:10mm;margin-top:11mm}
+.sign.a4 .yn{font-size:40pt}
+.sign.a4 .ysep{height:40pt}
+.sign.a5 .years{gap:5mm;margin-top:5mm}
+.sign.a5 .yn{font-size:20pt}
+.sign.a5 .ysep{height:20pt}
+.sign.a5 .yc{font-size:6.5pt}
+
 .qrblock{display:flex;flex-direction:column;align-items:center;gap:2.5mm;margin:8mm 0 0}
 .qrblock canvas{image-rendering:pixelated}
 .qrcap{font-size:9.5pt;color:var(--grey);font-family:var(--sans);line-height:1.35}
@@ -454,6 +468,14 @@ const CARDS = [
     title:'Розсадка', sub:'знайди своє імʼя й номер столу',
     body:['Якщо імені немає або хочеться сісти інакше — скажіть нам, ми все владнаємо.'] },
 
+  { id:'letters1', loc:1, on:true, kind:'sign',
+    name:'Листи в майбутнє', note:'до скрині — тієї самої, що для конвертів, або окремої',
+    title:'Листи в майбутнє', sub:'прочитаємо не сьогодні',
+    body:['Візьміть аркуш і конверт. Напишіть нам що завгодно: побажання, пораду, передбачення, таємницю.',
+          'Згори на конверті поставте <b>рік</b> — через стільки ми його відкриємо. І підпишіться, щоб ми знали, кого перечитуємо.',
+          'Запечатаний конверт — до скрині.'],
+    years:[[1,'рік'], [3,'роки'], [5,'років'], [10,'років']] },
+
   { id:'box1', loc:1, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'поштова скринька',
     title:'На наш перший рік', sub:'скринька для листівок і конвертів',
@@ -521,10 +543,10 @@ const CARDS = [
     name:'Турнірна таблиця — сітка (A4)', note:'8 дівчат: чвертьфінали → фінал' },
 
   { id:'instax2', loc:2, on:true, kind:'sign',
-    name:'Інстакс + фотоальбом', note:'',
-    title:'Інстакс', sub:'знімай і вклеюй',
-    body:['Зробіть фото, дочекайтесь, поки проявиться, вклейте в альбом.',
-          '<b>Підпис обовʼязковий</b> — ми потім не згадаємо, хто це.',
+    name:'Фотоальбом + інстакс', note:'куточки, підписи, наклейки зі шкатулки',
+    title:'Фотоальбом', sub:'знімай, вклеюй, підписуй',
+    body:['Зробіть фото інстаксом і дочекайтесь, поки проявиться.',
+          'Вклейте його в альбом на <b>куточки</b> — вони лежать поруч. Підпишіть, хто це і що відбувається: ми потім не згадаємо. Прикрасити можна <b>наклейками зі шкатулки</b>.',
           '<b>Друге фото — ваше.</b> Зробіть ще один кадр, заберіть із собою, приклейте магнітик — і одразу на холодильник.'],
     qr:'f_kadr', qrcap:'або фоткай на телефон — за кодом завдання' },
 
@@ -559,6 +581,14 @@ const CARDS = [
     title:'Розіграш', sub:'відірви корінець і кинь у коробку',
     body:['Наприкінці ми витягнемо номери — і роздамо призи.',
           '<b>Не отримали паперове запрошення?</b> Пошукайте своє тут — воно на вас чекає. Відірвіть корінець і теж киньте в коробку.'] },
+
+  { id:'letters2', loc:2, on:true, kind:'sign',
+    name:'Листи в майбутнє', note:'друга, для вечора',
+    title:'Листи в майбутнє', sub:'прочитаємо не сьогодні',
+    body:['Візьміть аркуш і конверт. Напишіть нам що завгодно: побажання, пораду, передбачення, таємницю.',
+          'Згори на конверті поставте <b>рік</b> — через стільки ми його відкриємо. І підпишіться, щоб ми знали, кого перечитуємо.',
+          'Запечатаний конверт — до скрині.'],
+    years:[[1,'рік'], [3,'роки'], [5,'років'], [10,'років']] },
 
   { id:'box2', loc:2, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'друга, для вечора',
@@ -647,6 +677,11 @@ function signHTML(c){
     + '<p class="sub"' + ed(c.id + '.sub') + '>' + esc(c.sub) + '</p>'
     + c.body.map((b, i) => '<p class="body"' + ed(c.id + '.b' + i) + '>' + b + '</p>').join('')
     + (c.addr && V('f_addr1') ? '<p class="body addr"' + ED + '><b>' + esc(V('f_addr1')) + '</b></p>' : '')
+    + (c.years ? '<div class="years">' + c.years.map(function(y, i){
+        return (i ? '<span class="ysep">' + orn(['dot'], a4 ? 1.7 : 1.1) + '</span>' : '')
+          + '<div class="yr"><span class="yn">' + y[0] + '</span>'
+          + '<span class="yc">' + esc(y[1]) + '</span></div>';
+      }).join('') + '</div>' : '')
     + qrBlock(c)
     + '</div>'
     + (a4 ? band() : '') + '</div>';
@@ -718,10 +753,18 @@ function seatsHTML(){
         + planTable('Стіл 2', t2) + band() + '</div>',
     ];
   };
-  const variantB = (lbl) => ['<div class="page">'
-    + pageHead(LOCNAME(1) + ' · ' + lbl, 'Схема розсадки')
-    + planTable('Спільний стіл', total, { left:Math.ceil(total / 2), names:{ 1:'Катя', 2:'Діма' } })
-    + '</div>'];
+  const variantB = (lbl) => {
+    const left = Math.ceil(total / 2);
+    /* молодята сидять посередині довгого боку, а не з краю */
+    const mid = Math.max(1, Math.floor((left - 1) / 2) + 1);
+    const names = {};
+    names[mid] = 'Катя';
+    names[Math.min(left, mid + 1)] = 'Діма';
+    return ['<div class="page">'
+      + pageHead(LOCNAME(1) + ' · ' + lbl, 'Схема розсадки')
+      + planTable('Спільний стіл', total, { left:left, names:names })
+      + '</div>'];
+  };
 
   if (mode === 'a')  return variantA();
   if (mode === 'b')  return variantB('6 вересня 2026');
