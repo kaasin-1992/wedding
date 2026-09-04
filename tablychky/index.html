@@ -302,9 +302,12 @@ button:active{transform:scale(.98)}
       <button id="btnSofi">Тільки перша локація</button>
       <button id="btnHvlv">Тільки друга локація</button>
       <button id="btnNone">Зняти все</button>
+      <button id="btnReset" hidden>Скинути мої правки</button>
       <span class="count" id="count"></span>
     </div>
     <p class="hint">У вікні друку: A4, <b>«Фон і зображення»</b> увімкнено, поля <b>«Немає»</b>. Інакше червоне не надрукується.</p>
+    <p class="hint">Усе, що виправляєш просто на аркуші, <b>зберігається автоматично</b> в цьому браузері
+    й переживає перезавантаження. Правки з іншого пристрою сюди не потраплять.</p>
     <p class="hint"><b>Щоб зберегти файлом:</b> у тому самому вікні друку замість принтера обери
     <b>«Зберегти як PDF»</b>. На айфоні: кнопка → «Друк» → розтягни прев'ю двома пальцями →
     «Поділитися» → «Зберегти у файли».</p>
@@ -575,7 +578,27 @@ const CARDS = [
 const LOCNAME = n => n === 1 ? V('f_loc1') : n === 2 ? V('f_loc2') : '';
 const CROPS = '<span class="crop tl"></span><span class="crop tr"></span>'
             + '<span class="crop bl"></span><span class="crop br"></span>';
+/* Правки, що їх вписують просто на аркуші, зберігаються за стабільним
+   ключем — інакше вони зникають при кожному перемальовуванні й на
+   перезавантаженні сторінки. */
+const EKEY = 'tablychky-edits';
+let EDITS = {};
+try { EDITS = JSON.parse(localStorage.getItem(EKEY) || '{}') || {}; } catch(e){ EDITS = {}; }
+const ed = k => ' contenteditable="true" spellcheck="false" data-k="' + k + '"';
 const ED = ' contenteditable="true" spellcheck="false"';
+
+function applyEdits(){
+  document.getElementById('sheets').querySelectorAll('[data-k]').forEach(function(el){
+    const v = EDITS[el.getAttribute('data-k')];
+    if (v != null) el.innerHTML = v;
+  });
+  const n = Object.keys(EDITS).length;
+  const b = document.getElementById('btnReset');
+  if (b) { b.hidden = !n; b.textContent = 'Скинути мої правки (' + n + ')'; }
+}
+function saveEdits(){
+  try { localStorage.setItem(EKEY, JSON.stringify(EDITS)); } catch(e){}
+}
 
 function qrCanvas(text, px){
   const cv = document.createElement('canvas');
@@ -606,13 +629,13 @@ function qrBlock(c){
 function signHTML(c){
   const a4 = isA4();
   const head = c.head || (LOCNAME(c.loc) ? LOCNAME(c.loc) + ' · 6 вересня 2026' : 'Катя &amp; Діма · 6.09.2026');
-  const ttl = '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>';
+  const ttl = '<h1 class="ttl"' + ed(c.id + '.ttl') + '>' + esc(c.title) + '</h1>';
   return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
     + '<p class="head">' + head + '</p>'
     + '<div class="mid">'
     + (a4 ? ttl : wings(ttl))
-    + '<p class="sub"' + ED + '>' + esc(c.sub) + '</p>'
-    + c.body.map(b => '<p class="body"' + ED + '>' + b + '</p>').join('')
+    + '<p class="sub"' + ed(c.id + '.sub') + '>' + esc(c.sub) + '</p>'
+    + c.body.map((b, i) => '<p class="body"' + ed(c.id + '.b' + i) + '>' + b + '</p>').join('')
     + (c.addr && V('f_addr1') ? '<p class="body addr"' + ED + '><b>' + esc(V('f_addr1')) + '</b></p>' : '')
     + qrBlock(c)
     + '</div>'
@@ -633,8 +656,8 @@ function navHTML(c){
   return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
     + '<p class="head">' + esc(LOCNAME(1)) + ' · 6 вересня 2026</p>'
     + '<div class="mid"><p class="navarrow">' + arrowSVG(V('f_arrow'), a4 ? 95 : 48) + '</p>'
-    + '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>'
-    + '<p class="sub"' + ED + '>Катя &amp; Діма</p></div>'
+    + '<h1 class="ttl"' + ed('nav.ttl') + '>' + esc(c.title) + '</h1>'
+    + '<p class="sub"' + ed('nav.sub') + '>Катя &amp; Діма</p></div>'
     + (a4 ? band() : '') + '</div>';
 }
 
@@ -712,7 +735,7 @@ function seatsHTML(){
 }
 
 function pageHead(head, h2){
-  return '<p class="head">' + esc(head) + '</p><h2' + ED + '>' + esc(h2) + '</h2>' + band();
+  return '<p class="head">' + esc(head) + '</p><h2' + ed('h2.' + h2) + '>' + esc(h2) + '</h2>' + band();
 }
 
 function schedHTML(c){
@@ -723,7 +746,7 @@ function schedHTML(c){
     for (let i = 0; i < 12; i++) l += '<div class="bl"><span class="t"></span><span class="e"></span></div>';
     return '<div class="page">' + head + '<div class="blank">' + l + '</div></div>';
   }
-  const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l){
+  const rows = V(c.src).split('\n').map(s => s.trim()).filter(Boolean).map(function(l, idx){
     const mark = l.charAt(0) === '*';
     const t = mark ? l.slice(1).trim() : l;
     const m = t.match(/^(\d{1,2}[:.]\d{2}(?:\s*[—–-]\s*\d{1,2}[:.]\d{2})?)\s*[—–-]\s*(.*)$/);
@@ -731,7 +754,7 @@ function schedHTML(c){
     const cls = noTime() ? 'tm empty'
       : ['tm'].concat(tm.indexOf('–') >= 0 ? ['range'] : []).join(' ');
     return '<li' + (mark ? ' class="mark"' : '') + '><span class="' + cls + '">'
-      + (noTime() ? '' : esc(tm)) + '</span><span class="ev"' + ED + '>'
+      + (noTime() ? '' : esc(tm)) + '</span><span class="ev"' + ed(c.src + '.ev' + idx) + '>'
       + esc(m ? m[2] : t) + '</span></li>';
   }).join('');
   return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul>' + band() + '</div>';
@@ -760,7 +783,7 @@ const RULES = [
 
 function rulesHTML(){
   return '<div class="page">' + pageHead(LOCNAME(2) + ' · замість кидання букета', 'Армреслінг за букет')
-    + '<ol class="rules">' + RULES.map(r => '<li' + ED + '>' + r + '</li>').join('') + '</ol>'
+    + '<ol class="rules">' + RULES.map((r, i) => '<li' + ed('rules.' + i) + '>' + r + '</li>').join('') + '</ol>'
     + '<p class="note"><b>Переможниця забирає букет.</b> Не ловить і не вихоплює — чесно виборює. '
     + 'Наступне весілля тепер повністю на її совісті.</p></div>';
 }
@@ -846,6 +869,7 @@ function render(){
     slot.appendChild(qrCanvas(slot.getAttribute('data-url'),
       parseInt(slot.getAttribute('data-px'), 10) || 220));
   });
+  applyEdits();
   $('count').textContent = picked.length + ' поз. · ' + sheets.length + ' аркушів A4';
   fitSheets();
   saveState();
@@ -909,6 +933,20 @@ Object.keys(DEFAULTS).concat(['f_blank', 'f_notime']).forEach(function(k){
     });
     render();
   });
+});
+
+$('sheets').addEventListener('input', function(e){
+  const el = e.target.closest && e.target.closest('[data-k]');
+  if (!el) return;
+  EDITS[el.getAttribute('data-k')] = el.innerHTML;
+  saveEdits();
+  const b = $('btnReset');
+  if (b){ b.hidden = false; b.textContent = 'Скинути мої правки (' + Object.keys(EDITS).length + ')'; }
+});
+
+$('btnReset').addEventListener('click', function(){
+  if (!confirm('Прибрати всі правки, вписані просто на аркушах?')) return;
+  EDITS = {}; saveEdits(); render();
 });
 
 $('btnPrint').addEventListener('click', () => window.print());
