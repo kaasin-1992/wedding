@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Таблички для друку · Катя &amp; Діма</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#3A2530; --muted:#8A6E76; --wine:#B0464E; --gold:#B98A4B;
+  --line:#E3D2CB; --paper:#FFFFFF; --cream:#FBF3EF;
+  --serif:'Cormorant Garamond', Georgia, serif;
+  --sans:'Manrope', -apple-system, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#E8DFDB;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+
+/* ─────────── панель (тільки на екрані) ─────────── */
+.panel{max-width:900px;margin:0 auto;padding:26px 18px 8px}
+.panel h1{font-family:var(--serif);font-weight:600;font-size:34px;margin:0 0 4px}
+.panel h1 em{font-style:italic;color:var(--wine)}
+.panel .sub{color:var(--muted);margin:0 0 20px}
+.box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.box h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--wine);margin:0 0 12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=url],input[type=number],textarea{
+  width:100%;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:9px;background:#fff;color:var(--ink)}
+textarea{min-height:150px;resize:vertical;line-height:1.45;font-size:13px}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 18px}
+.list .grp{grid-column:1/-1;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--gold);margin:12px 0 4px;border-top:1px solid var(--line);padding-top:10px}
+.list .grp:first-child{border-top:0;margin-top:0;padding-top:0}
+.chk{display:flex;gap:9px;align-items:flex-start;padding:5px 0;cursor:pointer}
+.chk input{margin:3px 0 0;flex:0 0 auto;width:16px;height:16px;accent-color:var(--wine)}
+.chk .t{font-size:14px;line-height:1.35}
+.chk .t small{display:block;color:var(--muted);font-size:12px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+button{font:inherit;font-weight:600;font-size:14px;padding:9px 15px;border-radius:10px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+button.primary{background:var(--wine);border-color:var(--wine);color:#fff}
+button:active{transform:scale(.98)}
+.count{color:var(--muted);font-size:13px;align-self:center;margin-left:4px}
+
+/* ─────────── аркуші ─────────── */
+.sheets{padding:10px 0 60px}
+.sheet{width:210mm;height:297mm;background:var(--paper);margin:0 auto 16px;
+  box-shadow:0 6px 24px rgba(90,60,65,.18);overflow:hidden;position:relative;
+  display:flex;flex-direction:column}
+.sheet.half{}
+.cut{border-top:1px dashed #D9C9C2}
+
+/* картка A5 (альбомна) — дві на аркуш */
+.card{height:148.5mm;padding:16mm 18mm;display:flex;flex-direction:column;position:relative}
+.frame{flex:1;border:1.1pt solid var(--gold);border-radius:3mm;padding:9mm 10mm;
+  display:flex;flex-direction:column;text-align:center;justify-content:center;position:relative}
+.eyebrow{font-size:8.5pt;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);
+  margin:0 0 4mm}
+.ttl{font-family:var(--serif);font-weight:600;font-size:30pt;line-height:1.02;margin:0;color:var(--ink)}
+.ttl em{font-style:italic;color:var(--wine)}
+.rule{width:16mm;height:0;border-top:1.1pt solid var(--wine);margin:4mm auto 4.5mm}
+.body{font-size:11.5pt;line-height:1.5;margin:0;color:var(--ink);max-width:135mm;align-self:center}
+.body + .body{margin-top:3mm}
+.body b{color:var(--wine);font-weight:700}
+.foot{font-size:8.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:5mm 0 0}
+.orn{color:var(--gold);font-size:10pt;letter-spacing:.6em;margin:6mm 0 0;line-height:1}
+.card.tall .ttl{font-size:26pt}
+.card.tall .body{font-size:11pt}
+
+/* аркуш A4 цілком */
+.page{flex:1;padding:18mm 20mm;display:flex;flex-direction:column}
+.page .eyebrow{text-align:center}
+.page h2{font-family:var(--serif);font-weight:600;font-size:26pt;line-height:1.05;margin:0;text-align:center}
+.page h2 em{font-style:italic;color:var(--wine)}
+.page .rule{margin:4mm auto 6mm}
+
+/* розклад */
+.sched{list-style:none;margin:0;padding:0;flex:1;display:flex;flex-direction:column;
+  justify-content:space-evenly}
+.sched li{display:flex;gap:7mm;align-items:baseline;padding:2mm 0;border-bottom:.6pt dotted var(--line)}
+.sched li:last-child{border-bottom:0}
+.sched .tm{font-family:var(--serif);font-weight:700;font-size:19pt;color:var(--wine);
+  flex:0 0 26mm;font-variant-numeric:tabular-nums;line-height:1}
+.sched .ev{flex:1;font-size:13.5pt;line-height:1.25}
+.sched li.mark .ev{font-weight:700}
+.sched li.mark .tm{font-size:21pt}
+
+/* сітка турніру */
+.bracket{flex:1;display:grid;grid-template-columns:repeat(4,1fr);
+  grid-template-rows:auto 1fr;column-gap:8mm;margin-top:3mm}
+.blbl{font-size:8pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);text-align:center;padding-bottom:4mm}
+.bcol{display:flex;flex-direction:column}
+.bslot{flex:1;display:flex;align-items:center;position:relative}
+.bslot .ln{flex:1;border-bottom:1pt solid var(--ink);height:0}
+.bslot::after{content:'';position:absolute;right:-8mm;top:50%;width:8mm;border-bottom:.7pt solid var(--line)}
+.bcol:last-child .bslot::after{display:none}
+.bcol:last-child .bslot .ln{border-bottom-width:1.8pt;border-color:var(--wine)}
+
+/* список запису */
+.signup{flex:1;display:grid;grid-template-columns:1fr 1fr;column-gap:12mm;align-content:start;margin-top:3mm}
+.sline{display:flex;gap:4mm;align-items:baseline;border-bottom:.8pt solid var(--line);padding:3.4mm 0}
+.sline .n{font-family:var(--serif);font-weight:700;font-size:13pt;color:var(--gold);flex:0 0 8mm;
+  font-variant-numeric:tabular-nums}
+
+/* правила */
+.rules{list-style:none;margin:2mm 0 0;padding:0;counter-reset:r}
+.rules li{counter-increment:r;position:relative;padding:0 0 4mm 13mm;font-size:11.5pt;line-height:1.45}
+.rules li::before{content:counter(r);position:absolute;left:0;top:-1mm;font-family:var(--serif);
+  font-weight:700;font-size:17pt;color:var(--wine);width:9mm;text-align:right}
+.note{margin-top:auto;border-top:1pt solid var(--gold);padding-top:4mm;font-size:10.5pt;color:var(--muted)}
+.note b{color:var(--wine)}
+
+/* QR */
+.qrwrap{display:flex;flex-direction:column;align-items:center;gap:3mm;margin:2mm 0}
+.qrwrap canvas{width:38mm;height:38mm;image-rendering:pixelated}
+.qrlink{font-size:8.5pt;color:var(--muted);word-break:break-all;max-width:110mm}
+.qrmini{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:0;flex:1}
+.qrmini .m{border:.5pt dashed #CFC0BA;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:6mm;gap:2mm}
+.qrmini .m canvas{width:30mm;height:30mm;image-rendering:pixelated}
+.qrmini .m .mt{font-family:var(--serif);font-weight:600;font-size:14pt;line-height:1.1}
+.qrmini .m .ms{font-size:8pt;color:var(--muted);line-height:1.3}
+
+/* номерки */
+.nums{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:0}
+.num{width:25%;height:52mm;border:.5pt dashed #CFC0BA;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1mm;padding:3mm}
+.num .big{font-family:var(--serif);font-weight:700;font-size:40pt;line-height:.9;color:var(--ink)}
+.num .cap{font-size:7.5pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.num.prize .big{color:var(--wine)}
+.num.prize .cap{color:var(--wine)}
+
+.sheet-tag{position:absolute;top:4mm;right:6mm;font-size:7pt;letter-spacing:.1em;
+  text-transform:uppercase;color:#C8B6AF}
+
+@media print{
+  @page{size:A4 portrait;margin:0}
+  body{background:#fff}
+  .panel{display:none !important}
+  .sheets{padding:0}
+  .sheet{box-shadow:none;margin:0;page-break-after:always;break-after:page}
+  .sheet:last-child{page-break-after:auto;break-after:auto}
+  .sheet-tag{display:none}
+  .cut{border-top:1px dashed #E0D2CC}
+}
+@media (max-width:900px){
+  .sheet{transform-origin:top left;}
+  .sheets{overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h1>Таблички <em>для друку</em></h1>
+  <p class="sub">Софі та Хвильовий · 6 вересня 2026. Постав галочки, заповни поля — і друкуй на A4.</p>
+
+  <div class="box">
+    <h2>Загальне</h2>
+    <div class="fields">
+      <div><label for="f_loc1">Назва першої локації (день)</label><input type="text" id="f_loc1" value="Софі"></div>
+      <div><label for="f_loc2">Назва другої локації (вечір)</label><input type="text" id="f_loc2" value="Хвильовий"></div>
+      <div><label for="f_jar">Посилання на банку (збір)</label><input type="url" id="f_jar" placeholder="https://send.monobank.ua/jar/..."></div>
+      <div><label for="f_goal">На що збір (один рядок)</label><input type="text" id="f_goal" value="на потреби ЗСУ"></div>
+      <div><label for="f_prizes">Скільки призів у розіграші</label><input type="number" id="f_prizes" value="10" min="1" max="30"></div>
+    </div>
+    <p class="hint">Усе зберігається в цьому браузері — можна закрити й повернутись.</p>
+  </div>
+
+  <div class="box">
+    <h2>Розклад</h2>
+    <div class="fields">
+      <div><label for="f_s1">Розклад дня · перша локація</label><textarea id="f_s1"></textarea></div>
+      <div><label for="f_s2">Розклад вечора · друга локація</label><textarea id="f_s2"></textarea></div>
+    </div>
+    <p class="hint">Формат: <b>11:30 — Збір гостей</b>, по одному рядку. Рядок з <b>*</b> на початку буде жирним (головні моменти).</p>
+  </div>
+
+  <div class="box">
+    <h2>Що друкуємо</h2>
+    <div class="list" id="list"></div>
+  </div>
+
+  <div class="box">
+    <div class="btns">
+      <button class="primary" id="btnPrint">Друкувати вибране</button>
+      <button id="btnAll">Вибрати все</button>
+      <button id="btnSofi">Тільки перша локація</button>
+      <button id="btnHvlv">Тільки друга локація</button>
+      <button id="btnNone">Зняти все</button>
+      <span class="count" id="count"></span>
+    </div>
+  </div>
+</div>
+
+<div class="sheets" id="sheets"></div>
+
+<script src="../lib/qr.js?v=13"></script>
+<script>
+(function(){
+'use strict';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ── стан ─────────────────────────────────────────────────────────── */
+const SCHED1 = [
+  '11:30 — Збір гостей, вітальний напій',
+  '*12:00 — Церемонія',
+  '12:30 — Вітання, спільні фото',
+  '13:00 — Обід',
+  '14:30 — Розіграш призів',
+  '15:00 — Торт',
+  '15:30 — Вільний час, фото, гостьова книга',
+  '*17:00 — Завершуємо в Софі й рушаємо далі',
+].join('\n');
+
+const SCHED2 = [
+  '16:20 — Збір гостей, фуршет',
+  '17:00 — Вітальне слово',
+  '*17:30 — Перший танець',
+  '18:20 — Спільне фото всіх гостей',
+  '19:00 — Турнір з армреслінгу за букет',
+  '20:00 — Розіграш призів',
+  '21:00 — Дженга з побажаннями',
+  '*21:30 — Пісня від гурту',
+  '22:00 — Штольня — фінальна точка вечора',
+].join('\n');
+
+const DEFAULTS = {
+  f_loc1:'Софі', f_loc2:'Хвильовий', f_jar:'', f_goal:'на потреби ЗСУ',
+  f_prizes:'10', f_s1:SCHED1, f_s2:SCHED2,
+};
+const KEY = 'tablychky-v1';
+
+function loadState(){
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ saved = {}; }
+  Object.keys(DEFAULTS).forEach(k => {
+    const el = $(k);
+    if (el) el.value = (saved[k] != null && saved[k] !== '') ? saved[k] : DEFAULTS[k];
+  });
+  return saved;
+}
+function saveState(){
+  const out = {};
+  Object.keys(DEFAULTS).forEach(k => { const el = $(k); if (el) out[k] = el.value; });
+  out.picked = CARDS.filter(c => c.on).map(c => c.id);
+  try { localStorage.setItem(KEY, JSON.stringify(out)); } catch(e){}
+}
+const V = k => ($(k) ? $(k).value.trim() : DEFAULTS[k]);
+
+/* ── картки ───────────────────────────────────────────────────────── */
+/* loc: 1 = перша локація (день), 2 = друга (вечір), 0 = обидві / службове */
+const CARDS = [
+  /* ══ ПЕРША ЛОКАЦІЯ ══ */
+  { id:'welcome1', loc:1, on:false, kind:'card',
+    name:'Вітальна табличка на вхід',
+    note:'необовʼязково — якщо є де поставити',
+    title:'Катя <em>&amp;</em> Діма', eyebrow:'6 вересня 2026',
+    body:['Проходьте, ви саме там, де треба.'] },
+
+  { id:'book1', loc:1, on:true, kind:'card',
+    name:'Гостьова книга + інстакс',
+    note:'спершу пишемо, фото вклеюємо потім',
+    title:'Гостьова <em>книга</em>',
+    body:['Напишіть нам кілька слів — і лишіть під ними порожнє місце.',
+          '<b>Спершу текст, фото потім:</b> інстакс приїде разом з Катею, і знімки ми вклеїмо сюди вже по ходу дня.'] },
+
+  { id:'hearts', loc:1, on:true, kind:'card',
+    name:'Рамка з сердечками',
+    note:'побажання на сердечках',
+    title:'Серце <em>в рамку</em>',
+    body:['Візьміть одне сердечко, напишіть побажання — і покладіть його в рамку.',
+          'Ця рамка поїде до нас додому й лишиться на стіні.'] },
+
+  { id:'seating', loc:1, on:true, kind:'card',
+    name:'Розсадка',
+    note:'табличка над планом розсадки',
+    title:'Розсадка',
+    body:['Знайдіть своє імʼя — воно підкаже ваш стіл.',
+          'Якщо імені раптом немає або хочеться сісти інакше — скажіть нам, ми все владнаємо.'] },
+
+  { id:'box1', loc:1, on:true, kind:'card',
+    name:'Скринька-скарбничка для подарунків',
+    note:'поштова скринька',
+    title:'Скринька <em>для подарунків</em>',
+    body:['Листівки, конверти й теплі слова — сюди.',
+          'Ми відкриємо її вже вдвох, коли все скінчиться.'] },
+
+  { id:'lottery1', loc:1, on:true, kind:'card', tall:true,
+    name:'Розіграш: коробка для корінців + запасні запрошення',
+    note:'та сама табличка, що й у другій локації',
+    title:'Розіграш',
+    body:['Відірвіть корінець від свого запрошення й киньте його <b>в цю коробку</b>. Наприкінці ми витягнемо номери.',
+          '<b>Не отримали паперове запрошення?</b> Пошукайте своє тут — воно на вас чекає. Відірвіть корінець і теж киньте в коробку.'] },
+
+  { id:'sched1', loc:1, on:true, kind:'sched', src:'f_s1',
+    name:'Розклад дня (A4)',
+    note:'з панелі «Розклад»' },
+
+  /* ══ ДРУГА ЛОКАЦІЯ ══ */
+  { id:'welcome2', loc:2, on:false, kind:'card',
+    name:'Вітальна табличка на вхід',
+    note:'необовʼязково',
+    title:'Катя <em>&amp;</em> Діма', eyebrow:'вечір · 6 вересня 2026',
+    body:['Друга частина. Проходьте.'] },
+
+  { id:'arm_teaser', loc:2, on:true, kind:'card',
+    name:'Тизер на стіл армреслінгу',
+    note:'«тут скоро щось буде»',
+    title:'Тут <em>скоро</em> буде бійка',
+    body:['Цей стіл готується до турніру з армреслінгу.',
+          '<b>Букет дістанеться тому, хто покладе всіх.</b> Запис — у ведучої.'] },
+
+  { id:'arm_signup', loc:2, on:true, kind:'signup',
+    name:'Запис учасників турніру (A4)',
+    note:'20 рядків, вішається біля столу' },
+
+  { id:'arm_rules', loc:2, on:true, kind:'rules',
+    name:'Правила армреслінгу (A4)',
+    note:'щоб не сперечались' },
+
+  { id:'arm_grid', loc:2, on:true, kind:'bracket',
+    name:'Турнірна таблиця — сітка (A4)',
+    note:'8 учасників: чвертьфінали → фінал' },
+
+  { id:'instax2', loc:2, on:true, kind:'card',
+    name:'Інстакс + фотоальбом',
+    note:'',
+    title:'Фото <em>на памʼять</em>',
+    body:['Зробіть фото, дочекайтесь, поки проявиться, вклейте в альбом і підпишіть.',
+          'Одне фото — одна сторінка. Підпис обовʼязковий, ми потім не згадаємо.'] },
+
+  { id:'jenga', loc:2, on:true, kind:'card',
+    name:'Дженга-гостьова книга',
+    note:'',
+    title:'Дженга <em>з побажаннями</em>',
+    body:['Візьміть брусок, напишіть на ньому побажання — і поставте назад у башту.',
+          'Потім ми зіграємо. І прочитаємо вголос усе, що впаде.'] },
+
+  { id:'cloth', loc:2, on:true, kind:'card',
+    name:'Скатертина з вибійкою',
+    note:'штампи й фарба',
+    title:'Скатертина',
+    body:['Оберіть штамп, вмочіть у фарбу — і лишіть свій слід. Можна підписатись поруч.',
+          'Цією скатертиною ми накриємо стіл на першу річницю.'] },
+
+  { id:'cameras', loc:2, on:true, kind:'card',
+    name:'Одноразові фотоапарати',
+    note:'',
+    title:'Плівкові <em>фотоапарати</em>',
+    body:['Беріть, знімайте одне одного — і лишайте апарат на місці для наступних.',
+          '<b>Не перемотуйте до кінця й не відкривайте кришку.</b> Плівку ми проявимо після весілля.'] },
+
+  { id:'clay', loc:2, on:true, kind:'card',
+    name:'Глиняні пряники',
+    note:'кожному свій, іменний',
+    title:'Глиняні <em>пряники</em>',
+    body:['Кожен пряник підписаний імʼям — знайдіть свій і заберіть додому.',
+          'Катя ліпила їх руками, по одному на кожного з вас.'] },
+
+  { id:'lottery2', loc:2, on:true, kind:'card', tall:true,
+    name:'Розіграш: коробка для корінців + запасні запрошення',
+    note:'',
+    title:'Розіграш',
+    body:['Відірвіть корінець від свого запрошення й киньте його <b>в цю коробку</b>. Наприкінці ми витягнемо номери.',
+          '<b>Не отримали паперове запрошення?</b> Пошукайте своє тут — воно на вас чекає. Відірвіть корінець і теж киньте в коробку.'] },
+
+  { id:'box2', loc:2, on:true, kind:'card',
+    name:'Скринька-скарбничка для подарунків',
+    note:'друга, для вечора',
+    title:'Скринька <em>для подарунків</em>',
+    body:['Листівки, конверти й теплі слова — сюди.',
+          'Ми відкриємо її вже вдвох, коли все скінчиться.'] },
+
+  { id:'sched2', loc:2, on:true, kind:'sched', src:'f_s2',
+    name:'Розклад вечора (A4)',
+    note:'з панелі «Розклад»' },
+
+  /* ══ ДЛЯ ОБОХ ══ */
+  { id:'jar', loc:0, on:true, kind:'qr',
+    name:'Банка — благодійний збір (A5)',
+    note:'великий QR, по одній на локацію' },
+
+  { id:'jarmini', loc:0, on:true, kind:'qrmini',
+    name:'Банка — маленькі картки на столи (A4, 8 шт.)',
+    note:'розрізати й розкласти по столах' },
+
+  { id:'numbers', loc:0, on:true, kind:'numbers',
+    name:'Номерки для розіграшу (по 2 на кожен приз)',
+    note:'один у лототрон, другий на сам приз' },
+];
+
+/* ── рендер ───────────────────────────────────────────────────────── */
+const LOCNAME = n => n === 1 ? V('f_loc1') : n === 2 ? V('f_loc2') : '';
+
+function cardHTML(c){
+  const eyebrow = c.eyebrow || LOCNAME(c.loc) || 'Катя &amp; Діма · 6.09.2026';
+  return '<div class="card' + (c.tall ? ' tall' : '') + '"><div class="frame">'
+    + '<p class="eyebrow">' + eyebrow + '</p>'
+    + '<h3 class="ttl">' + c.title + '</h3>'
+    + '<div class="rule"></div>'
+    + c.body.map(b => '<p class="body">' + b + '</p>').join('')
+    + '<p class="orn">&#10022;&#10022;&#10022;</p>'
+    + '</div></div>';
+}
+
+function schedHTML(c){
+  const lines = V(c.src).split('\n').map(s => s.trim()).filter(Boolean);
+  const rows = lines.map(function(l){
+    const mark = l.charAt(0) === '*';
+    const t = mark ? l.slice(1).trim() : l;
+    const m = t.match(/^(\d{1,2}[:.]\d{2})\s*[—–-]?\s*(.*)$/);
+    const tm = m ? m[1].replace('.', ':') : '';
+    const ev = m ? m[2] : t;
+    return '<li' + (mark ? ' class="mark"' : '') + '><span class="tm">' + esc(tm)
+      + '</span><span class="ev">' + esc(ev) + '</span></li>';
+  }).join('');
+  return '<div class="page">'
+    + '<p class="eyebrow">' + LOCNAME(c.loc) + ' · 6 вересня 2026</p>'
+    + '<h2>' + (c.loc === 1 ? 'Розклад <em>дня</em>' : 'Розклад <em>вечора</em>') + '</h2>'
+    + '<div class="rule"></div><ul class="sched">' + rows + '</ul></div>';
+}
+
+function signupHTML(c){
+  let l = '';
+  for (let i = 1; i <= 20; i++) l += '<div class="sline"><span class="n">' + i + '</span><span></span></div>';
+  return '<div class="page">'
+    + '<p class="eyebrow">' + LOCNAME(2) + ' · турнір за букет</p>'
+    + '<h2>Хто <em>бʼється</em></h2><div class="rule"></div>'
+    + '<p style="text-align:center;font-size:11pt;margin:0 0 4mm;color:#8A6E76">'
+    + 'Впишіть себе — і чекайте, поки ведуча назве вашу пару.</p>'
+    + '<div class="signup">' + l + '</div></div>';
+}
+
+const RULES = [
+  'Лікоть на столі й не відривається до кінця сутички. Відірвав — програв.',
+  'Вільна рука тримається за край столу або за ручку. Не за суперника.',
+  'Старт тільки по команді ведучої: «Готові — руш».',
+  'Перемога зараховується, коли тильна сторона долоні суперника торкнулась столу.',
+  'Фальстарт — перегравання. Другий фальстарт від того самого гравця — поразка.',
+  'Категорій немає. Чоловіки, жінки, свідки, теща — усі в одній сітці.',
+  'Рука одна на весь турнір: з якої почав, тією і йдеш до фіналу.',
+  'Ведуча — суддя. Її рішення остаточне й оскарженню не підлягає.',
+];
+
+function rulesHTML(){
+  return '<div class="page">'
+    + '<p class="eyebrow">' + LOCNAME(2) + ' · замість кидання букета</p>'
+    + '<h2>Армреслінг <em>за букет</em></h2><div class="rule"></div>'
+    + '<ol class="rules">' + RULES.map(r => '<li>' + r + '</li>').join('') + '</ol>'
+    + '<p class="note"><b>Переможець забирає букет.</b> Не ловить, не вихоплює — чесно виборює. '
+    + 'Наступне весілля тепер повністю на його совісті.</p></div>';
+}
+
+function bracketHTML(){
+  const cols = [[8,'Чвертьфінали'], [4,'Півфінали'], [2,'Фінал'], [1,'Переможець']];
+  const heads = cols.map(c => '<div class="blbl">' + c[1] + '</div>').join('');
+  const bodies = cols.map(function(c){
+    let s = '<div class="bcol">';
+    for (let i = 0; i < c[0]; i++) s += '<div class="bslot"><span class="ln"></span></div>';
+    return s + '</div>';
+  }).join('');
+  return '<div class="page">'
+    + '<p class="eyebrow">' + LOCNAME(2) + ' · турнір за букет</p>'
+    + '<h2>Турнірна <em>сітка</em></h2><div class="rule"></div>'
+    + '<div class="bracket">' + heads + bodies + '</div>'
+    + '<p class="note" style="text-align:center"><b>Переможець забирає букет.</b> '
+    + 'Якщо охочих більше восьми — перший раунд грайте на вибування просто в парах, '
+    + 'а сюди вписуйте вже тих, хто пройшов.</p></div>';
+}
+
+function qrCanvas(text, px){
+  const cv = document.createElement('canvas');
+  try {
+    const r = encodeQRWithQuiet(text, 'M', 4);
+    const scale = Math.max(1, Math.floor(px / r.size));
+    cv.width = cv.height = r.size * scale;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#3A2530';
+    for (let y = 0; y < r.size; y++) for (let x = 0; x < r.size; x++)
+      if (r.matrix[y][x]) g.fillRect(x * scale, y * scale, scale, scale);
+  } catch (e) {
+    cv.width = cv.height = 8;
+  }
+  return cv;
+}
+
+function jarHTML(){
+  const url = V('f_jar');
+  const goal = V('f_goal') || 'на потреби ЗСУ';
+  const qr = url ? '<span class="qrslot" data-url="' + esc(url) + '"></span>'
+                 : '<p class="body" style="color:#B0464E">⚠️ Встав посилання на банку в панелі вгорі</p>';
+  return '<div class="card"><div class="frame">'
+    + '<p class="eyebrow">Замість квітів</p>'
+    + '<h3 class="ttl">Наша <em>банка</em></h3><div class="rule"></div>'
+    + '<p class="body">Ми збираємо ' + esc(goal) + '. Скануйте — і долучайтесь, якщо відгукується.</p>'
+    + '<div class="qrwrap">' + qr + (url ? '<span class="qrlink">' + esc(url) + '</span>' : '') + '</div>'
+    + '</div></div>';
+}
+
+function jarMiniHTML(){
+  const url = V('f_jar');
+  const goal = V('f_goal') || 'на потреби ЗСУ';
+  let cells = '';
+  for (let i = 0; i < 8; i++){
+    cells += '<div class="m"><div class="mt">Наша банка</div>'
+      + (url ? '<span class="qrslot" data-url="' + esc(url) + '" data-px="120"></span>'
+             : '<div class="ms" style="color:#B0464E">немає посилання</div>')
+      + '<div class="ms">Замість квітів — ' + esc(goal) + '</div></div>';
+  }
+  return '<div class="page" style="padding:12mm"><div class="qrmini">' + cells + '</div></div>';
+}
+
+function numbersHTML(){
+  const n = Math.max(1, Math.min(30, parseInt(V('f_prizes'), 10) || 10));
+  const cells = [];
+  for (let i = 1; i <= n; i++) cells.push('<div class="num"><div class="big">' + i + '</div><div class="cap">у лототрон</div></div>');
+  for (let i = 1; i <= n; i++) cells.push('<div class="num prize"><div class="big">' + i + '</div><div class="cap">на приз</div></div>');
+  const perSheet = 20, out = [];
+  for (let i = 0; i < cells.length; i += perSheet){
+    out.push('<div class="sheet"><span class="sheet-tag">номерки</span>'
+      + '<div class="nums">' + cells.slice(i, i + perSheet).join('') + '</div></div>');
+  }
+  return out;
+}
+
+function render(){
+  const picked = CARDS.filter(c => c.on);
+  const sheets = [];
+  let pending = null;               /* незакрита половинка A5 */
+
+  const flush = () => { if (pending){ sheets.push('<div class="sheet">' + pending + '</div>'); pending = null; } };
+  const addHalf = (html, tag) => {
+    if (pending){
+      sheets.push('<div class="sheet"><span class="sheet-tag">' + tag + '</span>' + pending
+        + '<div class="cut"></div>' + html + '</div>');
+      pending = null;
+    } else {
+      pending = '<span class="sheet-tag">' + tag + '</span>' + html;
+    }
+  };
+  const addFull = (html, tag) => {
+    flush();
+    sheets.push('<div class="sheet"><span class="sheet-tag">' + tag + '</span>' + html + '</div>');
+  };
+
+  picked.forEach(function(c){
+    const tag = c.loc === 1 ? V('f_loc1') : c.loc === 2 ? V('f_loc2') : 'обидві';
+    if (c.kind === 'card')      addHalf(cardHTML(c), tag);
+    else if (c.kind === 'qr')   addHalf(jarHTML(), tag);
+    else if (c.kind === 'sched')   addFull(schedHTML(c), tag);
+    else if (c.kind === 'signup')  addFull(signupHTML(c), tag);
+    else if (c.kind === 'rules')   addFull(rulesHTML(), tag);
+    else if (c.kind === 'bracket') addFull(bracketHTML(), tag);
+    else if (c.kind === 'qrmini')  addFull(jarMiniHTML(), tag);
+    else if (c.kind === 'numbers'){ flush(); numbersHTML().forEach(s => sheets.push(s)); }
+  });
+  flush();
+
+  $('sheets').innerHTML = sheets.join('');
+  $('sheets').querySelectorAll('.qrslot').forEach(function(slot){
+    const px = parseInt(slot.getAttribute('data-px'), 10) || 200;
+    slot.appendChild(qrCanvas(slot.getAttribute('data-url'), px));
+  });
+  $('count').textContent = picked.length + ' поз. · ' + sheets.length + ' аркушів A4';
+  fitSheets();
+  saveState();
+}
+
+/* на телефоні аркуш ширший за екран — стискаємо прев'ю */
+function fitSheets(){
+  const box = $('sheets');
+  const mmPx = 210 * 96 / 25.4;
+  const k = Math.min(1, (box.clientWidth - 24) / mmPx);
+  box.querySelectorAll('.sheet').forEach(function(s){
+    s.style.transform = k < 1 ? 'scale(' + k + ')' : '';
+    s.style.marginBottom = k < 1 ? (16 - 297 * 96 / 25.4 * (1 - k)) + 'px' : '';
+  });
+}
+
+/* ── список чекбоксів ─────────────────────────────────────────────── */
+function buildList(){
+  const groups = [
+    { loc:1, ttl:() => V('f_loc1') + ' · день' },
+    { loc:2, ttl:() => V('f_loc2') + ' · вечір' },
+    { loc:0, ttl:() => 'Для обох локацій' },
+  ];
+  let h = '';
+  groups.forEach(function(g){
+    h += '<div class="grp" data-grp="' + g.loc + '">' + esc(g.ttl()) + '</div>';
+    CARDS.filter(c => c.loc === g.loc).forEach(function(c){
+      h += '<label class="chk"><input type="checkbox" data-id="' + c.id + '"' + (c.on ? ' checked' : '')
+        + '><span class="t">' + esc(c.name)
+        + (c.note ? '<small>' + esc(c.note) + '</small>' : '') + '</span></label>';
+    });
+  });
+  $('list').innerHTML = h;
+  $('list').addEventListener('change', function(e){
+    const id = e.target.getAttribute && e.target.getAttribute('data-id');
+    if (!id) return;
+    const c = CARDS.find(x => x.id === id);
+    if (c) c.on = e.target.checked;
+    render();
+  });
+}
+function syncChecks(){
+  $('list').querySelectorAll('input[data-id]').forEach(function(i){
+    const c = CARDS.find(x => x.id === i.getAttribute('data-id'));
+    i.checked = !!(c && c.on);
+  });
+}
+function setAll(fn){ CARDS.forEach(c => { c.on = fn(c); }); syncChecks(); render(); }
+
+/* ── старт ────────────────────────────────────────────────────────── */
+const saved = loadState();
+if (saved && Array.isArray(saved.picked)) CARDS.forEach(c => { c.on = saved.picked.indexOf(c.id) >= 0; });
+buildList();
+
+Object.keys(DEFAULTS).forEach(function(k){
+  const el = $(k);
+  if (!el) return;
+  el.addEventListener('input', function(){
+    $('list').querySelectorAll('.grp').forEach(function(g){
+      const n = +g.getAttribute('data-grp');
+      g.textContent = n === 1 ? V('f_loc1') + ' · день' : n === 2 ? V('f_loc2') + ' · вечір' : 'Для обох локацій';
+    });
+    render();
+  });
+});
+
+$('btnPrint').addEventListener('click', () => window.print());
+$('btnAll').addEventListener('click',  () => setAll(() => true));
+$('btnNone').addEventListener('click', () => setAll(() => false));
+$('btnSofi').addEventListener('click', () => setAll(c => c.loc === 1 || c.loc === 0));
+$('btnHvlv').addEventListener('click', () => setAll(c => c.loc === 2 || c.loc === 0));
+window.addEventListener('resize', fitSheets);
+
+render();
+})();
+</script>
+</body>
+</html>
