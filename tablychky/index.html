@@ -267,6 +267,7 @@ button:active{transform:scale(.98)}
       <div><label for="f_kadr">Посилання «залий свої фото»</label><input type="text" id="f_kadr" value="лютевесілля.укр/kadr"></div>
       <div><label for="f_prizes">Скільки призів у розіграші</label><input type="number" id="f_prizes" value="10" min="1" max="30"></div>
       <div><label for="f_seatmode">Схема розсадки</label><select id="f_seatmode">
+        <option value="ab">Обидва варіанти — оберу потім</option>
         <option value="a">Два столи + стіл молодят</option>
         <option value="b">Один стіл, молодята за ним</option>
         <option value="lists">Просто списки по столах</option>
@@ -395,9 +396,9 @@ const DEFAULTS = {
   f_addr1:'вул. Симона Петлюри, 1 · метро «Університет»', f_arrow:'→',
   f_jar:'https://send.monobank.ua/jar/5TEeFknTmt',
   f_goal:'на потреби ЗСУ', f_kadr:'лютевесілля.укр/kadr', f_prizes:'10',
-  f_seatmode:'a', f_guests:'37', f_tables:'6', f_seats:'8', f_s1:SCHED1, f_s2:SCHED2,
+  f_seatmode:'ab', f_guests:'37', f_tables:'6', f_seats:'8', f_s1:SCHED1, f_s2:SCHED2,
 };
-const KEY = 'tablychky-v7';
+const KEY = 'tablychky-v8';
 
 function loadState(){
   let saved = {};
@@ -539,9 +540,9 @@ const CARDS = [
     qr:'f_kadr', qrcap:'залий і свої фото з телефона' },
 
   { id:'clay', loc:2, on:true, kind:'sign',
-    name:'Глиняні гостинці', note:'іменні, кожному свій · назву можна змінити прямо на аркуші',
-    title:'Гостинці', sub:'знайди свій',
-    body:['Кожен гостинець із глини підписаний імʼям — знайдіть свій і заберіть додому.',
+    name:'Глиняні обереги', note:'іменні, кожному свій',
+    title:'Обереги', sub:'знайди свій',
+    body:['Кожен оберіг із глини підписаний імʼям — знайдіть свій і заберіть додому.',
           'Катя ліпила їх руками, по одному на кожного з вас.'] },
 
   { id:'lottery2', loc:2, on:true, kind:'sign',
@@ -697,24 +698,25 @@ function seatsHTML(){
   if (mode === 'free')
     return ['<div class="page">' + head + '<div class="seatfree"></div></div>'];
 
-  if (mode === 'a'){
+  const variantA = () => {
     const guests = total - 2;
     const t1 = Math.ceil(guests / 2), t2 = guests - t1;
     return [
-      '<div class="page">' + head
+      '<div class="page">' + pageHead(LOCNAME(1) + ' · варіант 1 з 2', 'Схема розсадки')
         + planHead('Стіл молодят', ['Катя', 'Діма'])
         + planTable('Стіл 1', t1) + '</div>',
-      '<div class="page">' + pageHead(LOCNAME(1) + ' · продовження', 'Схема розсадки')
+      '<div class="page">' + pageHead(LOCNAME(1) + ' · варіант 1, продовження', 'Схема розсадки')
         + planTable('Стіл 2', t2) + band() + '</div>',
     ];
-  }
+  };
+  const variantB = (lbl) => ['<div class="page">'
+    + pageHead(LOCNAME(1) + ' · ' + lbl, 'Схема розсадки')
+    + planTable('Спільний стіл', total, { left:Math.ceil(total / 2), names:{ 1:'Катя', 2:'Діма' } })
+    + '</div>'];
 
-  if (mode === 'b'){
-    const left = Math.ceil(total / 2);
-    return ['<div class="page">' + head
-      + planTable('Спільний стіл', total, { left:left, names:{ 1:'Катя', 2:'Діма' } })
-      + '</div>'];
-  }
+  if (mode === 'a')  return variantA();
+  if (mode === 'b')  return variantB('6 вересня 2026');
+  if (mode === 'ab') return variantA().concat(variantB('варіант 2 з 2'));
 
   /* списки по столах */
   const nT = Math.max(1, Math.min(24, parseInt(V('f_tables'), 10) || 6));
