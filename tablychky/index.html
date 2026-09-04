@@ -324,12 +324,17 @@ button:active{transform:scale(.98)}
       <button id="btnSofi">Тільки перша локація</button>
       <button id="btnHvlv">Тільки друга локація</button>
       <button id="btnNone">Зняти все</button>
+      <button id="btnExport" hidden>Зберегти правки файлом</button>
+      <button id="btnImport">Завантажити правки</button>
       <button id="btnReset" hidden>Скинути мої правки</button>
+      <input type="file" id="fileImport" accept=".json,application/json" hidden>
       <span class="count" id="count"></span>
     </div>
     <p class="hint">У вікні друку: A4, <b>«Фон і зображення»</b> увімкнено, поля <b>«Немає»</b>. Інакше червоне не надрукується.</p>
     <p class="hint">Усе, що виправляєш просто на аркуші, <b>зберігається автоматично</b> в цьому браузері
-    й переживає перезавантаження. Правки з іншого пристрою сюди не потраплять.</p>
+    й переживає перезавантаження. Але тільки в ньому: щоб перенести правки на інший пристрій або
+    комусь передати, натисни <b>«Зберегти правки файлом»</b> — і той, кому файл потрапив, відкриє його
+    кнопкою <b>«Завантажити правки»</b>.</p>
     <p class="hint"><b>Щоб зберегти файлом:</b> у тому самому вікні друку замість принтера обери
     <b>«Зберегти як PDF»</b>. На айфоні: кнопка → «Друк» → розтягни прев'ю двома пальцями →
     «Поділитися» → «Зберегти у файли».</p>
@@ -661,9 +666,7 @@ function applyEdits(){
     const v = EDITS[el.getAttribute('data-k')];
     if (v != null) el.innerHTML = v;
   });
-  const n = Object.keys(EDITS).length;
-  const b = document.getElementById('btnReset');
-  if (b) { b.hidden = !n; b.textContent = 'Скинути мої правки (' + n + ')'; }
+  if (typeof refreshEditButtons === 'function') refreshEditButtons();
 }
 function saveEdits(){
   try { localStorage.setItem(EKEY, JSON.stringify(EDITS)); } catch(e){}
@@ -1024,8 +1027,55 @@ $('sheets').addEventListener('input', function(e){
   if (!el) return;
   EDITS[el.getAttribute('data-k')] = el.innerHTML;
   saveEdits();
-  const b = $('btnReset');
-  if (b){ b.hidden = false; b.textContent = 'Скинути мої правки (' + Object.keys(EDITS).length + ')'; }
+  refreshEditButtons();
+});
+
+/* правки живуть у localStorage одного браузера — щоб їх можна було
+   передати або зберегти надовго, віддаємо їх файлом */
+function refreshEditButtons(){
+  const n = Object.keys(EDITS).length;
+  const r = $('btnReset'), e = $('btnExport');
+  if (r){ r.hidden = !n; r.textContent = 'Скинути мої правки (' + n + ')'; }
+  if (e){ e.hidden = !n; e.textContent = 'Зберегти правки файлом (' + n + ')'; }
+}
+
+$('btnExport').addEventListener('click', function(){
+  const txt = JSON.stringify(EDITS, null, 1);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type:'application/json' }));
+  a.download = 'pravky-tablychky-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).catch(function(){});
+});
+
+$('btnImport').addEventListener('click', () => $('fileImport').click());
+
+$('fileImport').addEventListener('change', function(e){
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = function(){
+    let data = null;
+    try { data = JSON.parse(String(rd.result)); } catch(err){ data = null; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)){
+      alert('Це не схоже на файл правок. Потрібен той .json, що дає кнопка «Зберегти правки файлом».');
+      return;
+    }
+    const keys = Object.keys(data).filter(k => typeof data[k] === 'string');
+    if (!keys.length){ alert('У файлі немає жодної правки.'); return; }
+    const had = Object.keys(EDITS).length;
+    if (had && !confirm('У тебе вже є ' + had + ' власних правок. Правки з файлу (' + keys.length
+      + ') накладуться зверху там, де збігаються. Продовжити?')) return;
+    keys.forEach(k => { EDITS[k] = data[k]; });
+    saveEdits();
+    render();
+    alert('Завантажено правок: ' + keys.length + '.');
+  };
+  rd.readAsText(f);
+  e.target.value = '';
 });
 
 $('btnReset').addEventListener('click', function(){
