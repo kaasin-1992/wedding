@@ -9,17 +9,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
+/* KyivType Serif — той самий шрифт, що на минулих табличках. Локальний файл,
+   щоб таблички друкувались однаково навіть без мережі. */
+@font-face{font-family:'KyivType Serif';font-weight:400;font-display:swap;src:url(ks-400.ttf) format('truetype')}
+@font-face{font-family:'KyivType Serif';font-weight:700;font-display:swap;src:url(ks-700.ttf) format('truetype')}
+
 :root{
   --red:#C8431F; --ink:#1E1B1A; --grey:#8B827D; --hair:#E6DDD8;
   --paper:#FFFFFF; --desk:#EDE7E3;
   --sans:'Manrope', -apple-system, 'Segoe UI', Arial, sans-serif;
+  --serif:'KyivType Serif', Georgia, serif;
+  --face:var(--sans); --w-ttl:800; --track:-.02em;
 }
+:root[data-font="serif"]{ --face:var(--serif); --w-ttl:700; --track:.02em; }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:var(--desk);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
 
 /* ─────────── панель (тільки на екрані) ─────────── */
-.panel{max-width:920px;margin:0 auto;padding:26px 18px 8px}
+.panel{max-width:920px;margin:0 auto;padding:26px 18px 8px;font-family:var(--sans)}
 .panel h1{font-weight:800;font-size:32px;letter-spacing:-.02em;margin:0 0 4px}
 .panel h1 em{font-style:normal;color:var(--red)}
 .panel .sub{color:var(--grey);margin:0 0 20px}
@@ -27,7 +35,7 @@ body{background:var(--desk);color:var(--ink);font-family:var(--sans);font-size:1
 .box h2{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--red);margin:0 0 12px}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 label{display:block;font-size:12px;font-weight:700;color:var(--grey);margin-bottom:4px}
-input[type=text],input[type=url],input[type=number],textarea{
+input[type=text],input[type=url],input[type=number],textarea,select{
   width:100%;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--hair);
   border-radius:8px;background:#fff;color:var(--ink)}
 textarea{min-height:150px;resize:vertical;line-height:1.45;font-size:13px}
@@ -52,46 +60,67 @@ button:active{transform:scale(.98)}
 .sheets{padding:10px 0 60px}
 .sheet{width:210mm;height:297mm;background:var(--paper);margin:0 auto 16px;
   box-shadow:0 6px 24px rgba(60,40,35,.16);overflow:hidden;position:relative;
-  display:flex;flex-direction:column}
+  display:flex;flex-direction:column;font-family:var(--face)}
 .cut{border-top:1px dashed #E4D8D2}
 .sheet-tag{position:absolute;top:4mm;right:6mm;font-size:7pt;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;color:#D8CCC6}
+  text-transform:uppercase;color:#D8CCC6;font-family:var(--sans)}
+[contenteditable]:focus{outline:1.5px dashed var(--red);outline-offset:3px}
 
 /* вибійка */
 .orn{color:var(--red);display:block}
 .ornrow{display:flex;align-items:center;justify-content:center;gap:7mm}
+.bandrow{display:flex;justify-content:center;overflow:hidden;width:100%}
 
-/* картка A5 (альбомна) — дві на аркуш */
-.card{height:148.5mm;padding:20mm 22mm;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;text-align:center;position:relative}
+/* ── табличка ────────────────────────────────────────────────────── */
+.sign{display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.head{font-size:9.5pt;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--grey);
+  font-family:var(--sans);margin:0}
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
+.ttl{font-weight:var(--w-ttl);color:var(--red);text-transform:uppercase;letter-spacing:var(--track);
+  line-height:1.03;margin:0;text-wrap:balance}
+.sub{font-size:13pt;color:var(--ink);letter-spacing:.06em;margin:4mm 0 0;font-family:var(--sans);font-weight:500}
+.body{line-height:1.6;margin:7mm 0 0;color:var(--ink);font-family:var(--sans)}
+.body + .body{margin-top:3.5mm}
+.body b{font-weight:800;color:var(--red)}
+.qrblock{display:flex;flex-direction:column;align-items:center;gap:2.5mm;margin:8mm 0 0}
+.qrblock canvas{image-rendering:pixelated}
+.qrcap{font-size:9.5pt;color:var(--grey);font-family:var(--sans);line-height:1.35}
+.qrcap b{color:var(--red);font-weight:700}
+
+/* A4 — одна табличка на аркуш */
+.sign.a4{flex:1;padding:15mm 20mm}
+.sign.a4 .mid{padding:4mm 0}
+.sign.a4 .ttl{font-size:44pt}
+.sign.a4 .sub{font-size:16pt}
+.sign.a4 .body{font-size:14.5pt;max-width:152mm}
+.sign.a4 .head{margin-bottom:2mm}
+.sign.a4 canvas{width:34mm;height:34mm}
+
+/* A5 — дві на аркуш */
+.sign.a5{height:148.5mm;padding:14mm 20mm;justify-content:center}
+.sign.a5 .mid{flex:0 0 auto}
+.sign.a5 .ttl{font-size:26pt}
+.sign.a5 .sub{font-size:10.5pt;margin-top:3mm}
+.sign.a5 .body{font-size:10.5pt;max-width:140mm;margin-top:5mm}
+.sign.a5 .qrblock{margin-top:5mm}
+.sign.a5 canvas{width:24mm;height:24mm}
 .crop{position:absolute;width:5mm;height:5mm;border:0 solid #E0D5CF}
-.crop.tl{top:8mm;left:9mm;border-top-width:.5pt;border-left-width:.5pt}
-.crop.tr{top:8mm;right:9mm;border-top-width:.5pt;border-right-width:.5pt}
-.crop.bl{bottom:8mm;left:9mm;border-bottom-width:.5pt;border-left-width:.5pt}
-.crop.br{bottom:8mm;right:9mm;border-bottom-width:.5pt;border-right-width:.5pt}
+.crop.tl{top:6mm;left:8mm;border-top-width:.5pt;border-left-width:.5pt}
+.crop.tr{top:6mm;right:8mm;border-top-width:.5pt;border-right-width:.5pt}
+.crop.bl{bottom:6mm;left:8mm;border-bottom-width:.5pt;border-left-width:.5pt}
+.crop.br{bottom:6mm;right:8mm;border-bottom-width:.5pt;border-right-width:.5pt}
 
-.lbl{font-size:9pt;font-weight:500;color:var(--grey);letter-spacing:.04em;margin:0 0 3mm}
-.ttl{font-weight:800;font-size:31pt;line-height:1;letter-spacing:-.02em;color:var(--red);margin:0;
-  white-space:nowrap}
-.tag{font-size:10pt;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--red);
-  margin:4mm 0 0}
-.body{font-size:11pt;line-height:1.5;margin:6mm 0 0;color:var(--ink);max-width:130mm}
-.body + .body{margin-top:3mm}
-.body b{font-weight:800}
-.card.tall .ttl{font-size:27pt}
-.card.tall .body{font-size:10.5pt}
-
-/* аркуш A4 цілком */
-.page{flex:1;padding:20mm 22mm;display:flex;flex-direction:column;align-items:center}
+/* аркуш A4 цілком (розклад, турнір, дрібні картки) */
+.page{flex:1;padding:16mm 20mm;display:flex;flex-direction:column;align-items:center}
 .page > *{width:100%}
-.page .lbl{text-align:center}
-.page h2{font-weight:800;font-size:26pt;line-height:1;letter-spacing:-.02em;color:var(--red);
-  margin:0;text-align:center}
-.page .ornrow{margin:5mm 0 7mm}
+.page .head{text-align:center}
+.page h2{font-weight:var(--w-ttl);font-size:28pt;line-height:1;letter-spacing:var(--track);
+  color:var(--red);margin:2mm 0 0;text-align:center;text-transform:uppercase}
+.page .bandrow{margin:5mm 0 7mm}
 
 /* розклад */
 .sched{list-style:none;margin:0;padding:0;flex:1;display:flex;flex-direction:column;
-  justify-content:space-evenly;width:100%}
+  justify-content:space-evenly;width:100%;font-family:var(--sans)}
 .sched li{display:flex;gap:8mm;align-items:baseline;padding:2mm 0;border-bottom:.6pt solid var(--hair)}
 .sched li:last-child{border-bottom:0}
 .sched .tm{font-weight:800;font-size:16pt;color:var(--red);flex:0 0 25mm;
@@ -105,7 +134,7 @@ button:active{transform:scale(.98)}
 
 /* сітка турніру */
 .bracket{flex:1;display:grid;grid-template-columns:repeat(4,1fr);
-  grid-template-rows:auto 1fr;column-gap:8mm;width:100%}
+  grid-template-rows:auto 1fr;column-gap:8mm;width:100%;font-family:var(--sans)}
 .blbl{font-size:8pt;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
   color:var(--grey);text-align:center;padding-bottom:4mm}
 .bcol{display:flex;flex-direction:column}
@@ -116,36 +145,37 @@ button:active{transform:scale(.98)}
 .bcol:last-child .bslot .ln{border-bottom-width:2pt;border-color:var(--red)}
 
 /* список запису */
-.signup{flex:1;display:grid;grid-template-columns:1fr 1fr;column-gap:14mm;align-content:start;width:100%}
+.signup{flex:1;display:grid;grid-template-columns:1fr 1fr;column-gap:14mm;align-content:start;
+  width:100%;font-family:var(--sans)}
 .sline{display:flex;gap:4mm;align-items:baseline;border-bottom:.8pt solid var(--hair);padding:3.6mm 0}
 .sline .n{font-weight:800;font-size:12pt;color:var(--red);flex:0 0 8mm;font-variant-numeric:tabular-nums}
 
 /* правила */
-.rules{list-style:none;margin:0;padding:0;counter-reset:r;width:100%;flex:1}
-.rules li{counter-increment:r;position:relative;padding:0 0 5mm 14mm;font-size:11.5pt;line-height:1.45}
+.rules{list-style:none;margin:0;padding:0;counter-reset:r;width:100%;flex:1;font-family:var(--sans)}
+.rules li{counter-increment:r;position:relative;padding:0 0 5mm 14mm;font-size:12pt;line-height:1.45}
 .rules li::before{content:counter(r);position:absolute;left:0;top:-.6mm;font-weight:800;
   font-size:14pt;color:var(--red);width:9mm;text-align:right}
 .note{width:100%;margin-top:auto;border-top:1pt solid var(--red);padding-top:4mm;
-  font-size:10.5pt;color:var(--grey)}
+  font-size:10.5pt;color:var(--grey);font-family:var(--sans)}
 .note b{color:var(--ink);font-weight:800}
 
-/* QR */
-.qrwrap{display:flex;flex-direction:column;align-items:center;gap:3mm;margin:6mm 0 0}
-.qrwrap canvas{width:36mm;height:36mm;image-rendering:pixelated}
-.qrlink{font-size:8pt;color:var(--grey);word-break:break-all;max-width:110mm}
-.qrmini{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;flex:1;width:100%}
+/* дрібні картки банки */
+.qrmini{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:minmax(0,1fr);
+  flex:1;min-height:0;width:100%}
 .qrmini .m{border:.5pt dashed #E0D5CF;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;text-align:center;padding:6mm;gap:2.5mm}
-.qrmini .m canvas{width:28mm;height:28mm;image-rendering:pixelated}
-.qrmini .m .mt{font-weight:800;font-size:13pt;color:var(--red);letter-spacing:-.01em}
-.qrmini .m .ms{font-size:8pt;color:var(--grey);line-height:1.3}
+  justify-content:center;text-align:center;padding:4mm;gap:2mm;min-height:0;overflow:hidden}
+.qrmini .m canvas{width:26mm;height:26mm;image-rendering:pixelated;flex:0 0 auto}
+.qrmini .m .mt{font-weight:var(--w-ttl);font-size:14pt;color:var(--red);text-transform:uppercase;
+  letter-spacing:var(--track)}
+.qrmini .m .ms{font-size:8pt;color:var(--grey);line-height:1.3;font-family:var(--sans)}
 
 /* номерки */
 .nums{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start}
 .num{width:25%;height:52mm;border:.5pt dashed #E0D5CF;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:1.5mm;padding:3mm}
-.num .big{font-weight:800;font-size:38pt;line-height:.9;color:var(--ink);letter-spacing:-.03em}
-.num .cap{font-size:7pt;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--grey)}
+.num .big{font-weight:var(--w-ttl);font-size:38pt;line-height:.9;color:var(--ink);letter-spacing:-.03em}
+.num .cap{font-size:7pt;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--grey);
+  font-family:var(--sans)}
 .num.prize .big{color:var(--red)}
 .num.prize .cap{color:var(--red)}
 
@@ -165,15 +195,31 @@ button:active{transform:scale(.98)}
 
 <div class="panel">
   <h1>Таблички <em>для друку</em></h1>
-  <p class="sub">Софі та Хвильовий · 6 вересня 2026. Білий, червоний, вибійка — як на камерах.</p>
+  <p class="sub">Софі та Хвильовий · 6 вересня 2026. Тексти на аркушах можна правити прямо тут — клікни й пиши.</p>
+
+  <div class="box">
+    <h2>Вигляд</h2>
+    <div class="fields">
+      <div><label for="f_size">Розмір табличок</label><select id="f_size">
+        <option value="a4">A4 — одна на аркуш, великі літери</option>
+        <option value="a5">A5 — дві на аркуш, економно</option>
+      </select></div>
+      <div><label for="f_font">Шрифт</label><select id="f_font">
+        <option value="sans">Manrope — як на камерах</option>
+        <option value="serif">KyivType Serif — як на минулих табличках</option>
+      </select></div>
+    </div>
+    <p class="hint">KyivType лежить у файлі поруч, тож друкується навіть без інтернету.</p>
+  </div>
 
   <div class="box">
     <h2>Загальне</h2>
     <div class="fields">
       <div><label for="f_loc1">Назва першої локації (день)</label><input type="text" id="f_loc1" value="Софі"></div>
       <div><label for="f_loc2">Назва другої локації (вечір)</label><input type="text" id="f_loc2" value="Хвильовий"></div>
-      <div><label for="f_jar">Посилання на банку (збір)</label><input type="url" id="f_jar" placeholder="https://send.monobank.ua/jar/..."></div>
+      <div><label for="f_jar">Посилання на банку (збір)</label><input type="url" id="f_jar" value="https://send.monobank.ua/jar/5TEeFknTmt"></div>
       <div><label for="f_goal">На що збір (один рядок)</label><input type="text" id="f_goal" value="на потреби ЗСУ"></div>
+      <div><label for="f_kadr">Посилання «залий свої фото»</label><input type="text" id="f_kadr" value="лютевесілля.укр/kadr"></div>
       <div><label for="f_prizes">Скільки призів у розіграші</label><input type="number" id="f_prizes" value="10" min="1" max="30"></div>
     </div>
     <p class="hint">Усе зберігається в цьому браузері — можна закрити й повернутись.</p>
@@ -203,7 +249,7 @@ button:active{transform:scale(.98)}
       <button id="btnNone">Зняти все</button>
       <span class="count" id="count"></span>
     </div>
-    <p class="hint">У вікні друку постав <b>«Фон і зображення»</b> увімкненим і поля <b>«Немає»</b> — інакше червоне не надрукується.</p>
+    <p class="hint">У вікні друку: A4, <b>«Фон і зображення»</b> увімкнено, поля <b>«Немає»</b>. Інакше червоне не надрукується.</p>
   </div>
 </div>
 
@@ -226,7 +272,7 @@ const MOTIF = {
 };
 const GAP = 2, ROWS = 7;
 
-function orn(seq, unitMm, cls){
+function orn(seq, unitMm){
   let x = 0, rects = '';
   seq.forEach(function(name, i){
     const m = MOTIF[name], h = m.length, w = m[0].length, top = (ROWS - h) / 2;
@@ -234,16 +280,27 @@ function orn(seq, unitMm, cls){
       if (m[r].charAt(c) === 'X') rects += '<rect x="' + (x + c) + '" y="' + (top + r) + '" width="1" height="1"/>';
     x += w + (i < seq.length - 1 ? GAP : 0);
   });
-  return '<svg class="orn ' + (cls || '') + '" viewBox="0 0 ' + x + ' ' + ROWS + '"'
-    + ' width="' + (x * unitMm).toFixed(2) + 'mm" height="' + (ROWS * unitMm).toFixed(2) + 'mm"'
+  /* unitMm === null — стрічка тягнеться на всю ширину контейнера */
+  const size = unitMm == null
+    ? ' style="width:100%;height:auto"'
+    : ' width="' + (x * unitMm).toFixed(2) + 'mm" height="' + (ROWS * unitMm).toFixed(2) + 'mm"';
+  return '<svg class="orn" viewBox="0 0 ' + x + ' ' + ROWS + '"' + size
+    + ' preserveAspectRatio="xMidYMid meet"'
     + ' fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">' + rects + '</svg>';
 }
 const WING = ['dot', 'cross', 'star', 'diamond'];
-const wings = (inner, u) => '<div class="ornrow">' + orn(WING, u)
-  + inner + orn(WING.slice().reverse(), u) + '</div>';
-const band = u => '<div class="ornrow">'
-  + orn(['dot','cross','star','diamond','star','cross','dot','cross','star','diamond','star','cross','dot'], u)
-  + '</div>';
+const wings = inner => '<div class="ornrow">' + orn(WING, 1.05) + inner
+  + orn(WING.slice().reverse(), 1.05) + '</div>';
+
+/* довга стрічка на всю ширину аркуша */
+function bandSeq(n){
+  const unit = ['diamond', 'star', 'cross', 'dot', 'cross', 'star'];
+  const out = ['dot'];
+  for (let i = 0; i < n; i++) out.push(unit[i % unit.length]);
+  out.push('dot');
+  return out;
+}
+const band = () => '<div class="bandrow">' + orn(bandSeq(21), null) + '</div>';
 
 /* ── стан ─────────────────────────────────────────────────────────── */
 const SCHED1 = [
@@ -270,10 +327,12 @@ const SCHED2 = [
 ].join('\n');
 
 const DEFAULTS = {
-  f_loc1:'Софі', f_loc2:'Хвильовий', f_jar:'', f_goal:'на потреби ЗСУ',
-  f_prizes:'10', f_s1:SCHED1, f_s2:SCHED2,
+  f_size:'a4', f_font:'sans', f_loc1:'Софі', f_loc2:'Хвильовий',
+  f_jar:'https://send.monobank.ua/jar/5TEeFknTmt',
+  f_goal:'на потреби ЗСУ', f_kadr:'лютевесілля.укр/kadr', f_prizes:'10',
+  f_s1:SCHED1, f_s2:SCHED2,
 };
-const KEY = 'tablychky-v2';
+const KEY = 'tablychky-v3';
 
 function loadState(){
   let saved = {};
@@ -294,61 +353,77 @@ function saveState(){
 }
 const V = k => ($(k) ? $(k).value.trim() : DEFAULTS[k]);
 const isBlank = () => !!($('f_blank') && $('f_blank').checked);
+const isA4 = () => V('f_size') !== 'a5';
 
 /* ── картки ───────────────────────────────────────────────────────── */
 /* loc: 1 = перша локація (день), 2 = друга (вечір), 0 = обидві */
 const CARDS = [
   /* ══ ПЕРША ЛОКАЦІЯ ══ */
-  { id:'welcome1', loc:1, on:false, kind:'card',
+  { id:'welcome1', loc:1, on:false, kind:'sign',
     name:'Вітальна табличка на вхід', note:'необовʼязково',
-    lbl:'6 вересня 2026', title:'К + Д', tag:'проходьте',
+    head:'6 вересня 2026', title:'К + Д', sub:'проходьте',
     body:['Ви саме там, де треба.'] },
 
-  { id:'book1', loc:1, on:true, kind:'card',
+  { id:'book1', loc:1, on:true, kind:'sign',
     name:'Гостьова книга + інстакс', note:'спершу пишемо, фото вклеюємо потім',
-    lbl:'напишіть нам кілька слів', title:'Гостьова книга', tag:'спочатку пиши',
-    body:['Лишіть під написаним порожнє місце — туди вклеїмо фото.',
-          'Інстакс приїде разом з Катею, тож знімки зʼявляться вже по ходу дня.'] },
+    title:'Гостьова книга', sub:'лиши нам слово',
+    body:['Кілька слів, спогад чи добрий жарт — ми перечитуватимемо це роками.',
+          '<b>Спочатку пиши, фото потім.</b> Лишіть під написаним порожнє місце: інстакс приїде разом з Катею, і знімки ми вклеїмо туди вже по ходу дня.'] },
 
-  { id:'hearts', loc:1, on:true, kind:'card',
+  { id:'hearts', loc:1, on:true, kind:'sign',
     name:'Рамка з сердечками', note:'побажання на сердечках',
-    lbl:'побажання для нас', title:'Серце в рамку', tag:'одне серце — одне побажання',
+    title:'Серце в рамку', sub:'одне серце — одне побажання',
     body:['Візьміть сердечко, напишіть побажання — і покладіть його в рамку.',
           'Ця рамка поїде до нас додому й лишиться на стіні.'] },
 
-  { id:'seating', loc:1, on:true, kind:'card',
+  { id:'seating', loc:1, on:true, kind:'sign',
     name:'Розсадка', note:'табличка над планом розсадки',
-    lbl:'де ви сидите', title:'Розсадка', tag:'знайди себе',
-    body:['Своє імʼя підкаже вам стіл.',
-          'Якщо імені немає або хочеться сісти інакше — скажіть нам, ми все владнаємо.'] },
+    title:'Розсадка', sub:'знайди своє імʼя й номер столу',
+    body:['Якщо імені немає або хочеться сісти інакше — скажіть нам, ми все владнаємо.'] },
 
-  { id:'box1', loc:1, on:true, kind:'card',
+  { id:'box1', loc:1, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'поштова скринька',
-    lbl:'для листівок і конвертів', title:'Скринька', tag:'кидай сюди',
-    body:['Листівки, конверти й теплі слова — усе сюди.',
-          'Ми відкриємо її вже вдвох, коли все скінчиться.'] },
+    title:'На наш перший рік', sub:'скринька для листівок і конвертів',
+    body:['Найбільший дарунок — що ви сьогодні поруч.',
+          'А хто хоче — ця скриня відкрита на наше спільне життя. Ми відкриємо її вже вдвох, коли все скінчиться.'] },
 
-  { id:'lottery1', loc:1, on:true, kind:'card', tall:true,
+  { id:'lottery1', loc:1, on:true, kind:'sign',
     name:'Розіграш: коробка для корінців + запасні запрошення',
     note:'та сама табличка, що й у другій локації',
-    lbl:'наприкінці витягнемо номери', title:'Розіграш', tag:'відірви корінець',
-    body:['Відірвіть корінець від свого запрошення й киньте його <b>в цю коробку</b>.',
+    title:'Розіграш', sub:'відірви корінець і кинь у коробку',
+    body:['Наприкінці ми витягнемо номери — і роздамо призи.',
           '<b>Не отримали паперове запрошення?</b> Пошукайте своє тут — воно на вас чекає. Відірвіть корінець і теж киньте в коробку.'] },
+
+  { id:'flowers', loc:1, on:false, kind:'sign',
+    name:'Квіти для декору', note:'було на минулих табличках — увімкни, якщо актуально',
+    title:'Квіти', sub:'для декору',
+    body:['Принесли живу квітку? Лишіть її тут — ми прикрасимо ними столи.'] },
+
+  { id:'photozone', loc:1, on:false, kind:'sign',
+    name:'Фотозона', note:'було на минулих табличках — увімкни, якщо буде',
+    title:'Фотозона', sub:'стань у кадр',
+    body:['Зробіть фото на памʼять — і собі, і нам.'] },
+
+  { id:'dress', loc:1, on:false, kind:'sign',
+    name:'Лотерея за дрес-код', note:'було на минулих табличках — увімкни, якщо лишили',
+    title:'Лотерея', sub:'за дрес-код',
+    body:['Одягнувся в нео-етно — ти в грі. Вишиванка, прикраси, орнамент — усе, що робить нас родом.',
+          'Білу сукню лишаємо нареченій. За найкращий образ — приз.'] },
 
   { id:'sched1', loc:1, on:true, kind:'sched', src:'f_s1',
     name:'Розклад дня (A4)', note:'з панелі «Розклад»' },
 
   /* ══ ДРУГА ЛОКАЦІЯ ══ */
-  { id:'welcome2', loc:2, on:false, kind:'card',
+  { id:'welcome2', loc:2, on:false, kind:'sign',
     name:'Вітальна табличка на вхід', note:'необовʼязково',
-    lbl:'вечір 6 вересня 2026', title:'К + Д', tag:'друга частина',
+    head:'вечір 6 вересня 2026', title:'К + Д', sub:'друга частина',
     body:['Проходьте.'] },
 
-  { id:'arm_teaser', loc:2, on:true, kind:'card',
+  { id:'arm_teaser', loc:2, on:true, kind:'sign',
     name:'Тизер на стіл армреслінгу', note:'«тут скоро щось буде»',
-    lbl:'цей стіл готується', title:'Армреслінг', tag:'тут скоро буде бійка',
+    title:'Армреслінг', sub:'тут скоро буде бійка',
     body:['<b>Букет дістанеться тому, хто покладе всіх.</b>',
-          'Запис — у ведучої.'] },
+          'Цей стіл готується до турніру. Запис — у ведучої.'] },
 
   { id:'arm_signup', loc:2, on:true, kind:'signup',
     name:'Запис учасників турніру (A4)', note:'20 рядків, вішається біля столу' },
@@ -359,57 +434,64 @@ const CARDS = [
   { id:'arm_grid', loc:2, on:true, kind:'bracket',
     name:'Турнірна таблиця — сітка (A4)', note:'8 учасників: чвертьфінали → фінал' },
 
-  { id:'instax2', loc:2, on:true, kind:'card',
+  { id:'instax2', loc:2, on:true, kind:'sign',
     name:'Інстакс + фотоальбом', note:'',
-    lbl:'фото на памʼять', title:'Інстакс', tag:'знімай і вклеюй',
+    title:'Інстакс', sub:'знімай і вклеюй',
     body:['Зробіть фото, дочекайтесь, поки проявиться, вклейте в альбом.',
-          '<b>Підпис обовʼязковий</b> — ми потім не згадаємо.'] },
+          '<b>Підпис обовʼязковий</b> — ми потім не згадаємо, хто це.'],
+    qr:'f_kadr', qrcap:'залий і свої фото з телефона' },
 
-  { id:'jenga', loc:2, on:true, kind:'card',
+  { id:'jenga', loc:2, on:true, kind:'sign',
     name:'Дженга-гостьова книга', note:'',
-    lbl:'гостьова книга, але падає', title:'Дженга', tag:'напиши на бруску',
+    title:'Дженга', sub:'напиши на бруску',
     body:['Візьміть брусок, напишіть побажання — і поставте назад у башту.',
           'Потім ми зіграємо. І прочитаємо вголос усе, що впаде.'] },
 
-  { id:'cloth', loc:2, on:true, kind:'card',
+  { id:'cloth', loc:2, on:true, kind:'sign',
     name:'Скатертина з вибійкою', note:'штампи й фарба',
-    lbl:'штамп, фарба, ваш слід', title:'Скатертина', tag:'лиши слід',
+    title:'Скатертина', sub:'лиши слід',
     body:['Оберіть штамп, вмочіть у фарбу — і приклáдіть. Можна підписатись поруч.',
           'Цією скатертиною ми накриємо стіл на першу річницю.'] },
 
-  { id:'cameras', loc:2, on:true, kind:'card',
+  { id:'cameras', loc:2, on:true, kind:'sign',
     name:'Одноразові фотоапарати', note:'у стилі самих камер',
-    lbl:'одноразова камера', title:'Знімай усе', tag:'і лишай на місці',
-    body:['Беріть, знімайте одне одного — і лишайте апарат тут для наступних.',
-          '<b>Не перемотуйте до кінця й не відкривайте кришку.</b> Плівку ми проявимо після весілля.'] },
+    title:'Знімай усе', sub:'одноразові камери',
+    body:['Бери камеру. 27 кадрів — не шкодуй плівки.',
+          'Темно? Увімкни спалах — коліщатко збоку. Після кадру перемотай до «клац».',
+          '<b>Не відкривай кришку.</b> Наприкінці лиши камеру тут — ми проявимо.'],
+    qr:'f_kadr', qrcap:'залий і свої фото з телефона' },
 
-  { id:'clay', loc:2, on:true, kind:'card',
+  { id:'clay', loc:2, on:true, kind:'sign',
     name:'Глиняні пряники', note:'кожному свій, іменний',
-    lbl:'катя ліпила їх руками', title:'Пряники', tag:'знайди свій',
+    title:'Пряники', sub:'знайди свій',
     body:['Кожен пряник підписаний імʼям — знайдіть свій і заберіть додому.',
-          'По одному на кожного з вас.'] },
+          'Катя ліпила їх руками, по одному на кожного з вас.'] },
 
-  { id:'lottery2', loc:2, on:true, kind:'card', tall:true,
+  { id:'lottery2', loc:2, on:true, kind:'sign',
     name:'Розіграш: коробка для корінців + запасні запрошення', note:'',
-    lbl:'наприкінці витягнемо номери', title:'Розіграш', tag:'відірви корінець',
-    body:['Відірвіть корінець від свого запрошення й киньте його <b>в цю коробку</b>.',
+    title:'Розіграш', sub:'відірви корінець і кинь у коробку',
+    body:['Наприкінці ми витягнемо номери — і роздамо призи.',
           '<b>Не отримали паперове запрошення?</b> Пошукайте своє тут — воно на вас чекає. Відірвіть корінець і теж киньте в коробку.'] },
 
-  { id:'box2', loc:2, on:true, kind:'card',
+  { id:'box2', loc:2, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'друга, для вечора',
-    lbl:'для листівок і конвертів', title:'Скринька', tag:'кидай сюди',
-    body:['Листівки, конверти й теплі слова — усе сюди.',
-          'Ми відкриємо її вже вдвох, коли все скінчиться.'] },
+    title:'На наш перший рік', sub:'скринька для листівок і конвертів',
+    body:['Найбільший дарунок — що ви сьогодні поруч.',
+          'А хто хоче — ця скриня відкрита на наше спільне життя.'] },
 
   { id:'sched2', loc:2, on:true, kind:'sched', src:'f_s2',
     name:'Розклад вечора (A4)', note:'з панелі «Розклад»' },
 
   /* ══ ДЛЯ ОБОХ ══ */
-  { id:'jar', loc:0, on:true, kind:'qr',
-    name:'Банка — благодійний збір (A5)', note:'великий QR, по одній на локацію' },
+  { id:'jar', loc:0, on:true, kind:'sign',
+    name:'Збір на ЗСУ — велика табличка', note:'по одній на локацію',
+    title:'Збір на ЗСУ', sub:'замість зайвого дарунка',
+    body:['Найкращий дарунок нам — підтримка тих, хто нас захищає.',
+          'Наведіть камеру телефона й долучайтесь.'],
+    qr:'f_jar', qrcap:'благодійний збір' },
 
   { id:'jarmini', loc:0, on:true, kind:'qrmini',
-    name:'Банка — маленькі картки на столи (A4, 8 шт.)', note:'розрізати й розкласти по столах' },
+    name:'Збір — маленькі картки на столи (A4, 8 шт.)', note:'розрізати й розкласти по столах' },
 
   { id:'numbers', loc:0, on:true, kind:'numbers',
     name:'Номерки для розіграшу (по 2 на кожен приз)', note:'один у лототрон, другий на сам приз' },
@@ -419,18 +501,51 @@ const CARDS = [
 const LOCNAME = n => n === 1 ? V('f_loc1') : n === 2 ? V('f_loc2') : '';
 const CROPS = '<span class="crop tl"></span><span class="crop tr"></span>'
             + '<span class="crop bl"></span><span class="crop br"></span>';
+const ED = ' contenteditable="true" spellcheck="false"';
 
-function cardHTML(c){
-  return '<div class="card' + (c.tall ? ' tall' : '') + '">' + CROPS
-    + '<p class="lbl">' + esc(c.lbl) + '</p>'
-    + wings('<h3 class="ttl">' + esc(c.title) + '</h3>', 1.15)
-    + '<p class="tag">' + esc(c.tag) + '</p>'
-    + c.body.map(b => '<p class="body">' + b + '</p>').join('')
-    + '</div>';
+function qrCanvas(text, px){
+  const cv = document.createElement('canvas');
+  try {
+    const r = encodeQRWithQuiet(text, 'M', 4);
+    const scale = Math.max(1, Math.floor(px / r.size));
+    cv.width = cv.height = r.size * scale;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#1E1B1A';
+    for (let y = 0; y < r.size; y++) for (let x = 0; x < r.size; x++)
+      if (r.matrix[y][x]) g.fillRect(x * scale, y * scale, scale, scale);
+  } catch (e) { cv.width = cv.height = 8; }
+  return cv;
 }
 
-function pageHead(lbl, h2){
-  return '<p class="lbl">' + esc(lbl) + '</p><h2>' + esc(h2) + '</h2>' + band(1.05);
+function qrBlock(c){
+  if (!c.qr) return '';
+  const url = V(c.qr);
+  if (!url) return '<p class="qrcap" style="color:#C8431F;margin-top:8mm">'
+    + '⚠️ Встав посилання в панелі вгорі — тут буде QR</p>';
+  const full = /^https?:/i.test(url) ? url : 'https://' + url;
+  return '<div class="qrblock"><span class="qrslot" data-url="' + esc(full) + '"></span>'
+    + '<span class="qrcap">' + esc(c.qrcap || '') + '<br><b>'
+    + esc(url.replace(/^https?:\/\//i, '')) + '</b></span></div>';
+}
+
+function signHTML(c){
+  const a4 = isA4();
+  const head = c.head || (LOCNAME(c.loc) ? LOCNAME(c.loc) + ' · 6 вересня 2026' : 'Катя &amp; Діма · 6.09.2026');
+  const ttl = '<h1 class="ttl"' + ED + '>' + esc(c.title) + '</h1>';
+  return '<div class="sign ' + (a4 ? 'a4' : 'a5') + '">' + (a4 ? band() : CROPS)
+    + '<p class="head">' + head + '</p>'
+    + '<div class="mid">'
+    + (a4 ? ttl : wings(ttl))
+    + '<p class="sub"' + ED + '>' + esc(c.sub) + '</p>'
+    + c.body.map(b => '<p class="body"' + ED + '>' + b + '</p>').join('')
+    + qrBlock(c)
+    + '</div>'
+    + (a4 ? band() : '') + '</div>';
+}
+
+function pageHead(head, h2){
+  return '<p class="head">' + esc(head) + '</p><h2' + ED + '>' + esc(h2) + '</h2>' + band();
 }
 
 function schedHTML(c){
@@ -446,7 +561,7 @@ function schedHTML(c){
     const t = mark ? l.slice(1).trim() : l;
     const m = t.match(/^(\d{1,2}[:.]\d{2})\s*[—–-]?\s*(.*)$/);
     return '<li' + (mark ? ' class="mark"' : '') + '><span class="tm">'
-      + esc(m ? m[1].replace('.', ':') : '') + '</span><span class="ev">'
+      + esc(m ? m[1].replace('.', ':') : '') + '</span><span class="ev"' + ED + '>'
       + esc(m ? m[2] : t) + '</span></li>';
   }).join('');
   return '<div class="page">' + head + '<ul class="sched">' + rows + '</ul></div>';
@@ -472,7 +587,7 @@ const RULES = [
 
 function rulesHTML(){
   return '<div class="page">' + pageHead(LOCNAME(2) + ' · замість кидання букета', 'Армреслінг за букет')
-    + '<ol class="rules">' + RULES.map(r => '<li>' + r + '</li>').join('') + '</ol>'
+    + '<ol class="rules">' + RULES.map(r => '<li' + ED + '>' + r + '</li>').join('') + '</ol>'
     + '<p class="note"><b>Переможець забирає букет.</b> Не ловить і не вихоплює — чесно виборює. '
     + 'Наступне весілля тепер повністю на його совісті.</p></div>';
 }
@@ -491,45 +606,19 @@ function bracketHTML(){
     + 'перший раунд грайте просто в парах, а сюди вписуйте вже тих, хто пройшов.</p></div>';
 }
 
-function qrCanvas(text, px){
-  const cv = document.createElement('canvas');
-  try {
-    const r = encodeQRWithQuiet(text, 'M', 4);
-    const scale = Math.max(1, Math.floor(px / r.size));
-    cv.width = cv.height = r.size * scale;
-    const g = cv.getContext('2d');
-    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-    g.fillStyle = '#1E1B1A';
-    for (let y = 0; y < r.size; y++) for (let x = 0; x < r.size; x++)
-      if (r.matrix[y][x]) g.fillRect(x * scale, y * scale, scale, scale);
-  } catch (e) { cv.width = cv.height = 8; }
-  return cv;
-}
-
-function jarHTML(){
-  const url = V('f_jar'), goal = V('f_goal') || 'на потреби ЗСУ';
-  return '<div class="card">' + CROPS
-    + '<p class="lbl">замість квітів</p>'
-    + wings('<h3 class="ttl">Наша банка</h3>', 1.15)
-    + '<p class="tag">' + esc(goal) + '</p>'
-    + '<div class="qrwrap">'
-    + (url ? '<span class="qrslot" data-url="' + esc(url) + '"></span>'
-             + '<span class="qrlink">' + esc(url) + '</span>'
-           : '<p class="body" style="color:#C8431F">⚠️ Встав посилання на банку в панелі вгорі</p>')
-    + '</div></div>';
-}
-
 function jarMiniHTML(){
   const url = V('f_jar'), goal = V('f_goal') || 'на потреби ЗСУ';
+  const full = url && (/^https?:/i.test(url) ? url : 'https://' + url);
   let cells = '';
   for (let i = 0; i < 8; i++){
     cells += '<div class="m">' + orn(['cross','diamond','cross'], .95)
-      + '<div class="mt">Наша банка</div>'
-      + (url ? '<span class="qrslot" data-url="' + esc(url) + '" data-px="120"></span>'
-             : '<div class="ms" style="color:#C8431F">немає посилання</div>')
-      + '<div class="ms">Замість квітів — ' + esc(goal) + '</div></div>';
+      + '<div class="mt">Збір на ЗСУ</div>'
+      + (full ? '<span class="qrslot" data-url="' + esc(full) + '" data-px="120"></span>'
+              : '<div class="ms" style="color:#C8431F">немає посилання</div>')
+      + '<div class="ms">Замість зайвого дарунка — ' + esc(goal)
+      + (url ? '<br>' + esc(url.replace(/^https?:\/\//i, '')) : '') + '</div></div>';
   }
-  return '<div class="page" style="padding:12mm"><div class="qrmini">' + cells + '</div></div>';
+  return '<div class="page" style="padding:10mm"><div class="qrmini">' + cells + '</div></div>';
 }
 
 function numbersHTML(){
@@ -547,7 +636,8 @@ function numbersHTML(){
 }
 
 function render(){
-  const picked = CARDS.filter(c => c.on);
+  document.documentElement.setAttribute('data-font', V('f_font'));
+  const picked = CARDS.filter(c => c.on), a4 = isA4();
   const sheets = [];
   let pending = null;
 
@@ -566,8 +656,7 @@ function render(){
 
   picked.forEach(function(c){
     const tag = c.loc === 1 ? V('f_loc1') : c.loc === 2 ? V('f_loc2') : 'обидві';
-    if (c.kind === 'card')         addHalf(cardHTML(c), tag);
-    else if (c.kind === 'qr')      addHalf(jarHTML(), tag);
+    if (c.kind === 'sign')         (a4 ? addFull : addHalf)(signHTML(c), tag);
     else if (c.kind === 'sched')   addFull(schedHTML(c), tag);
     else if (c.kind === 'signup')  addFull(signupHTML(), tag);
     else if (c.kind === 'rules')   addFull(rulesHTML(), tag);
@@ -580,7 +669,7 @@ function render(){
   $('sheets').innerHTML = sheets.join('');
   $('sheets').querySelectorAll('.qrslot').forEach(function(slot){
     slot.appendChild(qrCanvas(slot.getAttribute('data-url'),
-      parseInt(slot.getAttribute('data-px'), 10) || 200));
+      parseInt(slot.getAttribute('data-px'), 10) || 220));
   });
   $('count').textContent = picked.length + ' поз. · ' + sheets.length + ' аркушів A4';
   fitSheets();
@@ -638,7 +727,8 @@ buildList();
 Object.keys(DEFAULTS).concat(['f_blank']).forEach(function(k){
   const el = $(k);
   if (!el) return;
-  el.addEventListener(k === 'f_blank' ? 'change' : 'input', function(){
+  const ev = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
+  el.addEventListener(ev, function(){
     $('list').querySelectorAll('.grp').forEach(function(g){
       g.textContent = grpTitle(+g.getAttribute('data-grp'));
     });
