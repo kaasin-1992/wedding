@@ -375,6 +375,10 @@ button:active{transform:scale(.98)}
       <span class="count" id="count"></span>
     </div>
     <p class="hint">У вікні друку: A4, <b>«Фон і зображення»</b> увімкнено, поля <b>«Немає»</b>. Інакше червоне не надрукується.</p>
+    <p class="hint">Готові набори одним посиланням:
+    <b><a href="?botsad">?botsad</a></b> — усе для Ботсаду,
+    <b><a href="?hvlv">?hvlv</a></b> — усе для Хвильового,
+    <b><a href="?all">?all</a></b> — геть усе. Спільне (збір, номерки, коробки для листів) є в обох наборах.</p>
     <p class="hint">Усе, що виправляєш просто на аркуші, <b>зберігається автоматично</b> в цьому браузері
     й переживає перезавантаження. Але тільки в ньому: щоб перенести правки на інший пристрій або
     комусь передати, натисни <b>«Зберегти правки файлом»</b> — і той, кому файл потрапив, відкриє його
@@ -693,6 +697,12 @@ const CARDS = [
   { id:'numbers', loc:0, on:true, kind:'numbers',
     name:'Номерки для розіграшу (по 2 на кожен приз)', note:'один у лототрон, другий на сам приз' },
 ];
+
+/* Початковий стан галочок — до того, як його перекриє localStorage
+   чи параметр у посиланні. Треба, щоб посилання на локацію не вмикало
+   те, що ми свідомо лишили вимкненим (квіти, фотозона, дрес-код). */
+const DEFAULT_ON = {};
+CARDS.forEach(c => { DEFAULT_ON[c.id] = c.on; });
 
 /* ── рендер ───────────────────────────────────────────────────────── */
 const LOCNAME = n => n === 1 ? V('f_loc1') : n === 2 ? V('f_loc2') : '';
@@ -1134,6 +1144,22 @@ function setAll(fn){ CARDS.forEach(c => { c.on = fn(c); }); syncChecks(); render
 /* ── старт ────────────────────────────────────────────────────────── */
 const saved = loadState();
 if (saved && Array.isArray(saved.picked)) CARDS.forEach(c => { c.on = saved.picked.indexOf(c.id) >= 0; });
+
+/* Посилання виду ?botsad і ?hvlv відкривають одразу потрібний набір —
+   щоб не пояснювати щоразу, які галочки зняти. Спільні позиції
+   (збір, номерки, коробки для листів) є в обох. */
+(function fromURL(){
+  const q = (location.search || '').toLowerCase();
+  const want = /(^|[?&])(botsad|sofi|den|1)([=&]|$)/.test(q) ? 1
+             : /(^|[?&])(hvlv|hvylovyi|vechir|2)([=&]|$)/.test(q) ? 2
+             : /(^|[?&])(all|vse)([=&]|$)/.test(q) ? 0 : null;
+  if (want === null) return;
+  CARDS.forEach(function(c){
+    const here = (want === 0) || c.loc === want || c.loc === 0;
+    c.on = here && DEFAULT_ON[c.id];
+  });
+})();
+
 buildList();
 
 Object.keys(DEFAULTS).concat(['f_blank', 'f_notime']).forEach(function(k){
