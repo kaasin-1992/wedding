@@ -228,6 +228,26 @@ button:active{transform:scale(.98)}
   letter-spacing:var(--track)}
 .qrmini .m .ms{font-size:8pt;color:var(--grey);line-height:1.3;font-family:var(--sans)}
 
+/* номери столів — чотири на аркуш */
+.tgrid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.tnum{border:.5pt dashed #E0D5CF;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2mm;padding:6mm;min-height:0}
+.tcap{font-size:9pt;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--grey);
+  font-family:var(--sans)}
+.tbig{font-weight:var(--w-ttl);font-size:96pt;line-height:.85;color:var(--red);letter-spacing:var(--track)}
+
+/* написи на коробки для листів — два на аркуш */
+.ygrid{flex:1;display:grid;grid-template-rows:1fr 1fr}
+.ybox{border:.5pt dashed #E0D5CF;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1.5mm;padding:10mm;min-height:0}
+.ycap{font-size:10pt;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--grey);
+  font-family:var(--sans);margin-top:3mm}
+.ybig{font-weight:var(--w-ttl);font-size:80pt;line-height:.85;color:var(--red);letter-spacing:var(--track)}
+.yword{font-weight:var(--w-ttl);font-size:20pt;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--red);margin-top:-1mm}
+.yopen{font-size:11pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+  font-family:var(--sans);margin-top:4mm;border-top:1pt solid var(--red);padding-top:3mm}
+
 /* номерки */
 .nums{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start}
 .num{width:25%;height:52mm;border:.5pt dashed #E0D5CF;display:flex;flex-direction:column;
@@ -295,6 +315,8 @@ button:active{transform:scale(.98)}
         <option value="free">Порожній аркуш — намалюю сама</option>
       </select></div>
       <div><label for="f_guests">Людей усього, з молодятами</label><input type="number" id="f_guests" value="37" min="2" max="120"></div>
+      <div><label for="f_tablecards">Табличок з номерами столів</label><input type="number" id="f_tablecards" value="4" min="1" max="24"></div>
+      <div><label for="f_years">Роки для листів у майбутнє</label><input type="text" id="f_years" value="1, 3, 5, 10"></div>
       <div><label for="f_tables">Для «списків»: скільки столів</label><input type="number" id="f_tables" value="6" min="1" max="24"></div>
       <div><label for="f_seats">Для «списків»: місць за столом</label><input type="number" id="f_seats" value="8" min="1" max="20"></div>
     </div>
@@ -390,6 +412,21 @@ function bandSeq(n){
 }
 const band = () => '<div class="bandrow">' + orn(bandSeq(21), null) + '</div>';
 
+/* «1 рік», «3 роки», «5 років» — і рік, коли конверт відкриють */
+const WED_YEAR = 2026;
+function yearWord(n){
+  const a = n % 100, b = n % 10;
+  if (a >= 11 && a <= 14) return 'років';
+  if (b === 1) return 'рік';
+  if (b >= 2 && b <= 4) return 'роки';
+  return 'років';
+}
+function yearsList(){
+  const out = String(V('f_years') || '').split(/[,;\s]+/)
+    .map(x => parseInt(x, 10)).filter(n => n > 0 && n < 100);
+  return (out.length ? out : [1, 3, 5, 10]).map(n => [n, yearWord(n), WED_YEAR + n]);
+}
+
 /* ── стан ─────────────────────────────────────────────────────────── */
 const SCHED1 = [
   '12:00 — Велкам-дрінк',
@@ -422,7 +459,7 @@ const DEFAULTS = {
   f_addr1:'вул. Симона Петлюри, 1 · метро «Університет»', f_arrow:'→',
   f_jar:'https://send.monobank.ua/jar/5TEeFknTmt',
   f_goal:'на потреби ЗСУ', f_kadr:'лютевесілля.укр/kadr', f_prizes:'10',
-  f_seatmode:'ab', f_guests:'37', f_tables:'6', f_seats:'8', f_s1:SCHED1, f_s2:SCHED2,
+  f_seatmode:'ab', f_guests:'37', f_tablecards:'4', f_years:'1, 3, 5, 10', f_tables:'6', f_seats:'8', f_s1:SCHED1, f_s2:SCHED2,
 };
 const KEY = 'tablychky-v8';
 
@@ -486,7 +523,7 @@ const CARDS = [
     body:['Візьміть аркуш і конверт. Напишіть нам що завгодно: побажання, пораду, передбачення, таємницю.',
           'Згори на конверті поставте <b>рік</b> — через стільки ми його відкриємо. І підпишіться, щоб ми знали, кого перечитуємо.',
           'Запечатаний конверт — до скрині.'],
-    years:[[1,'рік'], [3,'роки'], [5,'років'], [10,'років']] },
+    years:true },
 
   { id:'box1', loc:1, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'поштова скринька',
@@ -600,7 +637,7 @@ const CARDS = [
     body:['Візьміть аркуш і конверт. Напишіть нам що завгодно: побажання, пораду, передбачення, таємницю.',
           'Згори на конверті поставте <b>рік</b> — через стільки ми його відкриємо. І підпишіться, щоб ми знали, кого перечитуємо.',
           'Запечатаний конверт — до скрині.'],
-    years:[[1,'рік'], [3,'роки'], [5,'років'], [10,'років']] },
+    years:true },
 
   { id:'box2', loc:2, on:true, kind:'sign',
     name:'Скринька-скарбничка для подарунків', note:'друга, для вечора',
@@ -618,6 +655,12 @@ const CARDS = [
     body:['Найкращий дарунок нам — підтримка тих, хто нас захищає.',
           'Наведіть камеру телефона й долучайтесь.'],
     qr:'f_jar', qrcap:'благодійний збір' },
+
+  { id:'tablenums', loc:1, on:true, kind:'tablenums',
+    name:'Номери столів', note:'великі цифри на самі столи, по чотири на аркуш' },
+
+  { id:'yearboxes', loc:0, on:true, kind:'yearboxes',
+    name:'Написи на коробки для листів', note:'по одному на кожен рік, з датою відкриття' },
 
   { id:'jarmini', loc:0, on:true, kind:'qrmini',
     name:'Збір — маленькі картки на столи (A4, 8 шт.)', note:'розрізати й розкласти по столах' },
@@ -709,7 +752,7 @@ function signHTML(c){
     + '<p class="sub"' + ed(c.id + '.sub') + '>' + esc(c.sub) + '</p>'
     + c.body.map((b, i) => '<p class="body"' + ed(c.id + '.b' + i) + '>' + b + '</p>').join('')
     + (c.addr && V('f_addr1') ? '<p class="body addr"' + ED + '><b>' + esc(V('f_addr1')) + '</b></p>' : '')
-    + (c.years ? '<div class="years">' + c.years.map(function(y, i){
+    + (c.years ? '<div class="years">' + yearsList().map(function(y, i){
         return (i ? '<span class="ysep">' + orn(['dot'], a4 ? 1.7 : 1.1) + '</span>' : '')
           + '<div class="yr"><span class="yn">' + y[0] + '</span>'
           + '<span class="yc">' + esc(y[1]) + '</span></div>';
@@ -903,6 +946,34 @@ function jarMiniHTML(){
   return '<div class="page" data-sid="mini" style="padding:10mm"><div class="qrmini">' + cells + '</div></div>';
 }
 
+function tableNumsHTML(){
+  const n = Math.max(1, Math.min(24, parseInt(V('f_tablecards'), 10) || 4));
+  const cells = [];
+  for (let i = 1; i <= n; i++)
+    cells.push('<div class="tnum">' + orn(['dot','cross','dot'], 1.3)
+      + '<div class="tcap">Стіл</div><div class="tbig">' + i + '</div></div>');
+  const out = [];
+  for (let i = 0; i < cells.length; i += 4)
+    out.push('<div class="sheet" data-sid="tnum' + i + '"><span class="sheet-tag">номери столів</span>'
+      + '<div class="tgrid">' + cells.slice(i, i + 4).join('') + '</div></div>');
+  return out;
+}
+
+function yearBoxesHTML(){
+  const cards = yearsList().map(function(y){
+    return '<div class="ybox">' + orn(['dot','cross','star','cross','dot'], 1.25)
+      + '<div class="ycap">Листи через</div>'
+      + '<div class="ybig">' + y[0] + '</div>'
+      + '<div class="yword">' + y[1] + '</div>'
+      + '<div class="yopen">відкрити у ' + y[2] + '</div></div>';
+  });
+  const out = [];
+  for (let i = 0; i < cards.length; i += 2)
+    out.push('<div class="sheet" data-sid="ybox' + i + '"><span class="sheet-tag">коробки для листів</span>'
+      + '<div class="ygrid">' + cards.slice(i, i + 2).join('') + '</div></div>');
+  return out;
+}
+
 function numbersHTML(){
   const n = Math.max(1, Math.min(30, parseInt(V('f_prizes'), 10) || 10));
   const cells = [];
@@ -946,6 +1017,8 @@ function render(){
     else if (c.kind === 'rules')   addFull(rulesHTML(), tag);
     else if (c.kind === 'bracket') addFull(bracketHTML(), tag);
     else if (c.kind === 'qrmini')  addFull(jarMiniHTML(), tag);
+    else if (c.kind === 'tablenums'){ flush(); tableNumsHTML().forEach(s => sheets.push(s)); }
+    else if (c.kind === 'yearboxes'){ flush(); yearBoxesHTML().forEach(s => sheets.push(s)); }
     else if (c.kind === 'numbers'){ flush(); numbersHTML().forEach(s => sheets.push(s)); }
   });
   flush();
