@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Після весілля — що лишилось зробити</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#C8431F">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#C8431F; --ink:#1E1B1A; --muted:#8B827D; --line:#E6DDD8;
+  --bg:#FBF6F2; --card:#FFFFFF; --soft:#FCEEE8;
+  --sans:'Manrope', -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --ink:#F4EAE5; --muted:#A99A93; --line:#3A2E29; --bg:#171310; --card:#221B17; --soft:#31201A; }
+}
+:root[data-theme="dark"]{ --ink:#F4EAE5; --muted:#A99A93; --line:#3A2E29; --bg:#171310; --card:#221B17; --soft:#31201A; }
+:root[data-theme="light"]{ --ink:#1E1B1A; --muted:#8B827D; --line:#E6DDD8; --bg:#FBF6F2; --card:#FFFFFF; --soft:#FCEEE8; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:780px;margin:0 auto;padding:26px 16px 90px}
+
+header{text-align:center;margin-bottom:22px}
+.orn{color:var(--red);display:block;margin:0 auto 12px}
+h1{font-weight:800;font-size:30px;letter-spacing:-.025em;margin:0 0 6px;line-height:1.1}
+h1 em{font-style:normal;color:var(--red)}
+.lede{color:var(--muted);margin:0;font-size:15px}
+
+.total{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:18px 0 8px;
+  position:sticky;top:8px;z-index:5;box-shadow:0 6px 22px rgba(120,70,50,.07)}
+.total .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.total .big{font-weight:800;font-size:22px;letter-spacing:-.02em}
+.total .big b{color:var(--red)}
+.total .sub{font-size:13px;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--soft);margin-top:11px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--red);border-radius:99px;transition:width .25s}
+
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:14px 0;overflow:hidden}
+.head{display:flex;align-items:center;gap:12px;padding:15px 17px;cursor:pointer;user-select:none}
+.head .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--soft);
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.head .tx{flex:1;min-width:0;display:block}
+.head .t{display:block;font-weight:800;font-size:16px;letter-spacing:-.01em}
+.head .s{display:block;font-size:13px;color:var(--muted);margin-top:1px}
+.head .cnt{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.head .arr{flex:0 0 auto;color:var(--muted);font-size:14px;transition:transform .18s}
+section.open .head .arr{transform:rotate(90deg)}
+.body{display:none;padding:0 17px 8px}
+section.open .body{display:block}
+section.done .head .t{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+
+.task{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task input[type=checkbox]{flex:0 0 auto;width:20px;height:20px;margin:1px 0 0;accent-color:var(--red);cursor:pointer}
+.task .tx{flex:1;min-width:0;display:block}
+.task .t{display:block;font-size:15px;line-height:1.35}
+.task .n{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.task.ok .t{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+.task.ok .n{opacity:.6}
+.task .del{flex:0 0 auto;border:0;background:none;color:var(--muted);font-size:15px;cursor:pointer;
+  padding:0 2px;opacity:.5}
+.task .del:hover{opacity:1;color:var(--red)}
+.hot{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--red);background:var(--soft);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+
+/* пости */
+.post{padding:11px 0;border-top:1px solid var(--line)}
+.post:first-child{border-top:0}
+.post .pt{font-weight:700;font-size:15px;line-height:1.3}
+.post .pa{font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.post .pa b{color:var(--ink);font-weight:700}
+.chips{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+  border:1px solid var(--line);border-radius:99px;padding:4px 11px;cursor:pointer;user-select:none;
+  color:var(--muted);background:transparent}
+.chip input{display:none}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.post.done .pt{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+
+.add{display:flex;gap:8px;padding:10px 0 14px;border-top:1px solid var(--line)}
+.add input{flex:1;font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);
+  border-radius:9px;background:var(--bg);color:var(--ink)}
+.add button{font:inherit;font-weight:700;font-size:14px;padding:8px 14px;border-radius:9px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;justify-content:center}
+.tools button{font:inherit;font-weight:700;font-size:13.5px;padding:9px 14px;border-radius:10px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.tools button.primary{background:var(--red);border-color:var(--red);color:#fff}
+footer{text-align:center;color:var(--muted);font-size:13px;margin-top:22px;line-height:1.6}
+.theme{position:fixed;top:12px;right:12px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+  background:var(--card);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;z-index:9}
+</style>
+</head>
+<body>
+<button class="theme" id="themeBtn" aria-label="Тема">🌙</button>
+<div class="wrap">
+
+<header>
+  <span id="ornTop"></span>
+  <h1>Після <em>весілля</em></h1>
+  <p class="lede">6 вересня 2026 · Ботсад Фоміна і Хвильовий</p>
+</header>
+
+<div class="total">
+  <div class="row">
+    <span class="big"><b id="pDone">0</b> з <span id="pAll">0</span></span>
+    <span class="sub" id="pSub"></span>
+  </div>
+  <div class="bar"><i id="pBar" style="width:0"></i></div>
+</div>
+
+<div id="app"></div>
+
+<div class="tools">
+  <button class="primary" id="btnExport">Зберегти файлом</button>
+  <button id="btnImport">Завантажити з файлу</button>
+  <button id="btnOpen">Розгорнути все</button>
+  <button id="btnReset">Скинути все</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+</div>
+
+<footer>
+  Усе зберігається в цьому браузері.<br>
+  Щоб перенести на інший пристрій — «Зберегти файлом», далі «Завантажити з файлу».
+</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── вибійка ──────────────────────────────────────────────────── */
+const MOTIF = { dot:['X'], cross:['.X.','XXX','.X.'], star:['..X..','.XXX.','XXXXX','.XXX.','..X..'],
+  diamond:['...X...','..XXX..','.XXXXX.','XXXXXXX','.XXXXX.','..XXX..','...X...'] };
+function orn(seq, px){
+  let x = 0, r = '';
+  seq.forEach(function(n, i){
+    const m = MOTIF[n], h = m.length, w = m[0].length, top = (7 - h) / 2;
+    for (let a = 0; a < h; a++) for (let c = 0; c < w; c++)
+      if (m[a].charAt(c) === 'X') r += '<rect x="' + (x+c) + '" y="' + (top+a) + '" width="1" height="1"/>';
+    x += w + (i < seq.length - 1 ? 2 : 0);
+  });
+  return '<svg class="orn" viewBox="0 0 ' + x + ' 7" width="' + (x*px) + '" height="' + (7*px)
+    + '" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">' + r + '</svg>';
+}
+
+/* ── що робимо ────────────────────────────────────────────────── */
+const T = (id, t, n, hot) => ({ id:id, t:t, n:n || '', hot:!!hot });
+
+const GROUPS = [
+  { id:'now', ic:'🔥', t:'Поки не пізно', s:'це тижня — далі буде гірше або незручно',
+    items:[
+      T('cams', 'Зібрати всі одноразові камери з обох локацій', 'Перевір по списку, скільки роздавала й скільки повернулось. Загублені вже не знайдуться.', 1),
+      T('film', 'Здати всю плівку в проявку однією партією', 'Проси одразу цифрові скани у високій якості. Плівка не любить лежати — кольори попливуть.', 1),
+      T('letters', 'Скласти листи в майбутнє по коробках і сховати в одне місце', 'Підписані коробки: 2027, 2029, 2031, 2036.', 1),
+      T('remind', 'Поставити 4 нагадування в телефоні на роки відкриття', 'Вересень 2027, 2029, 2031, 2036. Інакше про них забудуть обоє.', 1),
+      T('thanks', 'Подякувати гостям — спільне повідомлення', 'Там само попроси скинути фото й відео, і постав дедлайн — інакше не скинуть ніколи.', 1),
+      T('photog', 'Написати фотографу: коли чекати репортаж'),
+      T('lesha', 'Написати Льоші: коли чекати лавсторі', 'Плівка, тож довше. Спитай, скільки кадрів вийшло.'),
+      T('money', 'Порахувати, що в скриньках, і закрити бюджет', 'Поки памʼятаєш, хто що доплачував.'),
+      T('return', 'Повернути орендоване й віддати чуже', 'Посуд, мольберти, техніка, усе, що позичали.'),
+    ]},
+
+  { id:'collect', ic:'📥', t:'Зібрати весь матеріал', s:'усе в одну купу, поки нічого не загубилось',
+    items:[
+      T('kadr', 'Скачати все з лютевесілля.укр/kadr', 'Фото, які гості залили самі.'),
+      T('fromph', 'Забрати репортаж від фотографа'),
+      T('fromfilm', 'Забрати скани плівки з одноразових камер'),
+      T('friends', 'Зібрати відео від друзів', 'Відеографа не було — усе відео в чужих телефонах. Збирай зараз.'),
+      T('book', 'Відсканувати або перезняти гостьову книгу — кожен розворот'),
+      T('hearts', 'Зняти рамку з сердечками і кожне сердечко окремо'),
+      T('jenga', 'Зняти дженгу — кожен брусок з побажанням', 'Це окремий пост сам по собі.'),
+      T('cloth', 'Зняти скатертину-вибійку: цілком і деталями'),
+      T('album', 'Зняти фотоальбом з інстаксами — розвороти'),
+      T('things', 'Зняти предметку: обереги, таблички, номери столів, запрошення, корінці', 'На світлому тлі, при денному світлі. Це база для кейсу.'),
+      T('dress', 'Зняти окремо сукню, передник, каблучки, букет'),
+      T('screens', 'Зробити скріншоти гри-запрошення, планера, сторінки табличок'),
+      T('sofia', 'Зняти Софію на простині — і процес, і результат'),
+    ]},
+
+  { id:'sort', ic:'🗂', t:'Розібрати', s:'один раз розкласти — і далі все швидко',
+    items:[
+      T('folder', 'Одна папка, підпапки за джерелами', 'Фотограф / плівка / гості / телефон / предметка.'),
+      T('backup', 'Бекап у хмару і на фізичний диск', 'До того, як почнеш щось видаляти.', 1),
+      T('best', 'Перший відбір: найкращі 150–200'),
+      T('bytheme', 'Розкласти відібране по темах постів', 'Папка на кожен пост зі списку нижче. Далі писати буде легко.'),
+      T('edit', 'Обробити відібране в одному стилі'),
+    ]},
+
+  { id:'sell', ic:'💸', t:'Продати й роздати декор', s:'поки сезон не скінчився',
+    items:[
+      T('inv', 'Інвентаризація: що взагалі лишилось'),
+      T('keep', 'Вирішити, що лишаємо собі', 'Скатертина, гостьова книга, дженга, Софія, альбом — точно собі.'),
+      T('lots', 'Сфотографувати лоти'),
+      T('olx', 'Виставити на OLX і у весільні групи', 'Вазочки, стрічки, мольберти, килими, посуд. Осінь — ще є попит.'),
+      T('give', 'Віддати те, що не продається', 'Дівчатам, які теж готуються. Швидше, ніж чекати покупця.'),
+    ]},
+
+  { id:'case', ic:'📁', t:'Кейс', s:'щоб було видно обсяг зробленого',
+    items:[
+      T('nums', 'Зібрати цифри', '109 гостей у таблиці · 36 у Ботсаду · скільки насправді у Хвильовому · бюджет · скільки годин.'),
+      T('handmade', 'Скласти список усього, що зроблено руками', 'Обереги, торт, скатертина, Софія, обгортки камер, таблички, вибійка.'),
+      T('tools', 'Зібрати скріншоти інструментів', 'Гра-запрошення, планер, принтер, таблички, схема розсадки.'),
+      T('page', 'Зверстати кейс окремою сторінкою на сайті'),
+      T('pdf', 'Зробити PDF-версію кейсу', 'Щоб можна було просто надіслати файлом.'),
+    ]},
+];
+
+const POSTS = [
+  { id:'p_anons', w:1, t:'Ми одружились', a:'Карусель з найкращих. Без пояснень, просто емоція. <b>Показати:</b> церемонія, перший танець, загальне фото.' },
+  { id:'p_dance', w:1, t:'Перший танець', a:'Reels. <b>Показати:</b> танець і реакцію гостей. Звук — оригінальний, не музика поверх.' },
+  { id:'p_botsad', w:2, t:'Ботсад Фоміна — денна локація', a:'<b>Кут:</b> чому ботсад, а не ресторан. <b>Показати:</b> зелень, церемонія, столи, номери столів.' },
+  { id:'p_hvlv', w:2, t:'Хвильовий — вечір', a:'<b>Кут:</b> дві локації в один день — навіщо і чи варто. <b>Показати:</b> фуршет, станції, дискотека.' },
+  { id:'p_change', w:2, t:'Як ми змінили локацію за два дні до весілля', a:'<b>Найсильніша історія з усіх.</b> Чесно: що сталось, що довелось передрукувати, як повідомляли гостей. Threads це зайде більше, ніж Instagram.' },
+  { id:'p_vybiyka', w:3, t:'Вибійка як айдентика весілля', a:'<b>Кут:</b> один орнамент — і все виглядає як одне ціле. <b>Показати:</b> таблички, обгортки камер, скатертина, номерки.' },
+  { id:'p_cams', w:3, t:'Одноразові камери з власними обгортками', a:'<b>Кут:</b> як зробити з дешевої камери частину декору. <b>Показати:</b> обгортку, камеру в руках, кадри з плівки.' },
+  { id:'p_clay', w:3, t:'Глиняні обереги кожному гостю', a:'<b>Кут:</b> скільки це насправді годин. <b>Показати:</b> процес ліплення, розкладені обереги, гість забирає свій.' },
+  { id:'p_cake', w:3, t:'Вафельний торт своїми руками', a:'<b>Кут:</b> 10 шарів, 7 кг, 98 порцій, і як шукали підставку. <b>Показати:</b> процес, розріз, поліна.' },
+  { id:'p_cloth', w:3, t:'Скатертина, яку розмалювали гості', a:'<b>Кут:</b> декор, що стає памʼяттю. <b>Показати:</b> штампи, процес, готову скатертину на столі через рік.' },
+  { id:'p_sofia', w:3, t:'Софія Київська на простині', a:'<b>Кут:</b> проєктор + простиня замість дорогого банера. <b>Показати:</b> ескіз, обведення, готове полотно.' },
+  { id:'p_invite', w:4, t:'Запрошення-гра замість листівки', a:'<b>Найсильніше для кейсу.</b> Сайт, паролі, корінці. <b>Показати:</b> екрани гри, паперове запрошення, корінець у коробці.' },
+  { id:'p_arm', w:4, t:'Армреслінг замість кидання букета', a:'<b>Кут:</b> вісім дівчат, пʼятнадцять хвилин, правила. <b>Показати:</b> сітку турніру, сам бій, переможницю з букетом. Готове reels.' },
+  { id:'p_jenga', w:4, t:'Дженга замість гостьової книги', a:'<b>Кут:</b> побажання, які потім падають. <b>Показати:</b> бруски крупно, як грали.' },
+  { id:'p_letters', w:4, t:'Листи в майбутнє: 1, 3, 5 і 10 років', a:'<b>Кут:</b> ідея, яку легко повторити. <b>Показати:</b> коробки з роками, гості пишуть.' },
+  { id:'p_album', w:4, t:'Фотоальбом з інстаксами й наклейками', a:'<b>Кут:</b> гості самі зробили собі памʼять. <b>Показати:</b> розвороти, куточки, підписи.' },
+  { id:'p_bride', w:5, t:'Образ нареченої', a:'<b>Кут:</b> передник Шипелика і спідниця, яку пошила подруга. <b>Показати:</b> деталі, збори, повний зріст.' },
+  { id:'p_groom', w:5, t:'Образ нареченого', a:'<b>Показати:</b> деталі, збори, разом.' },
+  { id:'p_money', w:5, t:'Скільки це коштувало насправді', a:'<b>Для Threads — найсильніший пост.</b> Чесні цифри по статтях, що вийшло дорожче за очікуване, на чому зекономили.' },
+  { id:'p_lessons', w:5, t:'Що б я зробила інакше', a:'<b>Кут:</b> чесно, без «усе було ідеально». Це те, що зберігають і пересилають.' },
+];
+const WAVES = { 1:'Хвиля 1 · одразу', 2:'Хвиля 2 · локації', 3:'Хвиля 3 · зроблено руками',
+  4:'Хвиля 4 · ідеї для гостей', 5:'Хвиля 5 · одяг і підсумки' };
+
+/* ── стан ─────────────────────────────────────────────────────── */
+const KEY = 'pislya-v1';
+let S = { done:{}, ig:{}, th:{}, extra:{}, open:{} };
+try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+const allItems = g => (g.items || []).concat(S.extra[g.id] || []);
+function groupStat(g){
+  if (g.id === 'posts'){
+    const n = POSTS.length * 2;
+    let d = 0;
+    POSTS.forEach(p => { if (S.ig[p.id]) d++; if (S.th[p.id]) d++; });
+    return [d, n];
+  }
+  const it = allItems(g);
+  return [it.filter(x => S.done[x.id]).length, it.length];
+}
+
+/* ── рендер ───────────────────────────────────────────────────── */
+function taskHTML(g, x, extra){
+  return '<div class="task' + (S.done[x.id] ? ' ok' : '') + '">'
+    + '<input type="checkbox" data-done="' + esc(x.id) + '"' + (S.done[x.id] ? ' checked' : '') + '>'
+    + '<span class="tx"><span class="t">' + esc(x.t)
+    + (x.hot ? '<span class="hot">не тягни</span>' : '') + '</span>'
+    + (x.n ? '<span class="n">' + x.n + '</span>' : '') + '</span>'
+    + (extra ? '<button class="del" data-del="' + esc(g.id) + '|' + esc(x.id) + '" title="прибрати">✕</button>' : '')
+    + '</div>';
+}
+
+function postsHTML(){
+  let h = '', w = 0;
+  POSTS.forEach(function(p){
+    if (p.w !== w){ w = p.w;
+      h += '<div class="task" style="border-top:0;padding-top:14px"><span class="tx"><span class="t" '
+        + 'style="font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--red)">'
+        + WAVES[w] + '</span></span></div>'; }
+    const both = S.ig[p.id] && S.th[p.id];
+    h += '<div class="post' + (both ? ' done' : '') + '">'
+      + '<div class="pt">' + esc(p.t) + '</div><div class="pa">' + p.a + '</div>'
+      + '<div class="chips">'
+      + '<label class="chip' + (S.ig[p.id] ? ' on' : '') + '"><input type="checkbox" data-ig="' + p.id + '"'
+      + (S.ig[p.id] ? ' checked' : '') + '>Instagram</label>'
+      + '<label class="chip' + (S.th[p.id] ? ' on' : '') + '"><input type="checkbox" data-th="' + p.id + '"'
+      + (S.th[p.id] ? ' checked' : '') + '>Threads</label>'
+      + '</div></div>';
+  });
+  return h;
+}
+
+function render(){
+  const all = GROUPS.concat([{ id:'posts', ic:'✍️', t:'Пости', s:'20 тем · Instagram і Threads окремо' }]);
+  let h = '';
+  all.forEach(function(g){
+    const st = groupStat(g);
+    const open = S.open[g.id] !== false;
+    h += '<section class="' + (open ? 'open ' : '') + (st[0] === st[1] && st[1] ? 'done' : '') + '" data-g="' + g.id + '">'
+      + '<div class="head" data-toggle="' + g.id + '"><span class="ic">' + g.ic + '</span>'
+      + '<span class="tx"><span class="t">' + esc(g.t) + '</span><span class="s">' + esc(g.s) + '</span></span>'
+      + '<span class="cnt">' + st[0] + '/' + st[1] + '</span><span class="arr">▸</span></div>'
+      + '<div class="body">';
+    if (g.id === 'posts') h += postsHTML();
+    else {
+      (g.items || []).forEach(x => { h += taskHTML(g, x, false); });
+      (S.extra[g.id] || []).forEach(x => { h += taskHTML(g, x, true); });
+      h += '<div class="add"><input type="text" data-add="' + g.id + '" placeholder="Додати своє…">'
+        + '<button data-addbtn="' + g.id + '">Додати</button></div>';
+    }
+    h += '</div></section>';
+  });
+  $('app').innerHTML = h;
+  refreshCounts();
+}
+
+/* ── події ────────────────────────────────────────────────────── */
+/* Галочку оновлюємо на місці, без перемальовування всього списку:
+   інакше на кожен клік злітає скрол, а на телефоні це просто нестерпно. */
+function refreshCounts(){
+  const all = GROUPS.concat([{ id:'posts' }]);
+  let dAll = 0, nAll = 0;
+  all.forEach(function(g){
+    const full = g.id === 'posts' ? { id:'posts' } : g;
+    const st = groupStat(full);
+    dAll += st[0]; nAll += st[1];
+    const sec = document.querySelector('section[data-g="' + g.id + '"]');
+    if (sec){
+      const c = sec.querySelector('.cnt');
+      if (c) c.textContent = st[0] + '/' + st[1];
+      sec.classList.toggle('done', st[1] > 0 && st[0] === st[1]);
+    }
+  });
+  $('pDone').textContent = dAll;
+  $('pAll').textContent = nAll;
+  $('pBar').style.width = (nAll ? Math.round(dAll / nAll * 100) : 0) + '%';
+  $('pSub').textContent = nAll ? Math.round(dAll / nAll * 100) + '% · лишилось ' + (nAll - dAll) : '';
+  save();
+}
+
+$('app').addEventListener('change', function(e){
+  const t = e.target;
+  if (t.dataset.done){
+    S.done[t.dataset.done] = t.checked;
+    const row = t.closest('.task');
+    if (row) row.classList.toggle('ok', t.checked);
+  } else if (t.dataset.ig || t.dataset.th){
+    const id = t.dataset.ig || t.dataset.th;
+    (t.dataset.ig ? S.ig : S.th)[id] = t.checked;
+    const chip = t.closest('.chip');
+    if (chip) chip.classList.toggle('on', t.checked);
+    const post = t.closest('.post');
+    if (post) post.classList.toggle('done', !!(S.ig[id] && S.th[id]));
+  } else return;
+  refreshCounts();
+});
+$('app').addEventListener('click', function(e){
+  const tg = e.target.closest('[data-toggle]');
+  if (tg){ const id = tg.dataset.toggle; S.open[id] = !(S.open[id] !== false); render(); return; }
+  const ab = e.target.closest('[data-addbtn]');
+  if (ab){ addFrom(ab.dataset.addbtn); return; }
+  const dl = e.target.closest('[data-del]');
+  if (dl){
+    const p = dl.dataset.del.split('|');
+    S.extra[p[0]] = (S.extra[p[0]] || []).filter(x => x.id !== p[1]);
+    delete S.done[p[1]];
+    render();
+  }
+});
+$('app').addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && e.target.dataset.add) addFrom(e.target.dataset.add);
+});
+function addFrom(gid){
+  const inp = document.querySelector('[data-add="' + gid + '"]');
+  const v = (inp && inp.value || '').trim();
+  if (!v) return;
+  S.extra[gid] = S.extra[gid] || [];
+  S.extra[gid].push({ id:'x' + Date.now().toString(36) + Math.random().toString(36).slice(2,5), t:v, n:'' });
+  inp.value = '';
+  render();
+}
+
+$('btnOpen').addEventListener('click', function(){
+  const anyClosed = GROUPS.concat([{id:'posts'}]).some(g => S.open[g.id] === false);
+  GROUPS.concat([{id:'posts'}]).forEach(g => { S.open[g.id] = anyClosed; });
+  render();
+});
+$('btnReset').addEventListener('click', function(){
+  if (!confirm('Зняти всі галочки й прибрати додані пункти?')) return;
+  S = { done:{}, ig:{}, th:{}, extra:{}, open:{} };
+  render();
+});
+$('btnExport').addEventListener('click', function(){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type:'application/json' }));
+  a.download = 'pislya-vesillya-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+});
+$('btnImport').addEventListener('click', () => $('fileIn').click());
+$('fileIn').addEventListener('change', function(e){
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = function(){
+    let d = null;
+    try { d = JSON.parse(String(rd.result)); } catch(err){ d = null; }
+    if (!d || typeof d !== 'object'){ alert('Це не схоже на файл цього трекера.'); return; }
+    S = Object.assign({ done:{}, ig:{}, th:{}, extra:{}, open:{} }, d);
+    render();
+    alert('Завантажено.');
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+});
+
+/* тема */
+const tkey = 'pislya-theme';
+function setTheme(v){
+  if (v) document.documentElement.setAttribute('data-theme', v);
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem(tkey, v || ''); } catch(e){}
+  $('themeBtn').textContent = v === 'dark' ? '☀️' : '🌙';
+}
+try { setTheme(localStorage.getItem(tkey) || ''); } catch(e){}
+$('themeBtn').addEventListener('click', function(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  const dark = cur ? cur === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+  setTheme(dark ? 'light' : 'dark');
+});
+
+$('ornTop').innerHTML = orn(['dot','cross','star','diamond','star','cross','dot'], 3);
+render();
+})();
+</script>
+</body>
+</html>
